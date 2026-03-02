@@ -1,7 +1,11 @@
 <script setup lang="ts">
-import { products } from '../../data/products'
+import { computed } from 'vue'
+import { products, productIconPaths } from '../../data/products'
 import ProductSubCard from './ProductSubCard.vue'
 import AnimatedProductGraph from './AnimatedProductGraph.vue'
+
+const infraProducts = computed(() => products.filter((p) => p.layer === 'infra'))
+const appProducts = computed(() => products.filter((p) => p.layer === 'app'))
 </script>
 
 <template>
@@ -47,13 +51,58 @@ import AnimatedProductGraph from './AnimatedProductGraph.vue'
         </div>
       </div>
 
-      <!-- Product Sub-cards Grid (2x2) -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 reveal-stagger">
-        <ProductSubCard
-          v-for="product in products"
-          :key="product.id"
-          :product="product"
-        />
+      <!-- Infra Layer -->
+      <div class="mb-10 reveal-fade-up">
+        <h3 class="text-phi-xl text-ink-900 mb-fib-4 font-semibold">AI 基础设施层</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 reveal-stagger">
+          <ProductSubCard
+            v-for="product in infraProducts"
+            :key="product.id"
+            :product="product"
+          />
+        </div>
+      </div>
+
+      <!-- Divider -->
+      <div class="flex items-center gap-4 mb-8 reveal-fade-up">
+        <div class="flex-1 h-px bg-ink-100"></div>
+        <p class="text-sm text-ink-400 whitespace-nowrap px-2">基于 Lurus 基础设施构建的产品</p>
+        <div class="flex-1 h-px bg-ink-100"></div>
+      </div>
+
+      <!-- App Products -->
+      <div class="reveal-fade-up">
+        <h3 class="text-phi-xl text-ink-900 mb-fib-4 font-semibold">应用产品</h3>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <a
+            v-for="product in appProducts"
+            :key="product.id"
+            :href="product.url"
+            :target="product.url.startsWith('http') ? '_blank' : undefined"
+            :rel="product.url.startsWith('http') ? 'noopener noreferrer' : undefined"
+            class="group card-sketchy p-5 flex items-start gap-4 hover:shadow-paper-hover transition-all"
+            data-testid="app-product-card"
+          >
+            <div
+              class="w-10 h-10 rounded-lg flex-shrink-0 flex items-center justify-center border-sketchy"
+              :style="{ backgroundColor: product.bgColor }"
+            >
+              <svg class="w-5 h-5 text-cream-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="productIconPaths[product.icon] || productIconPaths.api" />
+              </svg>
+            </div>
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-2 mb-1">
+                <h4 class="text-ink-900 font-semibold group-hover:text-gradient-ochre transition-colors">{{ product.name }}</h4>
+                <span class="text-xs text-ink-400 border-sketchy-light px-2 py-0.5">{{ product.tagline }}</span>
+              </div>
+              <p class="text-sm text-ink-500 line-clamp-2">{{ product.description }}</p>
+            </div>
+            <svg class="w-4 h-4 text-ink-300 group-hover:text-ochre group-hover:translate-x-1 transition-all flex-shrink-0 mt-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </a>
+        </div>
       </div>
     </div>
   </section>

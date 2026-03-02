@@ -38,13 +38,13 @@ describe('PortalLinks', () => {
       const wrapper = mountComponent()
       const heading = wrapper.find('h2')
       expect(heading.exists()).toBe(true)
-      expect(heading.text()).toContain('知识门户')
+      expect(heading.text()).toContain('资源中心')
     })
 
     it('should have a subtitle describing the portal purpose', () => {
       const wrapper = mountComponent()
       const text = wrapper.text()
-      expect(text).toContain('一站式访问')
+      expect(text).toContain('为使用 Lurus 的开发者精选')
     })
   })
 

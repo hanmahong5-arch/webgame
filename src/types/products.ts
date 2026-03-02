@@ -51,6 +51,8 @@ export interface Product {
   bgColor: string
   features: string[]
   stats: ProductStats
+  /** Infrastructure layer ('infra') or application product ('app') */
+  layer: 'infra' | 'app'
   /** Optional showcase area configuration for visual demo in card */
   showcase?: ProductShowcase
 }

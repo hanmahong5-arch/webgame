@@ -2,23 +2,27 @@ import { describe, it, expect } from 'vitest'
 import { products, productIconPaths, curlExample } from './products'
 
 describe('products', () => {
-  it('should export exactly 4 products', () => {
-    expect(products).toHaveLength(4)
+  it('should export exactly 6 products', () => {
+    expect(products).toHaveLength(6)
   })
 
-  it('should contain the 4 core products: api, gushen, webmail, switch', () => {
+  it('should contain all core products: api, gushen, webmail, switch, acest, memx', () => {
     const ids = products.map((p) => p.id)
     expect(ids).toContain('api')
     expect(ids).toContain('gushen')
     expect(ids).toContain('webmail')
     expect(ids).toContain('switch')
+    expect(ids).toContain('acest')
+    expect(ids).toContain('memx')
   })
 
   it('should have valid URLs for each product', () => {
     products.forEach((product) => {
-      if (product.url !== '#') {
-        expect(product.url).toMatch(/^https?:\/\//)
-      }
+      // URLs can be external (https://), internal paths (/...), or placeholder (#)
+      const isExternal = /^https?:\/\//.test(product.url)
+      const isInternalPath = product.url.startsWith('/')
+      const isPlaceholder = product.url === '#'
+      expect(isExternal || isInternalPath || isPlaceholder).toBe(true)
     })
   })
 
@@ -56,8 +60,9 @@ describe('products', () => {
   })
 
   describe('showcase data', () => {
-    it('should have showcase field for all products', () => {
-      products.forEach((product) => {
+    it('should have showcase field for infra products', () => {
+      const infraProducts = products.filter((p) => p.layer === 'infra')
+      infraProducts.forEach((product) => {
         expect(product.showcase).toBeDefined()
         expect(product.showcase?.type).toBeTruthy()
       })

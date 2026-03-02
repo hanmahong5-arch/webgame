@@ -105,13 +105,13 @@ describe('HeroSection', () => {
     it('should render colored dots for each product', () => {
       const wrapper = mount(HeroSection)
 
-      // Each product has a colored dot (w-3 h-3 rounded-full)
-      const dots = wrapper.findAll('.w-3.h-3.rounded-full')
-      // Filter out decorative floating dots (those have bg-ochre/20 class)
-      const productDots = dots.filter(
+      // Infra products use w-3 h-3 dots; app products use w-2.5 h-2.5 dots
+      const infraDots = wrapper.findAll('.w-3.h-3.rounded-full').filter(
         (d) => !d.classes().some((c) => c.includes('animate-float') || c.includes('bg-ochre'))
       )
-      expect(productDots.length).toBe(4)
+      const appDots = wrapper.findAll('.w-2\\.5.h-2\\.5.rounded-full')
+      // Total product dots = infra (2) + app (4) = 6
+      expect(infraDots.length + appDots.length).toBe(6)
     })
   })
 })

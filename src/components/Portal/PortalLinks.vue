@@ -53,7 +53,7 @@ const handleDragEnd = () => {
 </script>
 
 <template>
-  <section id="portal" aria-label="知识门户" class="py-fib-7 bg-cream-100 relative overflow-hidden">
+  <section id="portal" aria-label="资源中心" class="py-fib-7 bg-cream-100 relative overflow-hidden">
     <!-- Background texture -->
     <div class="absolute inset-0 opacity-[0.02]" aria-hidden="true" style="background-image: linear-gradient(#A89B8B 1px, transparent 1px), linear-gradient(90deg, #A89B8B 1px, transparent 1px); background-size: 34px 34px;"></div>
 
@@ -67,10 +67,10 @@ const handleDragEnd = () => {
       <!-- Section Header -->
       <div class="text-center mb-fib-6 reveal-fade-up">
         <h2 class="text-phi-2xl sm:text-phi-3xl text-ink-900 mb-fib-3 font-semibold">
-          知识门户
+          资源中心
         </h2>
         <p class="text-phi-xl text-ink-500 max-w-2xl mx-auto">
-          一站式访问学术、金融、科技、医疗、法律等专业资源
+          为使用 Lurus 的开发者精选的专业资源库
         </p>
       </div>
 

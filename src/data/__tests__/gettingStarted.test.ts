@@ -32,7 +32,7 @@ describe('gettingStartedItems', () => {
   it('should contain the expected item IDs', () => {
     const ids = gettingStartedItems.map((item) => item.id)
     expect(ids).toContain('api-docs')
-    expect(ids).toContain('portal')
+    expect(ids).toContain('download')
     expect(ids).toContain('gushen')
   })
 
@@ -46,10 +46,10 @@ describe('gettingStartedItems', () => {
     expect(gushen?.href).toMatch(/^https:\/\//)
   })
 
-  it('should mark portal as internal link', () => {
-    const portal = gettingStartedItems.find((i) => i.id === 'portal')
-    expect(portal?.external).toBe(false)
-    expect(portal?.href).toBe('#portal')
+  it('should mark download as internal link', () => {
+    const download = gettingStartedItems.find((i) => i.id === 'download')
+    expect(download?.external).toBe(false)
+    expect(download?.href).toBe('/download')
   })
 
   it('should have ariaLabel for every item', () => {

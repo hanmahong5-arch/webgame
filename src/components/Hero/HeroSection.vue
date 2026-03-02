@@ -3,7 +3,12 @@ import { products } from '../../data/products'
 import PrimaryButton from '../CTAs/PrimaryButton.vue'
 import SecondaryButton from '../CTAs/SecondaryButton.vue'
 
-const heroProducts = products.map((p) => ({
+const infraProducts = products.filter((p) => p.layer === 'infra').map((p) => ({
+  name: p.name,
+  color: p.bgColor,
+}))
+
+const appProducts = products.filter((p) => p.layer === 'app').map((p) => ({
   name: p.name,
   color: p.bgColor,
 }))
@@ -82,21 +87,38 @@ const floatingDots = [
             />
           </div>
 
-          <!-- Product Tags -->
+          <!-- Product Tags: infra group + app group -->
           <div>
-            <p class="text-sm text-ink-300 mb-fib-3">我们的产品</p>
-            <div class="flex flex-wrap gap-fib-3">
+            <p class="text-xs text-ink-300 mb-1.5 uppercase tracking-wide">核心基础设施</p>
+            <div class="flex flex-wrap gap-fib-3 mb-fib-4">
               <div
-                v-for="product in heroProducts"
+                v-for="product in infraProducts"
                 :key="product.name"
                 class="group px-5 py-2.5 border-sketchy bg-cream-100 hover:shadow-paper-hover transition-all cursor-pointer"
+                style="border-color: #C9A227;"
               >
                 <div class="flex items-center gap-2">
                   <div
                     class="w-3 h-3 rounded-full transition-all duration-300 group-hover:scale-125"
                     :style="{ backgroundColor: product.color }"
                   ></div>
-                  <span class="text-sm text-ink-700 group-hover:text-ink-900 transition-colors">{{ product.name }}</span>
+                  <span class="text-sm font-medium text-ink-700 group-hover:text-ink-900 transition-colors">{{ product.name }}</span>
+                </div>
+              </div>
+            </div>
+            <p class="text-xs text-ink-300 mb-1.5 uppercase tracking-wide">应用产品</p>
+            <div class="flex flex-wrap gap-fib-3">
+              <div
+                v-for="product in appProducts"
+                :key="product.name"
+                class="group px-4 py-2 border-sketchy-light bg-cream-100 hover:shadow-paper-hover transition-all cursor-pointer"
+              >
+                <div class="flex items-center gap-2">
+                  <div
+                    class="w-2.5 h-2.5 rounded-full transition-all duration-300 group-hover:scale-125"
+                    :style="{ backgroundColor: product.color }"
+                  ></div>
+                  <span class="text-sm text-ink-500 group-hover:text-ink-900 transition-colors">{{ product.name }}</span>
                 </div>
               </div>
             </div>

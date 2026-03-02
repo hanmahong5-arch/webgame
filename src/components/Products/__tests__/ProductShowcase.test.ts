@@ -45,16 +45,22 @@ describe('ProductShowcase', () => {
   })
 
   describe('product sub-cards', () => {
-    it('should render exactly 4 product cards', () => {
+    it('should render exactly 2 infra product cards', () => {
       const wrapper = mountComponent()
       const cards = wrapper.findAll('[data-testid="product-card"]')
+      expect(cards).toHaveLength(2)
+    })
+
+    it('should render exactly 4 app product mini cards', () => {
+      const wrapper = mountComponent()
+      const cards = wrapper.findAll('[data-testid="app-product-card"]')
       expect(cards).toHaveLength(4)
     })
 
-    it('should display product name for each card', () => {
+    it('should display product name for each infra card', () => {
       const wrapper = mountComponent()
       const cards = wrapper.findAll('[data-testid="product-card"]')
-      const expectedNames = ['Lurus API', 'GuShen', 'Webmail', 'Lurus Switch']
+      const expectedNames = ['Lurus API', 'Lurus Switch']
       cards.forEach((card, i) => {
         expect(card.text()).toContain(expectedNames[i])
       })
