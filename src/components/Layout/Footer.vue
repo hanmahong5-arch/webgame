@@ -161,6 +161,15 @@ const ICP_NUMBER = import.meta.env.VITE_ICP_NUMBER || '鲁ICP备2026000242号'
           >
             {{ ICP_NUMBER }}
           </a>
+          <a
+            href="https://www.beian.gov.cn/portal/registerSystemInfo?recordcode=37060002001239"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="hover:text-ink-500 transition-colors inline-flex items-center gap-1"
+          >
+            <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+            鲁公网安备37060002001239号
+          </a>
         </div>
       </div>
     </div>
