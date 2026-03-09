@@ -2,13 +2,16 @@
 import { ref, computed } from 'vue'
 import { portalCategories, type PortalLink } from '../../data/portalLinks'
 import { useTracking } from '../../composables/useTracking'
+import { useChatFeature } from '../../composables/useChatFeature'
 import { DRAG_MIME } from '../../utils/portalDrag'
 import CTABar from '../CTAs/CTABar.vue'
+import PortalChatPreview from './PortalChatPreview.vue'
 
 const PREVIEW_LINK_COUNT = 4
 const TOTAL_LINK_COUNT = 56
 
 const { track } = useTracking()
+const { isChatEnabled } = useChatFeature()
 const isExpanded = ref(false)
 
 const toggleExpand = () => {
@@ -78,6 +81,7 @@ const handleDragEnd = () => {
       <div
         data-testid="portal-content-layout"
         class="portal-content-layout"
+        :class="{ 'has-chat': isChatEnabled }"
       >
         <!-- Left: Portal Categories (60% on desktop when Chat enabled) -->
         <div class="portal-links-area">
@@ -152,6 +156,10 @@ const handleDragEnd = () => {
           </div>
         </div>
 
+        <!-- Right: Chat Preview (40% on desktop, hidden on mobile unless expanded) -->
+        <div v-if="isChatEnabled" class="portal-chat-area">
+          <PortalChatPreview />
+        </div>
       </div>
     </div>
 
@@ -182,6 +190,32 @@ const handleDragEnd = () => {
 .portal-category-card:hover {
   box-shadow: 4px 4px 0 var(--color-ink-100);
   transform: translate(-2px, -2px);
+}
+
+/* Grid layout: 60/40 split when chat is enabled */
+.portal-content-layout.has-chat {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 34px;
+}
+
+@media (min-width: 1024px) {
+  .portal-content-layout.has-chat {
+    grid-template-columns: 3fr 2fr;
+  }
+}
+
+.portal-chat-area {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .portal-chat-area {
+    display: block;
+    position: sticky;
+    top: 100px;
+    align-self: start;
+  }
 }
 
 /* Dragging feedback: reduce opacity on all links while one is being dragged */

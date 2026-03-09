@@ -3,7 +3,7 @@ import { stats } from '../../data/stats'
 </script>
 
 <template>
-  <section aria-label="平台统计数据" class="py-16 bg-cream-50 relative overflow-hidden">
+  <section aria-label="平台统计数据" class="py-fib-7 bg-cream-50 relative overflow-hidden">
     <!-- Decorative elements -->
     <div class="absolute top-8 left-8 doodle-corner opacity-30" aria-hidden="true"></div>
     <div class="absolute bottom-8 right-8 doodle-corner rotate-180 opacity-30" aria-hidden="true"></div>

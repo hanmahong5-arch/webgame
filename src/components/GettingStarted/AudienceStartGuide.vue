@@ -37,7 +37,7 @@ const paths = [
 </script>
 
 <template>
-  <section class="py-fib-6 bg-cream-100" aria-label="Getting Started">
+  <section class="py-fib-7 bg-cream-100" aria-label="Getting Started">
     <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="text-center mb-fib-5 reveal-fade-up">
         <h2 class="text-phi-2xl sm:text-phi-3xl text-ink-900 mb-fib-3 font-semibold">选择你的起点</h2>

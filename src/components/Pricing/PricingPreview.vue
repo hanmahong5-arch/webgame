@@ -23,7 +23,7 @@ const tiers = [
 </script>
 
 <template>
-  <section class="py-fib-6 bg-cream-50" aria-label="Pricing Preview">
+  <section class="py-fib-7 bg-cream-50" aria-label="Pricing Preview">
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
       <div class="text-center mb-fib-5 reveal-fade-up">
         <h2 class="text-phi-2xl sm:text-phi-3xl text-ink-900 mb-fib-3 font-semibold">透明定价，按需付费</h2>

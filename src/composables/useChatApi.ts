@@ -82,12 +82,24 @@ export const parseSSEChunk = (line: string): string | null => {
 }
 
 /**
+ * Validate API key is available before making requests
+ */
+function assertApiKey(): void {
+  const key = getApiKey()
+  if (!key) {
+    throw new NetworkError('未配置 API Key，请登录或联系管理员')
+  }
+}
+
+/**
  * Send message with timeout using AbortController (non-streaming)
  */
 const sendWithTimeout = async (
   messages: Array<{ role: string; content: string }>,
   model: string
 ): Promise<ChatApiResponse> => {
+  assertApiKey()
+
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS)
 
@@ -172,6 +184,8 @@ export const sendStreamMessage = async (
   onToken: (token: string) => void,
   abortSignal?: AbortSignal
 ): Promise<void> => {
+  assertApiKey()
+
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS)
 

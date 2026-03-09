@@ -50,7 +50,8 @@ export default {
         'fib-4': '21px',
         'fib-5': '34px',
         'fib-6': '55px',
-        'fib-7': '89px'
+        'fib-7': '89px',
+        'fib-8': '144px'
       },
       // Golden ratio aspect ratios
       aspectRatio: {

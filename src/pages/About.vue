@@ -2,37 +2,16 @@
 import { ref } from 'vue'
 import { useScrollReveal } from '../composables/useScrollReveal'
 import AdvantagesSection from '../components/About/AdvantagesSection.vue'
+import MissionVision from '../components/About/MissionVision.vue'
+import CredibilityStats from '../components/About/CredibilityStats.vue'
+import CoreValues from '../components/About/CoreValues.vue'
+import TechnologyBrief from '../components/About/TechnologyBrief.vue'
 import AnimatedTimeline from '../components/About/AnimatedTimeline.vue'
-import TechArchitecture from '../components/About/TechArchitecture.vue'
+import CareersSection from '../components/About/CareersSection.vue'
+import { MILESTONES } from '../data/about'
 
 const pageRef = ref<HTMLElement | null>(null)
 useScrollReveal(pageRef)
-
-const milestones = [
-  { year: '2024', event: '公司成立，确立 AI 基础设施服务方向' },
-  { year: '2025 Q1', event: 'Lurus API 网关上线，支持 OpenAI / Anthropic' },
-  { year: '2025 Q2', event: 'GuShen AI 量化交易平台发布' },
-  { year: '2025 Q3', event: '接入 50+ 模型，日均 API 调用突破百万' },
-  { year: '2026 Q1', event: 'Lurus Switch 桌面客户端发布，全平台覆盖' },
-]
-
-const values = [
-  {
-    title: '可靠稳定',
-    desc: '多节点部署，智能容灾，确保服务 7x24 小时稳定运行',
-    icon: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z',
-  },
-  {
-    title: '极致性能',
-    desc: '优化网络路由，就近接入，提供极低延迟的访问体验',
-    icon: 'M13 10V3L4 14h7v7l9-11h-7z',
-  },
-  {
-    title: '透明定价',
-    desc: '简单清晰的定价模式，按需付费，没有隐藏费用',
-    icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
-  },
-]
 </script>
 
 <template>
@@ -47,80 +26,34 @@ const values = [
           关于 Lurus
         </h1>
         <p class="text-phi-xl text-ink-500 max-w-2xl mx-auto">
-          让 AI 开发更简单、更稳定、更高效
+          让每个人都能简单、稳定地使用 AI
         </p>
       </div>
     </section>
 
+    <!-- Mission & Vision -->
+    <MissionVision />
+
+    <!-- Credibility Stats -->
+    <CredibilityStats />
+
+    <!-- Core Values -->
+    <CoreValues />
+
     <!-- Advantages + Ecosystem Graph -->
     <AdvantagesSection />
 
-    <!-- Platform Architecture -->
-    <TechArchitecture />
-
-    <!-- Mission -->
-    <section class="py-fib-6 bg-cream-50">
-      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="grid md:grid-cols-2 gap-fib-6 items-center reveal-fade-up">
-          <div>
-            <h2 class="text-phi-2xl font-hand font-bold text-ink-900 mb-fib-3">我们的使命</h2>
-            <p class="text-ink-500 leading-relaxed">
-              在 AI 技术快速发展的今天，开发者面临着 API 访问不稳定、多模型切换困难、
-              成本控制复杂等挑战。Lurus 致力于提供统一、稳定、高效的 AI 模型访问服务，
-              让开发者专注于创造价值，而不是解决基础设施问题。
-            </p>
-          </div>
-          <div class="border-sketchy bg-cream-100 p-fib-5">
-            <div class="grid grid-cols-2 gap-fib-5 text-center">
-              <div>
-                <div class="text-phi-2xl font-hand font-bold text-ochre mb-1">99.9%</div>
-                <div class="text-ink-400 text-sm">服务可用性</div>
-              </div>
-              <div>
-                <div class="text-phi-2xl font-hand font-bold text-ochre mb-1">50+</div>
-                <div class="text-ink-400 text-sm">支持模型</div>
-              </div>
-              <div>
-                <div class="text-phi-2xl font-hand font-bold text-ochre mb-1">&lt;100ms</div>
-                <div class="text-ink-400 text-sm">平均延迟</div>
-              </div>
-              <div>
-                <div class="text-phi-2xl font-hand font-bold text-ochre mb-1">24/7</div>
-                <div class="text-ink-400 text-sm">技术支持</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Core Values -->
-    <section class="py-fib-7 bg-cream-100">
-      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 class="text-phi-2xl font-hand font-bold text-ink-900 mb-fib-5 text-center reveal-fade-up">核心价值</h2>
-        <div class="grid md:grid-cols-3 gap-fib-5">
-          <div
-            v-for="v in values"
-            :key="v.title"
-            class="border-sketchy bg-cream-50 p-fib-5 reveal-fade-up"
-          >
-            <div class="w-12 h-12 border-sketchy bg-cream-100 flex items-center justify-center mb-fib-3">
-              <svg class="w-6 h-6 text-ochre" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="v.icon" />
-              </svg>
-            </div>
-            <h3 class="text-phi-lg font-hand font-bold text-ink-900 mb-fib-3">{{ v.title }}</h3>
-            <p class="text-ink-500 text-phi-base leading-relaxed">{{ v.desc }}</p>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <!-- Timeline -->
-    <AnimatedTimeline :milestones="milestones" />
+    <AnimatedTimeline :milestones="MILESTONES" />
+
+    <!-- Technology Brief -->
+    <TechnologyBrief />
+
+    <!-- Careers -->
+    <CareersSection />
 
     <!-- Contact -->
-    <section class="py-fib-6 bg-cream-50">
+    <section class="py-fib-7 bg-cream-100">
       <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center reveal-fade-up">
         <h2 class="text-phi-2xl font-hand font-bold text-ink-900 mb-fib-3">联系我们</h2>
         <p class="text-ink-500 mb-fib-5">

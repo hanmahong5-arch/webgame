@@ -5,10 +5,12 @@
 
 import { ref, computed } from 'vue'
 import type { ChatMessage } from '../types/chat'
+import { NetworkError } from '../types/chat'
 import { useChatPersist } from './useChatPersist'
 import { useChatApi, getErrorCode } from './useChatApi'
 import { useNetworkStatus } from './useNetworkStatus'
 import { chatModels, quickPrompts, chatConfig, DOCS_URL } from '../data/chatModels'
+import { checkRateLimit } from '../utils/rateLimiter'
 
 // Debounce settings from centralized config
 const DEBOUNCE_MS = chatConfig.debounceMs
@@ -78,6 +80,13 @@ export const useAIChat = () => {
   const sendMessage = async (content?: string) => {
     const messageContent = (content || inputMessage.value).trim()
     if (!messageContent) return
+
+    // Rate limit check
+    const rateResult = checkRateLimit()
+    if (!rateResult.allowed) {
+      const waitSec = Math.ceil((rateResult.retryAfterMs || 0) / 1000)
+      throw new NetworkError(`请求过于频繁，请 ${waitSec} 秒后再试`)
+    }
 
     // Debounce check
     const now = Date.now()
