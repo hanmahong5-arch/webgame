@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, nextTick, onMounted, onUnmounted } from 'vue'
-import { navItems } from '../../data/navItems'
+import { navItems, navIconPaths } from '../../data/navItems'
 import NavDropdown from './NavDropdown.vue'
 import AccountBadge from '../Portal/AccountBadge.vue'
 import { useActiveSection } from '../../composables/useActiveSection'
@@ -22,8 +22,9 @@ const displayInitial = (u: NonNullable<typeof userInfo.value>) =>
 
 // Map nav items to their corresponding section IDs
 const sectionMap: Record<string, string> = {
-  '产品': 'products',
-  '资源': 'portal',
+  '探索者': 'audience-hero',
+  '创业者': 'audience-hero',
+  '构建者': 'audience-hero',
 }
 
 const isNavItemActive = (name: string): boolean => {
@@ -152,6 +153,8 @@ function handleLogout() {
                 :label="link.name"
                 :items="link.children"
                 :active="isNavItemActive(link.name)"
+                :footer-link="link.footerLink"
+                :solution-tags="link.solutionTags"
               />
               <!-- External link -->
               <a
@@ -184,6 +187,14 @@ function handleLogout() {
 
           <!-- CTA Buttons -->
           <div class="hidden md:flex items-center gap-3">
+            <a
+              href="https://docs.lurus.cn"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="px-4 py-2 text-ink-500 hover:text-ink-900 transition-colors text-sm"
+            >
+              文档
+            </a>
             <template v-if="isLoggedIn && userInfo">
               <!-- Logged in: Show user menu -->
               <div class="flex items-center gap-3">
@@ -280,7 +291,7 @@ function handleLogout() {
                   <div class="pt-4 pb-2 px-4 text-xs font-semibold text-ink-300 uppercase tracking-wider">
                     {{ link.name }}
                   </div>
-                  <template v-for="child in link.children" :key="child.path">
+                  <template v-for="child in link.children" :key="child.path + child.name">
                     <a
                       v-if="child.external"
                       :href="child.path"
@@ -289,11 +300,18 @@ function handleLogout() {
                       class="mobile-nav-link pl-6"
                       @click="closeMobileMenu"
                     >
-                      <span class="flex items-center gap-2">
-                        {{ child.name }}
-                        <svg class="w-3.5 h-3.5 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                      <span class="flex items-center gap-3">
+                        <svg
+                          v-if="child.icon && navIconPaths[child.icon]"
+                          class="w-5 h-5 text-ochre shrink-0"
+                          fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"
+                        >
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="navIconPaths[child.icon]" />
                         </svg>
+                        <span>
+                          <span class="block text-ink-700 font-medium">{{ child.name }}</span>
+                          <span v-if="child.desc" class="block text-xs text-ink-400">{{ child.desc }}</span>
+                        </span>
                       </span>
                     </a>
                     <router-link
@@ -302,7 +320,19 @@ function handleLogout() {
                       class="mobile-nav-link pl-6"
                       @click="closeMobileMenu"
                     >
-                      {{ child.name }}
+                      <span class="flex items-center gap-3">
+                        <svg
+                          v-if="child.icon && navIconPaths[child.icon]"
+                          class="w-5 h-5 text-ochre shrink-0"
+                          fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"
+                        >
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="navIconPaths[child.icon]" />
+                        </svg>
+                        <span>
+                          <span class="block text-ink-700 font-medium">{{ child.name }}</span>
+                          <span v-if="child.desc" class="block text-xs text-ink-400">{{ child.desc }}</span>
+                        </span>
+                      </span>
                     </router-link>
                     <a
                       v-else
@@ -310,7 +340,19 @@ function handleLogout() {
                       class="mobile-nav-link pl-6"
                       @click="closeMobileMenu"
                     >
-                      {{ child.name }}
+                      <span class="flex items-center gap-3">
+                        <svg
+                          v-if="child.icon && navIconPaths[child.icon]"
+                          class="w-5 h-5 text-ochre shrink-0"
+                          fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true"
+                        >
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="navIconPaths[child.icon]" />
+                        </svg>
+                        <span>
+                          <span class="block text-ink-700 font-medium">{{ child.name }}</span>
+                          <span v-if="child.desc" class="block text-xs text-ink-400">{{ child.desc }}</span>
+                        </span>
+                      </span>
                     </a>
                   </template>
                 </template>

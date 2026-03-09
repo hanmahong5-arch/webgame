@@ -1,34 +1,137 @@
 /**
  * Navigation Items Data
- * Centralized navigation configuration for Navbar component
+ * Audience-based navigation: Explorers / Entrepreneurs / Builders
  */
 
 import type { NavDropdownItem } from '../types/navigation'
 
 export const navItems: NavDropdownItem[] = [
   {
-    name: '产品',
-    path: '#products',
+    name: '探索者',
+    path: '/for-explorers',
     children: [
-      { name: 'API Gateway', path: 'https://api.lurus.cn', external: true },
-      { name: 'GuShen', path: 'https://gushen.lurus.cn', external: true },
-      { name: 'Switch', path: '/download' },
-      { name: 'MemX', path: '/download#memx' },
-      { name: 'Docs', path: 'https://docs.lurus.cn', external: true },
+      {
+        name: 'ACEST Desktop',
+        desc: 'AI 桌面助手，全局快捷键唤醒智能',
+        path: '/download',
+        icon: 'brain',
+      },
+      {
+        name: 'GuShen 谷神',
+        desc: '自然语言驱动的 AI 量化交易',
+        path: 'https://gushen.lurus.cn',
+        external: true,
+        icon: 'chart',
+      },
+      {
+        name: 'Lurus Switch',
+        desc: '一键管理 AI CLI 工具',
+        path: '/download',
+        icon: 'desktop',
+      },
+      {
+        name: 'MemX',
+        desc: '跨会话持久 AI 记忆',
+        path: '/download#memx',
+        icon: 'database',
+      },
+      {
+        name: 'Lurus Mail',
+        desc: '安全加密个人邮箱',
+        path: 'https://mail.lurus.cn',
+        external: true,
+        icon: 'mail',
+      },
     ],
+    footerLink: { name: '查看个人版全部方案 →', path: '/for-explorers' },
   },
   {
-    name: '解决方案',
-    path: '/solutions',
+    name: '创业者',
+    path: '/for-entrepreneurs',
+    children: [
+      {
+        name: 'Lurus API',
+        desc: 'LLM 统一网关，50+ 模型一个端点',
+        path: 'https://api.lurus.cn',
+        external: true,
+        icon: 'api',
+      },
+      {
+        name: 'Lurus Mail',
+        desc: '企业邮件，多域名管理',
+        path: 'https://mail.lurus.cn',
+        external: true,
+        icon: 'mail',
+      },
+      {
+        name: 'Lurus Switch',
+        desc: '团队 AI 工具统一管理',
+        path: '/download',
+        icon: 'desktop',
+      },
+      {
+        name: 'GuShen Pro',
+        desc: '机构级量化交易服务',
+        path: 'https://gushen.lurus.cn',
+        external: true,
+        icon: 'chart',
+      },
+    ],
+    solutionTags: ['金融', '学术', '医疗', '法律', '工程'],
+    footerLink: { name: '查看企业版全部方案 →', path: '/for-entrepreneurs' },
   },
   {
-    name: '资源',
-    path: '#resources',
+    name: '构建者',
+    path: '/for-builders',
     children: [
-      { name: '文档', path: 'https://docs.lurus.cn', external: true },
+      {
+        name: 'Lurus Identity',
+        desc: '即插即用的认证 + 订阅 + 计费',
+        path: 'https://identity.lurus.cn',
+        external: true,
+        icon: 'shield',
+      },
+      {
+        name: 'MemX SDK',
+        desc: '为你的产品添加跨会话持久记忆',
+        path: '/download#memx',
+        icon: 'database',
+      },
+      {
+        name: 'Lurus API (OEM)',
+        desc: '白标 LLM 网关，私有化部署',
+        path: 'https://api.lurus.cn',
+        external: true,
+        icon: 'api',
+      },
+      {
+        name: 'Lurus Notification',
+        desc: '站内信 + 邮件 + 推送通知中枢',
+        path: '#',
+        icon: 'bell',
+      },
     ],
+    footerLink: { name: '联系我们获取定制方案 →', path: '/about' },
   },
-  { name: '下载', path: '/download' },
   { name: '定价', path: '/pricing' },
   { name: '关于', path: '/about' },
 ]
+
+/**
+ * SVG icon paths for navigation dropdown icons
+ */
+export const navIconPaths: Record<string, string> = {
+  brain:
+    'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z',
+  chart:
+    'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
+  desktop:
+    'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
+  database:
+    'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4',
+  mail: 'M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
+  api: 'M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
+  shield:
+    'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z',
+  bell: 'M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9',
+}

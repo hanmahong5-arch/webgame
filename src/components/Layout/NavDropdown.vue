@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
-import type { NavItem } from '../../types/navigation'
+import type { NavItem, NavFooterLink } from '../../types/navigation'
+import { navIconPaths } from '../../data/navItems'
 
 defineProps<{
   label: string
   items: NavItem[]
   active?: boolean
+  footerLink?: NavFooterLink
+  solutionTags?: string[]
 }>()
 
 const isOpen = ref(false)
@@ -28,7 +31,6 @@ const toggle = () => {
   else open()
 }
 
-// Hover with delay to prevent flicker
 const handleMouseEnter = () => {
   if (hoverTimeout) { clearTimeout(hoverTimeout); hoverTimeout = null }
   isOpen.value = true
@@ -105,42 +107,143 @@ onUnmounted(() => {
     >
       <div
         v-if="isOpen"
-        class="absolute top-full left-0 mt-2 py-2 min-w-48 bg-cream-50 border-2 border-ink-200 rounded-lg shadow-lg z-[60]"
+        class="absolute top-full left-1/2 -translate-x-1/2 mt-2 w-[420px] bg-cream-50 border-2 border-ink-200 rounded-lg shadow-lg z-[60] overflow-hidden"
       >
-        <template v-for="item in items" :key="item.path">
-          <a
-            v-if="item.external"
-            :href="item.path"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="block px-4 py-2.5 text-ink-500 hover:text-ink-900 hover:bg-cream-200 transition-colors"
-            @click="handleNavigate"
-          >
-            <span class="flex items-center gap-2">
-              {{ item.name }}
-              <svg class="w-3.5 h-3.5 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-              </svg>
-            </span>
-          </a>
+        <!-- Product items grid -->
+        <div class="grid grid-cols-2 gap-1 p-3">
+          <template v-for="item in items" :key="item.path + item.name">
+            <a
+              v-if="item.external"
+              :href="item.path"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="mega-dropdown-item"
+              @click="handleNavigate"
+            >
+              <div class="flex items-start gap-3">
+                <svg
+                  v-if="item.icon && navIconPaths[item.icon]"
+                  class="w-5 h-5 mt-0.5 text-ochre shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="navIconPaths[item.icon]" />
+                </svg>
+                <div class="min-w-0">
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-sm font-medium text-ink-800">{{ item.name }}</span>
+                    <svg class="w-3 h-3 text-ink-300 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                  </div>
+                  <p v-if="item.desc" class="text-xs text-ink-400 mt-0.5 leading-snug">{{ item.desc }}</p>
+                </div>
+              </div>
+            </a>
+            <router-link
+              v-else-if="item.path.startsWith('/')"
+              :to="item.path"
+              class="mega-dropdown-item"
+              @click="handleNavigate"
+            >
+              <div class="flex items-start gap-3">
+                <svg
+                  v-if="item.icon && navIconPaths[item.icon]"
+                  class="w-5 h-5 mt-0.5 text-ochre shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="navIconPaths[item.icon]" />
+                </svg>
+                <div class="min-w-0">
+                  <span class="text-sm font-medium text-ink-800">{{ item.name }}</span>
+                  <p v-if="item.desc" class="text-xs text-ink-400 mt-0.5 leading-snug">{{ item.desc }}</p>
+                </div>
+              </div>
+            </router-link>
+            <a
+              v-else
+              :href="item.path"
+              class="mega-dropdown-item"
+              @click="handleNavigate"
+            >
+              <div class="flex items-start gap-3">
+                <svg
+                  v-if="item.icon && navIconPaths[item.icon]"
+                  class="w-5 h-5 mt-0.5 text-ochre shrink-0"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="currentColor"
+                  aria-hidden="true"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="navIconPaths[item.icon]" />
+                </svg>
+                <div class="min-w-0">
+                  <span class="text-sm font-medium text-ink-800">{{ item.name }}</span>
+                  <p v-if="item.desc" class="text-xs text-ink-400 mt-0.5 leading-snug">{{ item.desc }}</p>
+                </div>
+              </div>
+            </a>
+          </template>
+        </div>
+
+        <!-- Solution tags (for business audience) -->
+        <div v-if="solutionTags && solutionTags.length > 0" class="px-4 pb-2">
+          <p class="text-xs text-ink-300 mb-1.5">行业方案</p>
+          <div class="flex flex-wrap gap-1.5">
+            <router-link
+              v-for="tag in solutionTags"
+              :key="tag"
+              to="/solutions"
+              class="text-xs px-2.5 py-1 bg-cream-200 text-ink-500 rounded hover:bg-cream-300 hover:text-ink-700 transition-colors"
+              @click="handleNavigate"
+            >
+              {{ tag }}
+            </router-link>
+          </div>
+        </div>
+
+        <!-- Footer link -->
+        <div v-if="footerLink" class="border-t border-ink-100 px-4 py-2.5">
           <router-link
-            v-else-if="item.path.startsWith('/')"
-            :to="item.path"
-            class="block px-4 py-2.5 text-ink-500 hover:text-ink-900 hover:bg-cream-200 transition-colors"
+            v-if="footerLink.path.startsWith('/')"
+            :to="footerLink.path"
+            class="text-sm text-ochre hover:text-ochre/80 font-medium transition-colors"
             @click="handleNavigate"
           >
-            {{ item.name }}
+            {{ footerLink.name }}
           </router-link>
           <a
             v-else
-            :href="item.path"
-            class="block px-4 py-2.5 text-ink-500 hover:text-ink-900 hover:bg-cream-200 transition-colors"
+            :href="footerLink.path"
+            :target="footerLink.external ? '_blank' : undefined"
+            :rel="footerLink.external ? 'noopener noreferrer' : undefined"
+            class="text-sm text-ochre hover:text-ochre/80 font-medium transition-colors"
             @click="handleNavigate"
           >
-            {{ item.name }}
+            {{ footerLink.name }}
           </a>
-        </template>
+        </div>
       </div>
     </Transition>
   </div>
 </template>
+
+<style scoped>
+@reference "../../styles/main.css";
+
+.mega-dropdown-item {
+  display: block;
+  padding: 0.625rem 0.75rem;
+  border-radius: 0.5rem;
+  transition: all 0.15s ease;
+}
+
+.mega-dropdown-item:hover {
+  background-color: var(--color-cream-200);
+}
+</style>

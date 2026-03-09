@@ -1,18 +1,30 @@
 <script setup lang="ts">
 const currentYear = new Date().getFullYear()
 
-const products = [
+const explorers = [
+  { name: 'ACEST Desktop', href: '/download', description: 'AI 桌面助手' },
+  { name: 'GuShen 谷神', href: 'https://gushen.lurus.cn', description: 'AI 量化交易' },
+  { name: 'Lurus Switch', href: '/download', description: 'AI 工具管理器' },
+  { name: 'MemX', href: '/download#memx', description: 'AI 记忆扩展' },
+]
+
+const entrepreneurs = [
   { name: 'Lurus API', href: 'https://api.lurus.cn', description: 'LLM 统一网关' },
-  { name: 'GuShen', href: 'https://gushen.lurus.cn', description: 'AI 量化交易' },
-  { name: 'Lurus Switch', href: '#', description: '智能客户端' },
-  { name: 'MemX', href: '/download#memx', description: 'AI 记忆增强框架' },
-  { name: 'Lurus Docs', href: 'https://docs.lurus.cn', description: '文档中心' },
+  { name: 'Lurus Mail', href: 'https://mail.lurus.cn', description: '企业邮件' },
+  { name: 'GuShen Pro', href: 'https://gushen.lurus.cn', description: '机构量化服务' },
+]
+
+const builders = [
+  { name: 'Lurus Identity', href: 'https://identity.lurus.cn', description: '身份与计费平台' },
+  { name: 'MemX SDK', href: '/download#memx', description: 'AI 记忆基础设施' },
+  { name: 'API (OEM)', href: 'https://api.lurus.cn', description: '白标 LLM 网关' },
 ]
 
 const resources = [
-  { name: 'API 文档', href: 'https://docs.lurus.cn/api' },
-  { name: '快速入门', href: 'https://docs.lurus.cn/quickstart' },
+  { name: 'API 文档', href: 'https://docs.lurus.cn' },
+  { name: '快速入门', href: 'https://docs.lurus.cn/guide/quickstart' },
   { name: '定价方案', href: '/pricing' },
+  { name: '下载中心', href: '/download' },
 ]
 
 const company = [
@@ -33,48 +45,79 @@ const ICP_NUMBER = import.meta.env.VITE_ICP_NUMBER || '鲁ICP备2026000242号'
 
     <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       <!-- Main Footer Content -->
-      <div class="py-fib-6 grid grid-cols-2 md:grid-cols-5 gap-fib-5 lg:gap-fib-6">
+      <div class="py-fib-6 grid grid-cols-2 md:grid-cols-6 gap-fib-5 lg:gap-fib-5">
         <!-- Brand Column -->
-        <div class="col-span-2">
+        <div class="col-span-2 md:col-span-2">
           <div class="flex items-center gap-3 mb-fib-4">
             <div class="w-10 h-10 rounded-lg bg-ochre flex items-center justify-center border-2 border-ink-300">
               <span class="text-cream-50 font-hand font-bold text-xl">L</span>
             </div>
             <span class="text-ink-900 font-hand font-bold text-2xl">Lurus</span>
           </div>
-          <p class="text-ink-500 mb-fib-4 max-w-sm leading-relaxed">
-            为开发者提供一站式 AI 基础设施服务，从模型接入到智能应用，助力创新加速落地。
+          <p class="text-ink-500 mb-fib-4 max-w-sm leading-relaxed text-sm">
+            AI 基础设施生态 — 从个人桌面到企业平台，为每一种可能提供底座。
           </p>
         </div>
 
-        <!-- Products Column -->
+        <!-- Explorers Column -->
         <div>
-          <h3 class="text-phi-xl text-ink-900 mb-fib-4 font-semibold">产品</h3>
-          <ul class="space-y-fib-3">
-            <li v-for="item in products" :key="item.name">
+          <h3 class="text-sm text-ink-900 mb-fib-3 font-semibold">探索者</h3>
+          <ul class="space-y-2.5">
+            <li v-for="item in explorers" :key="item.name">
               <a
                 :href="item.href"
                 :target="item.href.startsWith('http') ? '_blank' : undefined"
                 :rel="item.href.startsWith('http') ? 'noopener noreferrer' : undefined"
-                class="group flex flex-col"
+                class="group"
               >
-                <span class="text-ink-500 group-hover:text-ink-900 transition-colors">{{ item.name }}</span>
-                <span class="text-xs text-ink-300">{{ item.description }}</span>
+                <span class="text-sm text-ink-500 group-hover:text-ink-900 transition-colors">{{ item.name }}</span>
               </a>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Entrepreneurs Column -->
+        <div>
+          <h3 class="text-sm text-ink-900 mb-fib-3 font-semibold">创业者</h3>
+          <ul class="space-y-2.5">
+            <li v-for="item in entrepreneurs" :key="item.name">
+              <a
+                :href="item.href"
+                :target="item.href.startsWith('http') ? '_blank' : undefined"
+                :rel="item.href.startsWith('http') ? 'noopener noreferrer' : undefined"
+                class="group"
+              >
+                <span class="text-sm text-ink-500 group-hover:text-ink-900 transition-colors">{{ item.name }}</span>
+              </a>
+            </li>
+            <li>
+              <h3 class="text-sm text-ink-900 mt-fib-3 mb-2 font-semibold">构建者</h3>
+              <ul class="space-y-2.5">
+                <li v-for="item in builders" :key="item.name">
+                  <a
+                    :href="item.href"
+                    :target="item.href.startsWith('http') ? '_blank' : undefined"
+                    :rel="item.href.startsWith('http') ? 'noopener noreferrer' : undefined"
+                    class="group"
+                  >
+                    <span class="text-sm text-ink-500 group-hover:text-ink-900 transition-colors">{{ item.name }}</span>
+                  </a>
+                </li>
+              </ul>
             </li>
           </ul>
         </div>
 
         <!-- Resources Column -->
         <div>
-          <h3 class="text-phi-xl text-ink-900 mb-fib-4 font-semibold">资源</h3>
-          <ul class="space-y-fib-3">
+          <h3 class="text-sm text-ink-900 mb-fib-3 font-semibold">资源</h3>
+          <ul class="space-y-2.5">
             <li v-for="item in resources" :key="item.name">
               <a
                 :href="item.href"
                 :target="item.href.startsWith('http') ? '_blank' : undefined"
                 :rel="item.href.startsWith('http') ? 'noopener noreferrer' : undefined"
-                class="text-ink-500 hover:text-ink-900 transition-colors"
+                class="text-sm text-ink-500 hover:text-ink-900 transition-colors"
               >
                 {{ item.name }}
               </a>
@@ -84,20 +127,20 @@ const ICP_NUMBER = import.meta.env.VITE_ICP_NUMBER || '鲁ICP备2026000242号'
 
         <!-- Company Column -->
         <div>
-          <h3 class="text-phi-xl text-ink-900 mb-fib-4 font-semibold">公司</h3>
-          <ul class="space-y-fib-3">
+          <h3 class="text-sm text-ink-900 mb-fib-3 font-semibold">公司</h3>
+          <ul class="space-y-2.5">
             <li v-for="item in company" :key="item.name">
               <router-link
                 v-if="item.href.startsWith('/')"
                 :to="item.href"
-                class="text-ink-500 hover:text-ink-900 transition-colors"
+                class="text-sm text-ink-500 hover:text-ink-900 transition-colors"
               >
                 {{ item.name }}
               </router-link>
               <a
                 v-else
                 :href="item.href"
-                class="text-ink-500 hover:text-ink-900 transition-colors"
+                class="text-sm text-ink-500 hover:text-ink-900 transition-colors"
               >
                 {{ item.name }}
               </a>

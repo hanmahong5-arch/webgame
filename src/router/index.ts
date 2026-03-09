@@ -27,6 +27,21 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../pages/Solutions.vue')
   },
   {
+    path: '/for-explorers',
+    name: 'ForExplorers',
+    component: () => import('../pages/ForExplorers.vue')
+  },
+  {
+    path: '/for-entrepreneurs',
+    name: 'ForEntrepreneurs',
+    component: () => import('../pages/ForEntrepreneurs.vue')
+  },
+  {
+    path: '/for-builders',
+    name: 'ForBuilders',
+    component: () => import('../pages/ForBuilders.vue')
+  },
+  {
     path: '/terms',
     name: 'Terms',
     component: () => import('../pages/Terms.vue')
