@@ -1,8 +1,7 @@
 <script setup lang="ts">
 import { defineAsyncComponent, ref, nextTick, onMounted, onUnmounted } from 'vue'
 import { RouterView } from 'vue-router'
-import Navbar from './components/Layout/Navbar.vue'
-import Footer from './components/Layout/Footer.vue'
+import AppShell from './components/Layout/AppShell.vue'
 import { useChatFeature } from './composables/useChatFeature'
 import { useTracking } from './composables/useTracking'
 
@@ -63,7 +62,7 @@ const ChatFloatingTrigger = defineAsyncComponent(
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col bg-surface-dark">
+  <div>
     <!-- Skip Link for accessibility -->
     <a
       href="#main-content"
@@ -72,11 +71,9 @@ const ChatFloatingTrigger = defineAsyncComponent(
       跳至主内容
     </a>
 
-    <Navbar />
-    <main id="main-content" class="flex-1" tabindex="-1">
+    <AppShell>
       <RouterView />
-    </main>
-    <Footer />
+    </AppShell>
 
     <!-- AI Chat: conditional load via env flag (ADR-001) -->
     <template v-if="isChatEnabled">

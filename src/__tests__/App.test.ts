@@ -9,8 +9,16 @@ import { mount } from '@vue/test-utils'
 import { defineComponent, h } from 'vue'
 
 // Stub child components to isolate App.vue logic
-const NavbarStub = defineComponent({ name: 'Navbar', render: () => h('nav', 'navbar') })
-const FooterStub = defineComponent({ name: 'AppFooter', render: () => h('footer', 'footer') })
+const AppShellStub = defineComponent({
+  name: 'AppShell',
+  render() {
+    return h('div', { class: 'app-shell' }, [
+      h('nav', 'topbar'),
+      h('main', { id: 'main-content' }, this.$slots.default?.()),
+      h('footer', 'footer'),
+    ])
+  },
+})
 const RouterViewStub = defineComponent({ name: 'RouterView', render: () => h('div', 'router-view') })
 
 const ChatSidebarStub = defineComponent({
@@ -44,8 +52,7 @@ describe('App.vue conditional Chat loading', () => {
     const wrapper = mount(App, {
       global: {
         stubs: {
-          Navbar: NavbarStub,
-          Footer: FooterStub,
+          AppShell: AppShellStub,
           RouterView: RouterViewStub,
           AIChatSidebar: ChatSidebarStub,
           ChatFloatingTrigger: ChatTriggerStub,
@@ -65,8 +72,7 @@ describe('App.vue conditional Chat loading', () => {
     const wrapper = mount(App, {
       global: {
         stubs: {
-          Navbar: NavbarStub,
-          Footer: FooterStub,
+          AppShell: AppShellStub,
           RouterView: RouterViewStub,
           AIChatSidebar: ChatSidebarStub,
           ChatFloatingTrigger: ChatTriggerStub,
@@ -81,7 +87,7 @@ describe('App.vue conditional Chat loading', () => {
     expect(wrapper.find('[data-testid="chat-trigger"]').exists()).toBe(true)
   })
 
-  it('should always render Navbar, main content, and Footer regardless of Chat flag', async () => {
+  it('should always render AppShell with main content regardless of Chat flag', async () => {
     vi.stubEnv('VITE_CHAT_ENABLED', 'false')
 
     const { default: App } = await import('../App.vue')
@@ -89,8 +95,7 @@ describe('App.vue conditional Chat loading', () => {
     const wrapper = mount(App, {
       global: {
         stubs: {
-          Navbar: NavbarStub,
-          Footer: FooterStub,
+          AppShell: AppShellStub,
           RouterView: RouterViewStub,
           AIChatSidebar: true,
           ChatFloatingTrigger: true,
@@ -98,8 +103,7 @@ describe('App.vue conditional Chat loading', () => {
       },
     })
 
-    expect(wrapper.find('nav').exists()).toBe(true)
-    expect(wrapper.find('footer').exists()).toBe(true)
+    expect(wrapper.find('.app-shell').exists()).toBe(true)
     expect(wrapper.find('#main-content').exists()).toBe(true)
   })
 
@@ -111,8 +115,7 @@ describe('App.vue conditional Chat loading', () => {
     const wrapper = mount(App, {
       global: {
         stubs: {
-          Navbar: NavbarStub,
-          Footer: FooterStub,
+          AppShell: AppShellStub,
           RouterView: RouterViewStub,
           AIChatSidebar: true,
           ChatFloatingTrigger: true,

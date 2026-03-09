@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import PainPointHero from '../components/Hero/PainPointHero.vue'
+import ValuePropositionHero from '../components/Hero/ValuePropositionHero.vue'
 import MediaShowcase from '../components/Products/MediaShowcase.vue'
 import AIToolsNarrative from '../components/Features/AIToolsNarrative.vue'
 import PortalLinks from '../components/Portal/PortalLinks.vue'
@@ -17,8 +17,8 @@ useScrollReveal(pageRef)
 
 <template>
   <div ref="pageRef">
-    <!-- S1: Pain Point Hero — Start from user problems -->
-    <PainPointHero />
+    <!-- S1: Value Proposition Hero -->
+    <ValuePropositionHero />
 
     <SectionDivider />
 

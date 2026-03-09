@@ -66,7 +66,7 @@ const products = [
 <template>
   <div ref="pageRef">
     <!-- Hero -->
-    <section class="relative overflow-hidden bg-cream-50 pt-28 pb-fib-7">
+    <section class="relative overflow-hidden bg-cream-50 py-fib-7">
       <div class="absolute inset-0 opacity-[0.03]" style="background-image: linear-gradient(#A89B8B 1px, transparent 1px), linear-gradient(90deg, #A89B8B 1px, transparent 1px); background-size: 34px 34px;"></div>
       <div class="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <span class="inline-block text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-full mb-fib-4" style="background-color: #5C7A8B20; color: #5C7A8B;">

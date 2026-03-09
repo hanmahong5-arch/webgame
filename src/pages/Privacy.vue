@@ -2,7 +2,7 @@
 </script>
 
 <template>
-  <div class="pt-16">
+  <div>
     <!-- Header -->
     <section class="py-fib-6 bg-cream-100 relative overflow-hidden">
       <div class="absolute inset-0 opacity-[0.02]" style="background-image: linear-gradient(#A89B8B 1px, transparent 1px), linear-gradient(90deg, #A89B8B 1px, transparent 1px); background-size: 34px 34px;"></div>
