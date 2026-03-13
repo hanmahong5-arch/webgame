@@ -30,6 +30,8 @@
   --color-product-switch: #C67B5C;
   --color-product-docs: #C9A227;
   --color-product-deaigc: #8B6B7D;
+  --color-product-acest: #5C7A8B;
+  --color-product-memx: #8B7A5C;
 
   /* Portal category colors */
   --color-portal-academic: #8B6B7D;
@@ -324,6 +326,11 @@ body {
     transform: scale(1.06);
     opacity: 0.85;
   }
+}
+
+@keyframes flow-pulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.8; }
 }
 
 .animate-float {

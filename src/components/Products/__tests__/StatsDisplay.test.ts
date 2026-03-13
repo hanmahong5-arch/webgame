@@ -64,11 +64,11 @@ describe('StatsDisplay', () => {
       })
     })
 
-    it('should use bg-cream-100 on stat cards', () => {
+    it('should use bg-cream-50 on stat cards', () => {
       const wrapper = mountComponent()
       const statItems = wrapper.findAll('[data-testid="stat-item"]')
       statItems.forEach((item) => {
-        expect(item.classes()).toContain('bg-cream-100')
+        expect(item.classes()).toContain('bg-cream-50')
       })
     })
 

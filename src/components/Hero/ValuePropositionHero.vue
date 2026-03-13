@@ -44,7 +44,7 @@ const scenarios = [
     <div class="absolute top-1/4 right-1/6 w-2 h-2 rounded-full bg-ochre/20 animate-float" aria-hidden="true"></div>
     <div class="absolute bottom-1/3 left-1/5 w-3 h-3 rounded-full bg-ink-300/15 animate-float" style="animation-delay: 2s;" aria-hidden="true"></div>
 
-    <div class="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="relative max-w-4xl mx-auto px-6 sm:px-8 lg:px-12">
       <!-- Headline -->
       <div class="text-center mb-fib-6 reveal-fade-up">
         <h1 class="text-phi-2xl sm:text-phi-3xl font-hand font-bold text-ink-900 mb-fib-3">
@@ -56,7 +56,7 @@ const scenarios = [
       </div>
 
       <!-- Scenario cards -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-fib-4 mb-fib-6 reveal-fade-up">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-fib-5 mb-fib-6 reveal-fade-up">
         <div
           v-for="scenario in scenarios"
           :key="scenario.title"

@@ -30,7 +30,9 @@ export default {
         'product-gushen': '#7D8B6A',   // Sage green
         'product-switch': '#C67B5C',   // Terracotta
         'product-docs': '#C9A227',     // Ochre gold
-        'product-deaigc': '#8B6B7D'    // Plum
+        'product-deaigc': '#8B6B7D',   // Plum
+        'product-acest': '#5C7A8B',   // Steel blue
+        'product-memx': '#8B7A5C'     // Warm bronze
       },
       // Golden ratio (phi = 1.618) based font sizes
       fontSize: {

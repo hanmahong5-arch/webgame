@@ -36,13 +36,13 @@ const toolLogos = [
 </script>
 
 <template>
-  <section class="py-fib-7 bg-cream-50 relative overflow-hidden" aria-label="AI Tools Ecosystem">
+  <section class="py-fib-7 bg-cream-100 relative overflow-hidden" aria-label="AI Tools Ecosystem">
     <!-- Background pattern -->
     <div class="absolute inset-0 opacity-[0.02]" style="background-image: linear-gradient(#A89B8B 1px, transparent 1px), linear-gradient(90deg, #A89B8B 1px, transparent 1px); background-size: 34px 34px;"></div>
 
     <div class="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
       <!-- Section header -->
-      <div class="text-center mb-fib-5 reveal-fade-up">
+      <div class="text-center mb-fib-6 reveal-fade-up">
         <h2 class="text-phi-2xl sm:text-phi-3xl text-ink-900 mb-fib-3 font-semibold">
           AI 工具爆发的时代，你需要一个控制中心
         </h2>
@@ -63,7 +63,7 @@ const toolLogos = [
       </div>
 
       <!-- Three pillars -->
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-fib-4 reveal-fade-up">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-fib-5 reveal-fade-up">
         <div
           v-for="pillar in pillars"
           :key="pillar.id"

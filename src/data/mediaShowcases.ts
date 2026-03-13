@@ -33,10 +33,10 @@ export const mediaShowcases: MediaShowcaseItem[] = [
   },
   {
     id: 'acest',
-    title: '一个快捷键，唤出你的 AI 助手',
-    description: '无论在哪个应用里，都能随时调出 AI — 选中文本，按下快捷键，即刻获取帮助。',
-    detail: '全局快捷键调用，支持翻译、总结、改写、编程辅助等多种场景。',
-    mediaAlt: 'ACEST 快捷键调用演示',
+    title: 'Rust 原生，极致轻量',
+    description: 'ACEST 用 Rust 从零构建 — 没有 Electron 臃肿，没有 GC 停顿。常驻内存不到 8MB，响应快于你的手速。',
+    detail: '零垃圾回收、确定性延迟、内存安全。快捷键唤醒到 AI 响应 < 50ms，本地数据处理保护隐私。',
+    mediaAlt: 'ACEST Rust 原生性能展示',
     color: '#5C7A8B',
   },
 ]

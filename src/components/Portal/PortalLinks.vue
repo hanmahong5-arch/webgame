@@ -56,7 +56,7 @@ const handleDragEnd = () => {
 </script>
 
 <template>
-  <section id="portal" aria-label="资源中心" class="py-fib-7 bg-cream-100 relative overflow-hidden">
+  <section id="portal" aria-label="资源中心" class="py-fib-7 bg-cream-50 relative overflow-hidden">
     <!-- Background texture -->
     <div class="absolute inset-0 opacity-[0.02]" aria-hidden="true" style="background-image: linear-gradient(#A89B8B 1px, transparent 1px), linear-gradient(90deg, #A89B8B 1px, transparent 1px); background-size: 34px 34px;"></div>
 
