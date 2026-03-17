@@ -53,24 +53,31 @@ const industries = [
 <template>
   <div ref="pageRef">
     <!-- Hero -->
-    <section class="relative overflow-hidden bg-cream-50 py-fib-7">
-      <div class="absolute inset-0 opacity-[0.03]" style="background-image: linear-gradient(#A89B8B 1px, transparent 1px), linear-gradient(90deg, #A89B8B 1px, transparent 1px); background-size: 34px 34px;"></div>
-      <div class="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <span class="inline-block text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-full mb-fib-4" style="background-color: #6B8BA420; color: #6B8BA4;">
-          创业者
-        </span>
-        <h1 class="text-phi-2xl md:text-phi-3xl lg:text-[58px] text-ink-900 mb-fib-4 leading-tight font-bold reveal-fade-up">
-          用 AI 加速你的
-          <span class="text-gradient-ochre font-hand">业务增长</span>
+    <section class="biz-hero section-dark" aria-label="For Entrepreneurs">
+      <div class="biz-hero-glow" aria-hidden="true"></div>
+      <div class="relative max-w-4xl mx-auto px-6 sm:px-8 lg:px-12 py-28 sm:py-36 text-center">
+        <span class="biz-eyebrow reveal-fade-up">创业者</span>
+        <h1 class="biz-title reveal-fade-up">
+          用 AI 加速你的<br>
+          <span class="text-gradient-gold">业务增长</span>
         </h1>
-        <p class="text-phi-lg text-ink-500 max-w-2xl mx-auto leading-relaxed mb-fib-5 reveal-fade-up">
+        <p class="biz-subtitle reveal-fade-up">
           LLM 网关、量化交易、团队工具管理 — 从第一天开始拥有企业级 AI 基础设施
         </p>
-        <div class="flex flex-col sm:flex-row gap-fib-3 justify-center reveal-fade-up">
-          <a href="https://api.lurus.cn" target="_blank" rel="noopener noreferrer" class="btn-hand btn-hand-primary text-center">
-            注册 API Key
+        <div class="biz-cta-row reveal-fade-up">
+          <a
+            href="https://api.lurus.cn"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="btn-primary px-8 py-3 text-base"
+            @click="track('cta_click', { label: 'biz_hero_api' })"
+          >
+            注册 API Key →
           </a>
-          <button @click="login({ prompt: 'create' })" class="btn-hand text-center">
+          <button
+            class="btn-outline px-8 py-3 text-base"
+            @click="track('cta_click', { label: 'biz_hero_register' }); login({ prompt: 'create' })"
+          >
             免费开始
           </button>
         </div>
@@ -78,33 +85,32 @@ const industries = [
     </section>
 
     <!-- Products -->
-    <section class="py-fib-7 bg-cream-100">
-      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section class="section-dark-raised py-24" aria-label="产品">
+      <div class="max-w-5xl mx-auto px-6 sm:px-8 lg:px-12">
         <div
           v-for="(product, index) in products"
           :key="product.id"
-          class="mb-fib-7 last:mb-0 reveal-fade-up"
+          class="biz-product reveal-fade-up"
+          :class="{ 'biz-product--last': index === products.length - 1 }"
         >
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-fib-5 items-center" :class="index % 2 === 1 ? 'md:[direction:rtl] md:[&>*]:[direction:ltr]' : ''">
+          <div class="biz-product-grid" :class="{ 'biz-product-grid--flip': index % 2 === 1 }">
+            <!-- Text side -->
             <div>
-              <div class="flex items-center gap-3 mb-fib-3">
-                <div
-                  class="w-10 h-10 rounded-lg flex items-center justify-center border-2 border-ink-200"
-                  :style="{ backgroundColor: product.color + '20' }"
-                >
+              <div class="biz-product-header">
+                <div class="biz-product-icon" :style="{ '--prod-color': product.color }">
                   <svg class="w-5 h-5" :style="{ color: product.color }" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="product.iconPath" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="product.iconPath" />
                   </svg>
                 </div>
                 <div>
-                  <h2 class="text-xl font-bold text-ink-900">{{ product.name }}</h2>
-                  <p class="text-sm text-ink-400">{{ product.tagline }}</p>
+                  <h2 class="biz-product-name">{{ product.name }}</h2>
+                  <p class="biz-product-tagline">{{ product.tagline }}</p>
                 </div>
               </div>
-              <p class="text-ink-500 leading-relaxed mb-fib-4">{{ product.description }}</p>
-              <ul class="space-y-2 mb-fib-4">
-                <li v-for="feature in product.features" :key="feature" class="flex items-center gap-2 text-sm text-ink-700">
-                  <svg class="w-4 h-4 text-ochre shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <p class="biz-product-desc">{{ product.description }}</p>
+              <ul class="biz-feature-list">
+                <li v-for="feature in product.features" :key="feature">
+                  <svg class="w-4 h-4 shrink-0" style="color:var(--color-ochre)" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                   </svg>
                   {{ feature }}
@@ -115,31 +121,26 @@ const industries = [
                 :href="product.cta.href"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="btn-hand btn-hand-primary inline-block"
+                class="btn-primary inline-block mt-8 px-6 py-2.5"
                 @click="track('cta_click', { label: `biz_${product.id}` })"
-              >
-                {{ product.cta.text }}
-              </a>
+              >{{ product.cta.text }} →</a>
               <router-link
                 v-else
                 :to="product.cta.href"
-                class="btn-hand btn-hand-primary inline-block"
+                class="btn-primary inline-block mt-8 px-6 py-2.5"
                 @click="track('cta_click', { label: `biz_${product.id}` })"
-              >
-                {{ product.cta.text }}
-              </router-link>
+              >{{ product.cta.text }} →</router-link>
             </div>
-            <div class="border-sketchy bg-cream-50 p-fib-5 min-h-[200px] flex items-center justify-center">
-              <div class="text-center">
-                <div
-                  class="w-16 h-16 rounded-xl flex items-center justify-center mx-auto mb-fib-3 border-2 border-ink-200"
-                  :style="{ backgroundColor: product.color + '15' }"
-                >
-                  <svg class="w-8 h-8" :style="{ color: product.color }" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="product.iconPath" />
+            <!-- Visual side -->
+            <div class="biz-product-visual" :style="{ '--prod-color': product.color }">
+              <div class="biz-product-visual-inner">
+                <div class="biz-product-visual-icon">
+                  <svg class="w-10 h-10" :style="{ color: product.color }" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2" :d="product.iconPath" />
                   </svg>
                 </div>
-                <p class="text-sm text-ink-300 font-hand">{{ product.name }}</p>
+                <p class="biz-product-visual-name">{{ product.name }}</p>
+                <p class="biz-product-visual-tag">{{ product.tagline }}</p>
               </div>
             </div>
           </div>
@@ -148,37 +149,37 @@ const industries = [
     </section>
 
     <!-- Industry Solutions -->
-    <section class="py-fib-6 bg-cream-50">
-      <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="text-center mb-fib-5 reveal-fade-up">
-          <h2 class="text-phi-2xl text-ink-900 mb-fib-3 font-semibold">行业解决方案</h2>
-          <p class="text-ink-500">每个行业都有专属的产品组合</p>
+    <section class="section-dark py-20" aria-label="行业解决方案">
+      <div class="max-w-5xl mx-auto px-6 sm:px-8 lg:px-12">
+        <div class="text-center mb-12 reveal-fade-up">
+          <h2 class="biz-section-title">行业解决方案</h2>
+          <p class="biz-section-sub">每个行业都有专属的产品组合</p>
         </div>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-fib-4 reveal-fade-up">
+        <div class="biz-industry-grid reveal-fade-up">
           <router-link
             v-for="industry in industries"
             :key="industry.name"
             to="/solutions"
-            class="border-sketchy bg-cream-100 p-fib-4 text-center hover:shadow-paper-hover transition-all"
+            class="biz-industry-card"
           >
-            <h3 class="font-bold text-ink-900 mb-1">{{ industry.name }}</h3>
-            <p class="text-xs text-ink-400 mb-2">{{ industry.desc }}</p>
-            <p class="text-xs text-ochre font-medium">{{ industry.products }}</p>
+            <h3 class="biz-industry-name">{{ industry.name }}</h3>
+            <p class="biz-industry-desc">{{ industry.desc }}</p>
+            <p class="biz-industry-products">{{ industry.products }}</p>
           </router-link>
         </div>
       </div>
     </section>
 
     <!-- Bundle CTA -->
-    <section class="py-fib-7 bg-cream-100">
-      <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center reveal-fade-up">
-        <h2 class="text-phi-2xl text-ink-900 mb-fib-3 font-semibold">企业 AI 套餐</h2>
-        <p class="text-ink-500 max-w-2xl mx-auto mb-fib-5 leading-relaxed">
+    <section class="section-dark-raised py-24" aria-label="企业套餐">
+      <div class="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12 text-center reveal-fade-up">
+        <h2 class="biz-section-title">企业 AI 套餐</h2>
+        <p class="biz-section-sub biz-section-sub--wide">
           Lurus API + Switch (团队版) + GuShen Pro + Identity SSO — 企业级 AI 基础设施，开箱即用。
         </p>
-        <div class="flex flex-col sm:flex-row gap-fib-3 justify-center">
-          <router-link to="/pricing" class="btn-hand btn-hand-primary text-center">查看定价</router-link>
-          <a href="mailto:support@lurus.cn" class="btn-hand text-center">联系销售</a>
+        <div class="biz-cta-row mt-10">
+          <a href="mailto:support@lurus.cn" class="btn-primary px-8 py-3 text-base">联系销售</a>
+          <a href="https://api.lurus.cn" target="_blank" rel="noopener noreferrer" class="btn-outline px-8 py-3 text-base">注册试用</a>
         </div>
       </div>
     </section>
@@ -187,4 +188,269 @@ const industries = [
 
 <style scoped>
 @reference "../styles/main.css";
+
+/* Hero */
+.biz-hero {
+  position: relative;
+  overflow: hidden;
+}
+
+.biz-hero-glow {
+  position: absolute;
+  top: 10%;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 350px;
+  background: radial-gradient(ellipse, rgba(212,168,39,0.09) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.biz-eyebrow {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  padding: 5px 14px;
+  border-radius: 999px;
+  background-color: var(--color-surface-overlay);
+  border: 1px solid var(--color-surface-border);
+  color: var(--color-text-secondary);
+  margin-bottom: 24px;
+}
+
+.biz-title {
+  font-size: clamp(2.5rem, 6vw, 4rem);
+  font-weight: 800;
+  color: var(--color-text-primary);
+  line-height: 1.1;
+  letter-spacing: -0.03em;
+  margin-bottom: 20px;
+}
+
+.biz-subtitle {
+  font-size: 1.15rem;
+  color: var(--color-text-secondary);
+  max-width: 520px;
+  margin: 0 auto 36px;
+  line-height: 1.65;
+}
+
+.biz-cta-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+}
+
+/* Products */
+.biz-product {
+  margin-bottom: 80px;
+}
+
+.biz-product--last {
+  margin-bottom: 0;
+}
+
+.biz-product-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 56px;
+  align-items: center;
+}
+
+@media (max-width: 767px) {
+  .biz-product-grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+  .biz-product-grid--flip > *:first-child { order: 0; }
+}
+
+@media (min-width: 768px) {
+  .biz-product-grid--flip > *:first-child { order: 2; }
+  .biz-product-grid--flip > *:last-child  { order: 1; }
+}
+
+.biz-product-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.biz-product-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background-color: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.biz-product-name {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  line-height: 1.3;
+}
+
+.biz-product-tagline {
+  font-size: 0.82rem;
+  color: var(--color-text-muted);
+  margin-top: 2px;
+}
+
+.biz-product-desc {
+  font-size: 0.95rem;
+  color: var(--color-text-secondary);
+  line-height: 1.7;
+  margin-bottom: 20px;
+}
+
+.biz-feature-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.biz-feature-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary);
+}
+
+.biz-product-visual {
+  background-color: var(--color-surface-overlay);
+  border: 1px solid var(--color-surface-border);
+  border-radius: 16px;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  transition: border-color 0.2s;
+}
+
+.biz-product-visual::before {
+  content: '';
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 180px;
+  height: 180px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--prod-color, var(--color-ochre)), transparent 70%);
+  opacity: 0.12;
+  pointer-events: none;
+}
+
+.biz-product-visual-inner {
+  text-align: center;
+  padding: 32px;
+}
+
+.biz-product-visual-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 16px;
+  background-color: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 12px;
+}
+
+.biz-product-visual-name {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
+
+.biz-product-visual-tag {
+  font-size: 0.78rem;
+  color: var(--color-text-muted);
+  margin-top: 4px;
+}
+
+/* Industry grid */
+.biz-section-title {
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-weight: 800;
+  color: var(--color-text-primary);
+  letter-spacing: -0.03em;
+  margin-bottom: 12px;
+}
+
+.biz-section-sub {
+  font-size: 1rem;
+  color: var(--color-text-secondary);
+  max-width: 400px;
+  margin: 0 auto;
+  line-height: 1.65;
+}
+
+.biz-section-sub--wide {
+  max-width: 560px;
+  margin-top: 12px;
+  margin-bottom: 0;
+}
+
+.biz-industry-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+@media (min-width: 640px) {
+  .biz-industry-grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+.biz-industry-card {
+  display: block;
+  padding: 20px 18px;
+  background-color: var(--color-surface-raised);
+  border: 1px solid var(--color-surface-border);
+  border-radius: 12px;
+  text-align: center;
+  text-decoration: none;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.biz-industry-card:hover {
+  border-color: rgba(212, 168, 39, 0.4);
+  transform: translateY(-2px);
+}
+
+.biz-industry-name {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--color-text-primary);
+  margin-bottom: 6px;
+}
+
+.biz-industry-desc {
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.biz-industry-products {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-ochre);
+}
 </style>

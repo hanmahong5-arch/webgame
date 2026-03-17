@@ -8,21 +8,32 @@
 
 /* Theme Colors */
 @theme {
-  /* Cream/Paper tones */
+  /* === Dark Surface (new primary theme) === */
+  --color-surface-base:    #0D0B09;
+  --color-surface-raised:  #141210;
+  --color-surface-overlay: #1C1916;
+  --color-surface-border:  #2A2520;
+
+  /* === Dark Text === */
+  --color-text-primary:   #F5F0E8;
+  --color-text-secondary: #A89B8B;
+  --color-text-muted:     #6B5D4D;
+
+  /* === Cream/Paper tones (kept for ForExplorers light theme) === */
   --color-cream-50: #FFFDF7;
   --color-cream-100: #FEF9E7;
   --color-cream-200: #FCF4D6;
   --color-cream-300: #F5E6B8;
 
-  /* Ink/Text tones */
+  /* Ink/Text tones (kept for light theme) */
   --color-ink-900: #2C2416;
   --color-ink-700: #4A3F2F;
   --color-ink-500: #6B5D4D;
   --color-ink-300: #A89B8B;
   --color-ink-100: #D4CCC0;
 
-  /* Accent */
-  --color-ochre: #C9A227;
+  /* Accent — elevated for dark background */
+  --color-ochre: #D4A827;
 
   /* Product colors */
   --color-product-api: #6B8BA4;
@@ -32,6 +43,20 @@
   --color-product-deaigc: #8B6B7D;
   --color-product-acest: #5C7A8B;
   --color-product-memx: #8B7A5C;
+
+  /* Neon accent colors for product hero sections */
+  --color-neon-api:     #4A9EFF;
+  --color-neon-kova:    #B08EFF;
+  --color-neon-gushen:  #7AFF89;
+  --color-neon-creator: #FFB86C;
+  --color-neon-lumen:   #FFE566;
+  --color-neon-switch:  #FF8C69;
+  --color-neon-memx:    #4AFFCB;
+
+  /* New product color tokens */
+  --color-product-kova:    #B08EFF;
+  --color-product-creator: #FFB86C;
+  --color-product-lumen:   #FFE566;
 
   /* Portal category colors */
   --color-portal-academic: #8B6B7D;
@@ -47,17 +72,13 @@ html {
   scroll-behavior: smooth;
 }
 
-/* Body defaults - cream paper background */
+/* Body defaults - dark theme */
 body {
-  background-color: var(--color-cream-50);
-  color: var(--color-ink-900);
+  background-color: var(--color-surface-base);
+  color: var(--color-text-primary);
   font-family: 'Noto Sans SC', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  /* Subtle paper texture using CSS */
-  background-image:
-    url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.021'/%3E%3C/svg%3E");
 }
 
 /* ============================================
@@ -185,24 +206,24 @@ body {
 }
 
 /* ============================================
-   Custom Scrollbar
+   Custom Scrollbar — dark theme
    ============================================ */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background-color: var(--color-cream-100);
+  background-color: var(--color-surface-raised);
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: var(--color-ink-300);
-  border-radius: 4px;
+  background-color: var(--color-surface-border);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background-color: var(--color-ink-500);
+  background-color: var(--color-text-muted);
 }
 
 /* ============================================
@@ -498,4 +519,337 @@ a, button {
   top: 0;
   outline: none;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* ============================================
+   Dark Theme — New Buttons
+   ============================================ */
+
+/* Primary filled button (dark bg context) */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px 24px;
+  font-size: 15px;
+  font-weight: 600;
+  background-color: var(--color-ochre);
+  color: #0D0B09;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.btn-primary:hover {
+  background-color: color-mix(in srgb, var(--color-ochre), #fff 12%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(212, 168, 39, 0.35);
+}
+
+/* Outline button (dark bg context) */
+.btn-outline {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 24px;
+  font-size: 15px;
+  font-weight: 500;
+  background-color: transparent;
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-surface-border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease, background-color 0.2s ease;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+.btn-outline:hover {
+  border-color: var(--color-text-secondary);
+  color: var(--color-text-primary);
+  background-color: rgba(255, 255, 255, 0.04);
+}
+
+/* Code/terminal button */
+.btn-code {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
+  font-size: 13px;
+  background-color: var(--color-surface-raised);
+  color: var(--color-text-secondary);
+  border: 1px solid var(--color-surface-border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, color 0.2s ease;
+  text-decoration: none;
+}
+
+.btn-code:hover {
+  border-color: var(--color-ochre);
+  color: var(--color-text-primary);
+}
+
+/* ============================================
+   Dark Theme — Cards
+   ============================================ */
+
+/* Standard dark card */
+.card-dark {
+  background-color: var(--color-surface-raised);
+  border: 1px solid var(--color-surface-border);
+  border-radius: 12px;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-dark:hover {
+  border-color: rgba(212, 168, 39, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+/* Bento grid card */
+.bento-card {
+  background-color: var(--color-surface-raised);
+  border: 1px solid var(--color-surface-border);
+  border-radius: 14px;
+  overflow: hidden;
+  transition: border-color 0.25s ease, box-shadow 0.25s ease;
+  position: relative;
+}
+
+.bento-card:hover {
+  box-shadow: 0 0 0 1px var(--color-ochre), 0 8px 32px rgba(212, 168, 39, 0.12);
+}
+
+/* ============================================
+   Dark Theme — Monospace / Code
+   ============================================ */
+.font-mono {
+  font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
+}
+
+/* ============================================
+   Dark Theme — Section utilities
+   ============================================ */
+.section-dark {
+  background-color: var(--color-surface-base);
+}
+
+.section-dark-raised {
+  background-color: var(--color-surface-raised);
+}
+
+/* Subtle divider line */
+.divider-dark {
+  border: none;
+  border-top: 1px solid var(--color-surface-border);
+}
+
+/* Glow text gradient (ochre) */
+.text-gradient-gold {
+  background: linear-gradient(135deg, var(--color-ochre), #F0C842);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ============================================
+   @keyframes — Marquee / Stats scroll
+   ============================================ */
+@keyframes marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  animation: marquee 30s linear infinite;
+}
+
+/* ============================================
+   Code block dark styles
+   ============================================ */
+.code-block {
+  background-color: #0A0908;
+  border: 1px solid var(--color-surface-border);
+  border-radius: 10px;
+  font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
+  font-size: 13px;
+  line-height: 1.7;
+  color: #C8BFB0;
+  overflow-x: auto;
+}
+
+.code-block .token-comment { color: #5C5448; }
+.code-block .token-key     { color: #7BACC8; }
+.code-block .token-string  { color: #8DAD7A; }
+.code-block .token-keyword { color: #D4A827; }
+
+/* ============================================
+   Product Section Layout — v2 (mastra.ai style)
+   ============================================ */
+
+/* Two-column product section (collapses to single on mobile) */
+.product-section-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 72px;
+  align-items: center;
+}
+
+@media (max-width: 767px) {
+  .product-section-grid {
+    grid-template-columns: 1fr;
+    gap: 40px;
+  }
+}
+
+/* 16/9 aspect-ratio container for SVG diagrams */
+.diagram-wrapper {
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  position: relative;
+}
+
+.diagram-wrapper svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Neon pill badge (e.g. "开发者首选") */
+.neon-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: 1px solid currentColor;
+  opacity: 0.85;
+}
+
+/* Pulsing neon dot indicator */
+.neon-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background-color: currentColor;
+  flex-shrink: 0;
+  animation: neon-dot-pulse 2.4s ease-in-out infinite;
+}
+
+@keyframes neon-dot-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.35; transform: scale(0.85); }
+}
+
+/* Product copy column */
+.product-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+/* Product section headline */
+.product-headline {
+  font-size: clamp(1.85rem, 3.5vw, 2.6rem);
+  font-weight: 800;
+  color: var(--color-text-primary);
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin: 16px 0 18px;
+}
+
+/* Product section description */
+.product-desc {
+  font-size: 1.05rem;
+  color: var(--color-text-secondary);
+  line-height: 1.65;
+  margin-bottom: 28px;
+  max-width: 440px;
+}
+
+/* Feature list (checkmark style) */
+.product-feature-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 36px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.product-feature-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+}
+
+/* Radial glow background decoration */
+.neon-glow-bg {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  opacity: 0.12;
+}
+
+/* Dual product grid (Switch + Lumen) */
+.dual-product-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 767px) {
+  .dual-product-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Individual dual card */
+.dual-card {
+  position: relative;
+  padding: 32px;
+  background-color: var(--color-surface-raised);
+  border: 1px solid var(--color-surface-border);
+  border-radius: 16px;
+  overflow: hidden;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.dual-card:hover {
+  border-color: var(--card-accent, var(--color-ochre));
+  transform: translateY(-2px);
+}
+
+/* Dual card corner glow */
+.dual-card::before {
+  content: '';
+  position: absolute;
+  top: -60px;
+  right: -60px;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--card-accent, var(--color-ochre)), transparent 70%);
+  opacity: 0.12;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+
+.dual-card:hover::before {
+  opacity: 0.25;
 }

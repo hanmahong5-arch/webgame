@@ -2,7 +2,7 @@
  * Account Overview Composable
  *
  * Fetches aggregated identity overview (VIP, Lubell wallet, subscription)
- * directly from lurus-identity public API using the Zitadel access_token.
+ * directly from lurus-platform public API using the Zitadel access_token.
  * Errors are silently swallowed — this is a non-critical enhancement.
  */
 

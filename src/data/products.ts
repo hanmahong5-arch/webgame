@@ -126,6 +126,48 @@ def strategy(context):
     stats: { value: '∞', label: '记忆容量' },
     layer: 'app' as const,
   },
+  {
+    id: 'kova',
+    name: 'Kova',
+    tagline: 'Rust Agent SDK',
+    description: 'Rust 构建的 AI Agent 持久执行引擎，WAL 级别的状态持久化，掉电不丢失，Agent Loop 自动恢复',
+    useCase: 'Rust 原生 Agent 持久化执行框架',
+    url: '#',
+    icon: 'cpu',
+    color: 'product-kova',
+    bgColor: '#B08EFF',
+    features: ['WAL 持久化状态', 'Rust 零 GC 延迟', 'Agent Loop 断点恢复', '编译时类型安全'],
+    stats: { value: '0ms', label: 'GC 停顿' },
+    layer: 'infra' as const,
+  },
+  {
+    id: 'creator',
+    name: 'Lurus Creator',
+    tagline: '桌面内容工厂',
+    description: '一站式 AI 内容创作桌面应用：视频抓取 → Whisper 转录 → LLM 编辑 → 多平台一键发布',
+    useCase: '视频→文稿→多平台，一键完成',
+    url: '/download',
+    icon: 'video',
+    color: 'product-creator',
+    bgColor: '#FFB86C',
+    features: ['yt-dlp 视频抓取', 'Whisper AI 转录', 'LLM 内容优化', '多平台一键发布'],
+    stats: { value: '3', label: '步完成发布' },
+    layer: 'app' as const,
+  },
+  {
+    id: 'lumen',
+    name: 'Lumen',
+    tagline: 'Agent 调试工具',
+    description: 'Agent 开发者专用调试 CLI，实时可视化 Agent 执行轨迹，断点注入与状态树检查',
+    useCase: 'Agent 执行可视化与断点调试',
+    url: '#',
+    icon: 'bug',
+    color: 'product-lumen',
+    bgColor: '#FFE566',
+    features: ['实时 Agent 追踪', '断点调试注入', '状态树可视化', '日志导出'],
+    stats: { value: '<5ms', label: '追踪延迟' },
+    layer: 'infra' as const,
+  },
 ] satisfies Product[]
 
 /**
@@ -137,6 +179,9 @@ export const productIconPaths: ProductIconPaths = {
   desktop: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
   brain: 'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z',
   database: 'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4',
+  cpu: 'M9 3H7a2 2 0 00-2 2v2M9 3h6M9 3v2m6-2h2a2 2 0 012 2v2m0 0V7m0 0h2M3 9v6m0 0v2a2 2 0 002 2h2m-4-4h2M21 9v6m0 0v2a2 2 0 01-2 2h-2m4-4h-2M9 21h6M9 21v-2m6 2v-2M9 19H7a2 2 0 01-2-2v-2m14 4h-2a2 2 0 01-2-2v-2',
+  video: 'M15 10l4.553-2.069A1 1 0 0121 8.845v6.31a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z',
+  bug: 'M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4',
 }
 
 /**

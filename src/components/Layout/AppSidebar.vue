@@ -50,8 +50,8 @@ const { isCollapsed, isMobileOpen, closeMobile } = useSidebar()
 .app-sidebar {
   grid-area: sidebar;
   width: 224px;
-  background-color: var(--color-cream-50);
-  border-right: 1px solid var(--color-ink-100);
+  background-color: var(--color-surface-raised);
+  border-right: 1px solid var(--color-surface-border);
   overflow-y: auto;
   overflow-x: hidden;
   transition: width 0.2s ease;
@@ -65,7 +65,7 @@ const { isCollapsed, isMobileOpen, closeMobile } = useSidebar()
 @media (max-width: 767px) {
   .app-sidebar {
     position: fixed;
-    top: 44px;
+    top: 64px;
     left: 0;
     bottom: 0;
     z-index: 35;

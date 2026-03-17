@@ -34,7 +34,7 @@ const hideSidebar = computed(() => route.meta.hideSidebar === true)
 
 .app-shell {
   display: grid;
-  grid-template-rows: 44px 1fr;
+  grid-template-rows: 64px 1fr;
   grid-template-columns: 224px 1fr;
   grid-template-areas:
     "topbar  topbar"

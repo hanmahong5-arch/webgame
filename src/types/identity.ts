@@ -1,7 +1,7 @@
 /**
  * Identity Overview Types
  *
- * TypeScript interfaces mirroring the lurus-identity
+ * TypeScript interfaces mirroring the lurus-platform
  * GET /api/v1/account/me/overview response schema.
  */
 

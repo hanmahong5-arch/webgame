@@ -3,6 +3,7 @@ import { ref } from 'vue'
 import { useScrollReveal } from '../composables/useScrollReveal'
 import { useTracking } from '../composables/useTracking'
 import { useAuth } from '../composables/useAuth'
+import PricingPreview from '../components/Pricing/PricingPreview.vue'
 
 const pageRef = ref<HTMLElement | null>(null)
 useScrollReveal(pageRef)
@@ -11,14 +12,14 @@ const { login } = useAuth()
 
 const products = [
   {
-    id: 'acest',
-    name: 'ACEST Desktop',
-    tagline: 'AI 桌面助手',
-    description: '在任何应用中按下快捷键，AI 立刻理解你正在做的事。不需要切换窗口，不需要复制粘贴，55+ 内置技能让 AI 融入你的每一个工作场景。',
-    features: ['全局快捷键唤醒', '上下文自动感知', '55+ 内置技能', '本地隐私优先', '多模型自由切换'],
-    cta: { text: '下载 ACEST', href: '/download' },
-    color: '#5C7A8B',
-    iconPath: 'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z',
+    id: 'creator',
+    name: 'Lurus Creator',
+    tagline: '桌面内容工厂',
+    description: '输入视频链接，yt-dlp 自动下载，Whisper 高精度转录，LLM 优化文案，一键同步到微信视频号、抖音、YouTube — 全流程无需手动操作。',
+    features: ['yt-dlp 视频抓取', 'Whisper 语音转录', 'LLM 文案优化', '多平台一键发布', '本地运行 · 零云依赖'],
+    cta: { text: '下载 Creator', href: '/download' },
+    color: '#C67B5C',
+    iconPath: 'M15 10l4.553-2.069A1 1 0 0121 8.845v6.31a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z',
   },
   {
     id: 'gushen',
@@ -67,7 +68,7 @@ const products = [
           <span class="text-gradient-ochre font-hand">每一天</span>
         </h1>
         <p class="text-phi-lg text-ink-500 max-w-2xl mx-auto leading-relaxed mb-fib-5 reveal-fade-up">
-          桌面 AI 助手、量化交易、工具管理、持久记忆 — 个人效率的无限延伸
+          视频内容创作、量化交易、工具管理、持久记忆 — 个人效率的无限延伸
         </p>
         <div class="flex flex-col sm:flex-row gap-fib-3 justify-center reveal-fade-up">
           <router-link to="/download" class="btn-hand btn-hand-primary text-center">
@@ -153,13 +154,16 @@ const products = [
       </div>
     </section>
 
+    <!-- Pricing Preview -->
+    <PricingPreview />
+
     <!-- Bundle CTA -->
     <section class="py-fib-7 bg-cream-50">
       <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center reveal-fade-up">
         <h2 class="text-phi-2xl text-ink-900 mb-fib-3 font-semibold">个人智能套餐</h2>
         <p class="text-ink-500 max-w-2xl mx-auto mb-fib-5 leading-relaxed">
-          ACEST + MemX + Switch + API 个人配额 — 一个订阅，完整的 AI 桌面体验。
-          ACEST 唤醒 AI，API 提供模型，MemX 持久记忆，Switch 管理工具。
+          Creator + MemX + Switch + API 个人配额 — 一个订阅，完整的 AI 桌面体验。
+          Creator 制作内容，MemX 持久记忆，Switch 管理工具，API 驱动一切。
         </p>
         <div class="flex flex-col sm:flex-row gap-fib-3 justify-center">
           <router-link to="/pricing" class="btn-hand btn-hand-primary text-center">查看定价</router-link>

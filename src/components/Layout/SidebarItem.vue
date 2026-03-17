@@ -105,7 +105,7 @@ const iconPath = computed(() => navIconPaths[props.item.icon] || '')
   gap: 10px;
   padding: 7px 12px;
   border-radius: 6px;
-  color: var(--color-ink-500);
+  color: var(--color-text-secondary);
   font-size: 13px;
   line-height: 1.4;
   transition: all 0.15s ease;
@@ -114,13 +114,13 @@ const iconPath = computed(() => navIconPaths[props.item.icon] || '')
 }
 
 .sidebar-item:hover {
-  color: var(--color-ink-900);
-  background-color: var(--color-cream-200);
+  color: var(--color-text-primary);
+  background-color: var(--color-surface-overlay);
 }
 
 .sidebar-item--active {
-  color: var(--color-ink-900);
-  background-color: var(--color-cream-200);
+  color: var(--color-text-primary);
+  background-color: var(--color-surface-overlay);
   font-weight: 500;
 }
 

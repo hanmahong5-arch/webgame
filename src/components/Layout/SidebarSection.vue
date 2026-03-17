@@ -22,7 +22,7 @@ const isExpanded = ref(true)
     >
       <span class="sidebar-section-label">{{ section.label }}</span>
       <svg
-        class="w-3 h-3 text-ink-300 transition-transform duration-200"
+        class="w-3 h-3 text-text-secondary transition-transform duration-200"
         :class="{ 'rotate-180': !isExpanded }"
         fill="none"
         viewBox="0 0 24 24"
@@ -34,7 +34,7 @@ const isExpanded = ref(true)
     </button>
 
     <!-- Collapsed mode: just a thin divider -->
-    <div v-else class="mx-2 my-2 border-t border-ink-100" aria-hidden="true"></div>
+    <div v-else class="mx-2 my-2 border-t border-surface-border" aria-hidden="true"></div>
 
     <!-- Section items -->
     <div v-if="!collapsed && isExpanded" class="sidebar-section-items">
@@ -77,7 +77,7 @@ const isExpanded = ref(true)
 }
 
 .sidebar-section-header:hover .sidebar-section-label {
-  color: var(--color-ink-500);
+  color: var(--color-text-primary);
 }
 
 .sidebar-section-label {
@@ -85,7 +85,7 @@ const isExpanded = ref(true)
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--color-ink-300);
+  color: var(--color-text-secondary);
   transition: color 0.15s ease;
 }
 

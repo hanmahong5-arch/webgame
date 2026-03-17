@@ -11,17 +11,17 @@ export const navItems: NavDropdownItem[] = [
     path: '/for-explorers',
     children: [
       {
-        name: 'ACEST Desktop',
-        desc: 'AI 桌面助手，全局快捷键唤醒智能',
-        path: '/download',
-        icon: 'brain',
-      },
-      {
         name: 'GuShen 谷神',
         desc: '自然语言驱动的 AI 量化交易',
         path: 'https://gushen.lurus.cn',
         external: true,
         icon: 'chart',
+      },
+      {
+        name: 'Lurus Creator',
+        desc: '视频→AI 转录→多平台发布一键完成',
+        path: '/download',
+        icon: 'video',
       },
       {
         name: 'Lurus Switch',
@@ -71,6 +71,18 @@ export const navItems: NavDropdownItem[] = [
     path: '/for-builders',
     children: [
       {
+        name: 'Kova SDK',
+        desc: 'Rust Agent 持久化执行框架',
+        path: '/for-builders',
+        icon: 'cpu',
+      },
+      {
+        name: 'Lumen',
+        desc: 'Agent 执行可视化与断点调试 CLI',
+        path: '/for-builders',
+        icon: 'bug',
+      },
+      {
         name: 'Lurus Identity',
         desc: '即插即用的认证 + 订阅 + 计费',
         path: 'https://identity.lurus.cn',
@@ -82,19 +94,6 @@ export const navItems: NavDropdownItem[] = [
         desc: '为你的产品添加跨会话持久记忆',
         path: '/download#memx',
         icon: 'database',
-      },
-      {
-        name: 'Lurus API (OEM)',
-        desc: '白标 LLM 网关，私有化部署',
-        path: 'https://api.lurus.cn',
-        external: true,
-        icon: 'api',
-      },
-      {
-        name: 'Lurus Notification',
-        desc: '站内信 + 邮件 + 推送通知中枢',
-        path: '#',
-        icon: 'bell',
       },
     ],
     footerLink: { name: '联系我们获取定制方案 →', path: '/about' },
@@ -130,4 +129,8 @@ export const navIconPaths: Record<string, string> = {
     'M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4',
   terminal:
     'M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
+  cpu: 'M9 3H7a2 2 0 00-2 2v2M9 3h6M9 3v2m6-2h2a2 2 0 012 2v2m0 0V7m0 0h2M3 9v6m0 0v2a2 2 0 002 2h2m-4-4h2M21 9v6m0 0v2a2 2 0 01-2 2h-2m4-4h-2M9 21h6M9 21v-2m6 2v-2M9 19H7a2 2 0 01-2-2v-2m14 4h-2a2 2 0 01-2-2v-2',
+  video:
+    'M15 10l4.553-2.069A1 1 0 0121 8.845v6.31a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z',
+  bug: 'M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4',
 }
