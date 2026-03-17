@@ -139,6 +139,20 @@ def strategy(context):
     features: ['WAL 持久化状态', 'Rust 零 GC 延迟', 'Agent Loop 断点恢复', '编译时类型安全'],
     stats: { value: '0ms', label: 'GC 停顿' },
     layer: 'infra' as const,
+    showcase: {
+      type: 'code' as const,
+      fallbackCode: `// Kova SDK — WAL-backed Agent Loop
+use kova::{Agent, WalStore};
+
+#[tokio::main]
+async fn main() {
+    let store = WalStore::open("./state.wal").await?;
+    let agent = Agent::builder().store(store).build();
+    agent.run_loop().await?; // auto-resumes on crash
+}`,
+      fallbackLanguage: 'rust',
+      fallbackAriaLabel: 'Kova SDK Rust Agent 持久化执行示例',
+    },
   },
   {
     id: 'creator',
@@ -167,6 +181,15 @@ def strategy(context):
     features: ['实时 Agent 追踪', '断点调试注入', '状态树可视化', '日志导出'],
     stats: { value: '<5ms', label: '追踪延迟' },
     layer: 'infra' as const,
+    showcase: {
+      type: 'features' as const,
+      fallbackFeatures: [
+        '实时 Agent 执行 flamechart',
+        '断点注入与暂停恢复',
+        '状态树可视化检查',
+        'CLI 日志结构化导出',
+      ],
+    },
   },
 ] satisfies Product[]
 

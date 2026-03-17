@@ -2,17 +2,19 @@ import { describe, it, expect } from 'vitest'
 import { products, productIconPaths, curlExample } from './products'
 
 describe('products', () => {
-  it('should export exactly 5 products', () => {
-    expect(products).toHaveLength(5)
+  it('should export exactly 8 products', () => {
+    expect(products).toHaveLength(8)
   })
 
-  it('should contain all core products: api, gushen, switch, acest, memx', () => {
+  it('should contain all core products: api, gushen, switch, memx, kova, creator, lumen', () => {
     const ids = products.map((p) => p.id)
     expect(ids).toContain('api')
     expect(ids).toContain('gushen')
     expect(ids).toContain('switch')
-    expect(ids).toContain('acest')
     expect(ids).toContain('memx')
+    expect(ids).toContain('kova')
+    expect(ids).toContain('creator')
+    expect(ids).toContain('lumen')
   })
 
   it('should have valid URLs for each product', () => {
