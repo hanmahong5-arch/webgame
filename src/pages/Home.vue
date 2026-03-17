@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, defineAsyncComponent } from 'vue'
+import { RouterLink } from 'vue-router'
 import { useAuth } from '../composables/useAuth'
 import { useTracking } from '../composables/useTracking'
 import { useScrollReveal } from '../composables/useScrollReveal'
@@ -162,10 +163,14 @@ const lumenFeatures  = ['实时 Agent 追踪', '断点调试注入', '状态树�
 
         <!-- 7-color product tag cloud -->
         <div class="hero-product-tags reveal-fade-up" role="list" aria-label="产品线">
-          <a
+          <component
             v-for="tag in heroTags"
+            :is="tag.href.startsWith('http') ? 'a' : RouterLink"
             :key="tag.name"
-            :href="tag.href"
+            :href="tag.href.startsWith('http') ? tag.href : undefined"
+            :to="!tag.href.startsWith('http') ? tag.href : undefined"
+            :target="tag.href.startsWith('http') ? '_blank' : undefined"
+            :rel="tag.href.startsWith('http') ? 'noopener noreferrer' : undefined"
             class="product-tag"
             :style="{ '--tag-color': tag.color }"
             role="listitem"
@@ -173,7 +178,7 @@ const lumenFeatures  = ['实时 Agent 追踪', '断点调试注入', '状态树�
           >
             <span class="product-tag-dot" :style="{ background: tag.color }"></span>
             {{ tag.name }}
-          </a>
+          </component>
         </div>
       </div>
     </section>
