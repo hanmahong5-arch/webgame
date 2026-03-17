@@ -110,8 +110,8 @@ describe('HeroSection', () => {
         (d) => !d.classes().some((c) => c.includes('animate-float') || c.includes('bg-ochre'))
       )
       const appDots = wrapper.findAll('.w-2\\.5.h-2\\.5.rounded-full')
-      // Total product dots = infra (2) + app (3) = 5
-      expect(infraDots.length + appDots.length).toBe(5)
+      // Total product dots = infra (4) + app (4) = 8
+      expect(infraDots.length + appDots.length).toBe(8)
     })
   })
 })
