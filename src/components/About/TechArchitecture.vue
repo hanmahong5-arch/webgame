@@ -34,10 +34,9 @@ const layers: ArchLayer[] = [
         color: '#C9A227',
       },
       {
-        id: 'identity-ui',
-        name: 'identity.lurus.cn',
-        port: '18104',
-        detail: '账户管理与授权中心，Zitadel OIDC 统一认证入口',
+        id: 'auth-ui',
+        name: 'auth.lurus.cn',
+        detail: 'Zitadel OIDC 统一认证中心，PKCE 授权流程入口',
         color: '#6B8BA4',
       },
       {
@@ -70,12 +69,12 @@ const layers: ArchLayer[] = [
         color: '#6B8BA4',
       },
       {
-        id: 'identity-svc',
-        name: 'lurus-identity',
-        sub: 'Identity',
+        id: 'platform-svc',
+        name: 'lurus-platform',
+        sub: 'Platform',
         port: '18104',
-        ns: 'lurus-identity',
-        detail: '账户体系与 billing 服务，统一 /internal/v1/* 接口供各服务调用',
+        ns: 'lurus-platform',
+        detail: '统一账户认证与计费平台，/internal/v1/* 接口供各服务调用，含 Temporal 工作流',
         color: '#6B8BA4',
       },
       {
