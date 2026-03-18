@@ -37,6 +37,14 @@ export interface ProductShowcase {
   fallbackFeatures?: string[]
 }
 
+/** Per-audience override for product descriptions, features, and CTAs */
+export interface AudienceOverride {
+  tagline?: string
+  description?: string
+  features?: string[]
+  cta?: { text: string; href: string; external?: boolean }
+}
+
 export interface Product {
   id: string
   name: string
@@ -48,6 +56,8 @@ export interface Product {
   docsUrl?: string
   icon: string
   color: string
+  /** Neon accent color used in hero/diagram sections */
+  neonColor?: string
   bgColor: string
   features: string[]
   stats: ProductStats
@@ -55,6 +65,21 @@ export interface Product {
   layer: 'infra' | 'app'
   /** Optional showcase area configuration for visual demo in card */
   showcase?: ProductShowcase
+  /** Audience-specific overrides */
+  audiences?: {
+    explorer?: AudienceOverride
+    entrepreneur?: AudienceOverride
+    builder?: AudienceOverride
+  }
+  /** SVG icon path data for use in audience pages */
+  iconPath?: string
+
+  /** Nav menu grouping: 'consumer' | 'infra' | 'dev' */
+  navGroup?: 'consumer' | 'infra' | 'dev'
+  /** Short description for nav menu items */
+  navDesc?: string
+  /** Whether URL is external */
+  external?: boolean
 }
 
 export type ProductIconPaths = Record<string, string>

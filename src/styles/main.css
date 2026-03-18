@@ -298,6 +298,15 @@ body {
   .product-graph-center {
     animation: none;
   }
+
+  .has-light-sweep::after {
+    animation: none;
+    display: none;
+  }
+
+  .card-glow:hover {
+    transform: none;
+  }
 }
 
 /* ============================================
@@ -852,4 +861,130 @@ a, button {
 
 .dual-card:hover::before {
   opacity: 0.25;
+}
+
+/* ============================================
+   Particle & Glow Effects
+   ============================================ */
+
+/* Particle rise animation */
+@keyframes particle-rise {
+  0% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.7;
+  }
+  90% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateY(-100vh) translateX(var(--drift, 20px));
+    opacity: 0;
+  }
+}
+
+/* Aura drift animation */
+@keyframes aura-drift {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: 0.07;
+  }
+  33% {
+    transform: translate(30px, -20px) scale(1.05);
+    opacity: 0.1;
+  }
+  66% {
+    transform: translate(-20px, 15px) scale(0.95);
+    opacity: 0.06;
+  }
+}
+
+/* Light sweep animation */
+@keyframes light-sweep {
+  0% {
+    transform: translateX(-100%) rotate(-45deg);
+  }
+  100% {
+    transform: translateX(200%) rotate(-45deg);
+  }
+}
+
+/* Card glow on hover — use --glow-color CSS variable */
+.card-glow {
+  transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s ease;
+}
+
+.card-glow:hover {
+  border-color: color-mix(in srgb, var(--glow-color, var(--color-ochre)) 50%, transparent);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--glow-color, var(--color-ochre)) 18%, transparent),
+              0 8px 32px rgba(0, 0, 0, 0.3);
+  transform: translateY(-3px);
+}
+
+/* Glass card effect */
+.card-glass {
+  background: rgba(20, 18, 16, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* Section fade-in gradient */
+.section-fade-in {
+  position: relative;
+}
+
+.section-fade-in::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  background: linear-gradient(to bottom, var(--color-surface-base), transparent);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Light sweep overlay */
+.has-light-sweep {
+  position: relative;
+  overflow: hidden;
+}
+
+.has-light-sweep::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 50%;
+  height: 200%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(212, 168, 39, 0.04),
+    rgba(212, 168, 39, 0.08),
+    rgba(212, 168, 39, 0.04),
+    transparent
+  );
+  animation: light-sweep 8s ease-in-out infinite;
+  pointer-events: none;
+}
+
+/* Button size variants */
+.btn-primary--sm {
+  padding: 7px 16px;
+  font-size: 13px;
+}
+
+.btn-primary--lg {
+  padding: 14px 40px;
+  font-size: 1.1rem;
+}
+
+.btn-outline--lg {
+  padding: 14px 40px;
+  font-size: 1.1rem;
 }

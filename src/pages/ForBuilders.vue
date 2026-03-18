@@ -1,116 +1,22 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, defineAsyncComponent } from 'vue'
 import { useScrollReveal } from '../composables/useScrollReveal'
 import { useTracking } from '../composables/useTracking'
+import { getProductsForAudience } from '../data/products'
 
 const pageRef = ref<HTMLElement | null>(null)
 useScrollReveal(pageRef)
 const { track } = useTracking()
 
-const products = [
-  {
-    id: 'kova',
-    name: 'Kova SDK',
-    tagline: 'Rust Agent 持久化执行框架',
-    description: '将 WAL 预写日志引入 Agent 执行引擎。崩溃重启后自动从断点恢复，Rust 零 GC 保障 μs 级确定性延迟。构建生产级、永不中断的 AI Agent。',
-    features: [
-      'WAL 持久化，掉电不丢状态',
-      'Rust 零 GC，μs 级响应',
-      'Agent Loop 断点自动恢复',
-      'Plan → Execute → Review 循环',
-      '编译时类型安全',
-      'Async + 多线程调度',
-    ],
-    cta: { text: '查看文档', href: 'https://docs.lurus.cn', external: true },
-    color: '#B08EFF',
-    iconPath: 'M9 3H7a2 2 0 00-2 2v2M9 3h6M9 3v2m6-2h2a2 2 0 012 2v2m0 0V7m0 0h2M3 9v6m0 0v2a2 2 0 002 2h2m-4-4h2M21 9v6m0 0v2a2 2 0 01-2 2h-2m4-4h-2M9 21h6M9 21v-2m6 2v-2M9 19H7a2 2 0 01-2-2v-2m14 4h-2a2 2 0 01-2-2v-2',
-  },
-  {
-    id: 'forge',
-    name: 'Forge',
-    tagline: 'AI 产品开发工作台',
-    description: '对话即需求 — 用自然语言描述产品想法，AI PM Agent 自动生成结构化需求树。从模糊构想到可执行 Story，一场对话搞定。运行在 Kova 之上，Agent 任务永不丢失。',
-    features: [
-      '对话 → 需求树自动生成',
-      'AI PM / Architect / Code Agent',
-      '产品本体论（7 级知识图谱）',
-      'Kova WAL 保障任务不丢失',
-      '依赖守护者（自动升级分析）',
-      '实时协作 (WebSocket)',
-    ],
-    cta: { text: '了解 Forge', href: 'https://docs.lurus.cn', external: true },
-    color: '#FF6B35',
-    iconPath: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
-  },
-  {
-    id: 'lumen',
-    name: 'Lumen',
-    tagline: 'Agent 执行可视化与调试 CLI',
-    description: '让 Agent 执行过程透明可见。实时追踪调用链与每步耗时，支持断点注入和状态树检查 — 开发阶段必备，生产排查利器。',
-    features: [
-      '实时执行 flamechart',
-      '断点注入与暂停',
-      '状态树可视化',
-      'CLI 日志导出',
-      '与 Kova SDK 无缝集成',
-      '零侵入式接入',
-    ],
-    cta: { text: '查看文档', href: 'https://docs.lurus.cn', external: true },
-    color: '#FFE566',
-    iconPath: 'M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4',
-  },
-  {
-    id: 'identity',
-    name: 'Lurus Identity',
-    tagline: '身份认证 + 订阅计费平台',
-    description: '不再重复造认证和计费系统。OIDC 标准认证、订阅管理、钱包系统、角色权限 — 3 天集成而不是 3 个月。适用于任何需要用户体系的 SaaS 产品。',
-    features: [
-      'OIDC + gRPC 双协议支持',
-      '订阅管理 + 钱包系统',
-      '多支付网关 (Stripe / WeChat / Alipay)',
-      '角色权限 + 权限缓存',
-      '审计日志 + 邮件通知',
-      '服务间 API (Bearer Key)',
-    ],
-    cta: { text: '查看文档', href: 'https://docs.lurus.cn', external: true },
-    color: '#8B6B7D',
-    iconPath: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z',
-  },
-  {
-    id: 'memx-sdk',
-    name: 'MemX SDK',
-    tagline: 'AI 记忆基础设施',
-    description: '为你的产品添加跨会话持久记忆。语义检索、本地优先、端到端加密 — 让你的 AI 应用拥有"记住用户"的能力，3 行代码接入。',
-    features: [
-      '跨会话持久化存储',
-      '语义向量检索',
-      '本地优先 + 端到端加密',
-      'Python SDK (pip install)',
-      'REST API 接口',
-      '无限记忆容量',
-    ],
-    cta: { text: '安装 SDK', href: '/download#memx' },
-    color: '#8B7A5C',
-    iconPath: 'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4',
-  },
-  {
-    id: 'api-oem',
-    name: 'Lurus API (OEM)',
-    tagline: '白标 LLM 网关',
-    description: '在你的品牌下提供 AI 模型访问服务。私有化部署、自定义定价、完全白标 — 你的客户看到的是你的品牌，你获得模型调用的全部收益。',
-    features: [
-      '完全白标 — 你的品牌',
-      '自定义定价与配额',
-      '私有化部署选项',
-      '多租户管理后台',
-      '50+ 模型即时可用',
-      '请求日志与分析',
-    ],
-    cta: { text: '联系我们', href: 'mailto:support@lurus.cn', external: true },
-    color: '#6B8BA4',
-    iconPath: 'M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
-  },
-]
+const products = getProductsForAudience('builder')
+
+// Lazy-loaded diagram components keyed by product ID
+const diagramComponents: Record<string, ReturnType<typeof defineAsyncComponent>> = {
+  kova: defineAsyncComponent(() => import('../components/Illustrations/KovaDiagram.vue')),
+  lumen: defineAsyncComponent(() => import('../components/Illustrations/LumenDiagram.vue')),
+  memx: defineAsyncComponent(() => import('../components/Illustrations/MemxGraphDiagram.vue')),
+  api: defineAsyncComponent(() => import('../components/Illustrations/ApiFlowDiagram.vue')),
+}
 
 const architectureSteps = [
   { step: '1', title: 'Kova SDK', desc: 'Agent 持久执行引擎' },
@@ -223,9 +129,35 @@ const architectureSteps = [
                 @click="track('cta_click', { label: `builder_${product.id}` })"
               >{{ product.cta.text }} →</router-link>
             </div>
+
             <!-- Visual side -->
             <div class="builder-product-visual" :style="{ '--prod-color': product.color }">
-              <div class="builder-visual-inner">
+              <!-- Diagram component (lazy-loaded) -->
+              <component
+                :is="diagramComponents[product.id]"
+                v-if="diagramComponents[product.id]"
+                class="builder-diagram"
+                :aria-label="`${product.name} diagram`"
+              />
+
+              <!-- Fallback: code block when no diagram but fallbackCode exists -->
+              <div
+                v-else-if="product.showcase?.fallbackCode"
+                class="builder-code-block"
+                role="region"
+                :aria-label="product.showcase.fallbackAriaLabel ?? `${product.name} code example`"
+              >
+                <div class="builder-code-bar" aria-hidden="true">
+                  <span class="builder-code-dot" style="background:#FF5F57"></span>
+                  <span class="builder-code-dot" style="background:#FEBC2E"></span>
+                  <span class="builder-code-dot" style="background:#28C840"></span>
+                  <span class="builder-code-lang">{{ product.showcase.fallbackLanguage ?? 'code' }}</span>
+                </div>
+                <pre class="builder-code-pre"><code>{{ product.showcase.fallbackCode }}</code></pre>
+              </div>
+
+              <!-- Fallback: icon placeholder when neither diagram nor code is available -->
+              <div v-else class="builder-visual-inner">
                 <div class="builder-visual-icon" :style="{ color: product.color }">
                   <svg class="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2" :d="product.iconPath" />
@@ -517,6 +449,65 @@ const architectureSteps = [
   background: radial-gradient(circle, var(--prod-color, var(--color-ochre)), transparent 70%);
   opacity: 0.12;
   pointer-events: none;
+}
+
+/* Diagram fills the visual container */
+.builder-diagram {
+  width: 100%;
+  height: 100%;
+  min-height: 200px;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+/* Code block */
+.builder-code-block {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.builder-code-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid var(--color-surface-border);
+}
+
+.builder-code-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.builder-code-lang {
+  margin-left: auto;
+  font-size: 0.7rem;
+  font-family: ui-monospace, monospace;
+  color: var(--color-text-muted);
+  text-transform: lowercase;
+}
+
+.builder-code-pre {
+  margin: 0;
+  padding: 16px;
+  overflow-x: auto;
+  font-size: 0.75rem;
+  font-family: ui-monospace, monospace;
+  line-height: 1.6;
+  color: var(--color-text-secondary);
+  white-space: pre;
+  flex: 1;
+}
+
+.builder-code-pre code {
+  font-family: inherit;
+  background: none;
+  padding: 0;
 }
 
 .builder-visual-inner {

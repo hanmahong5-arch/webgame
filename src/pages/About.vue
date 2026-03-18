@@ -8,6 +8,7 @@ import CoreValues from '../components/About/CoreValues.vue'
 import TechnologyBrief from '../components/About/TechnologyBrief.vue'
 import AnimatedTimeline from '../components/About/AnimatedTimeline.vue'
 import CareersSection from '../components/About/CareersSection.vue'
+import TeamSection from '../components/About/TeamSection.vue'
 import { MILESTONES } from '../data/about'
 
 const pageRef = ref<HTMLElement | null>(null)
@@ -48,6 +49,9 @@ useScrollReveal(pageRef)
 
     <!-- Technology Brief -->
     <TechnologyBrief />
+
+    <!-- Team -->
+    <TeamSection />
 
     <!-- Careers -->
     <CareersSection />

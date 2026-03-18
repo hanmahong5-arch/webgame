@@ -40,6 +40,10 @@ export default defineConfig({
           ) {
             return 'chat'
           }
+          // Releases chunk: markdown rendering + release pages
+          if (id.includes('marked') || id.includes('/pages/Releases')) {
+            return 'releases'
+          }
         },
       },
     },

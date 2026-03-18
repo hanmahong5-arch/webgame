@@ -1,53 +1,155 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+import { useReleases } from '../composables/useReleases'
+import { downloadableProducts } from '../data/downloadableProducts'
+import PlatformIcon from '../components/Download/PlatformIcon.vue'
+import { productIconPaths } from '../data/products'
+import type { LatestReleaseResponse } from '../types/release'
 
-const ACEST_DOWNLOAD_URL = '/releases/acest-desktop/v0.2.0/ACEST-Desktop_0.2.0_x64-setup.exe'
-const ACEST_FILE_SIZE = '37.4 MB'
-const ACEST_VERSION = '0.2.0'
-const ACEST_SHA256 = '1e8bdb46fb45fde5b7e9c4b51a8beab31376afe369d214adea4dbcaf25544d26'
+const {
+  fetchLatestRelease,
+  findRecommendedArtifact,
+  formatFileSize,
+  getPlatformName,
+  downloadArtifact,
+} = useReleases()
 
-function downloadAcest() {
-  window.location.href = ACEST_DOWNLOAD_URL
+// Static fallbacks (always available even if API is down)
+interface StaticFallback {
+  url: string
+  size: string
+  version: string
+  sha256: string
 }
 
-const staticReleases = [
-  {
-    product: 'ACEST Desktop',
-    version: 'v0.2.0',
-    platform: 'Windows x64',
-    status: 'available' as const,
+const staticFallbacks = new Map<string, StaticFallback>([
+  ['acest-desktop', {
+    url: '/releases/acest-desktop/v0.2.0/ACEST-Desktop_0.2.0_x64-setup.exe',
     size: '37.4 MB',
-    url: ACEST_DOWNLOAD_URL,
-    sha256: ACEST_SHA256,
-  },
-  {
-    product: 'Lurus Switch',
-    version: '—',
-    platform: 'Windows / macOS',
-    status: 'coming-soon' as const,
-    size: '—',
-    url: null,
-    sha256: null,
-  },
-  {
-    product: 'Lurus CLI',
-    version: '—',
-    platform: 'Windows / macOS / Linux',
-    status: 'coming-soon' as const,
-    size: '—',
-    url: null,
-    sha256: null,
-  },
-  {
-    product: 'MemX',
-    version: 'latest',
-    platform: 'Python · pip',
-    status: 'available' as const,
-    size: '—',
-    url: null,
-    sha256: null,
-  },
-]
+    version: '0.2.0',
+    sha256: '1e8bdb46fb45fde5b7e9c4b51a8beab31376afe369d214adea4dbcaf25544d26',
+  }],
+  ['lurus-switch', {
+    url: '/releases/lurus-switch/v0.1.0/lurus-switch_0.1.0_windows_x64.exe',
+    size: '12 MB',
+    version: '0.1.0',
+    sha256: '9442a44d9e61e1d0fa0083dcc17728d820144244f0e1035620a0add7969b1e16',
+  }],
+  ['lurus-creator', {
+    url: '/releases/lurus-creator/v0.3.0/lurus-creator_0.3.0_windows_x64.exe',
+    size: '15 MB',
+    version: '0.3.0',
+    sha256: '1b11275d629fe0b60e61b4c02ed1dab904d373bee8ca92791b244b57bd458d40',
+  }],
+])
+
+function downloadByProduct(releaseProductId: string) {
+  // Prefer API data
+  const apiRelease = latestReleases.value.get(releaseProductId)
+  if (apiRelease) {
+    const recommended = findRecommendedArtifact(apiRelease.release.artifacts)
+    if (recommended) {
+      downloadArtifact(apiRelease.release.id, recommended.id)
+      return
+    }
+  }
+  // Fall back to static URL
+  const fallback = staticFallbacks.get(releaseProductId)
+  if (fallback) {
+    window.location.href = fallback.url
+  }
+}
+
+// Dynamic release data from API
+const latestReleases = ref<Map<string, LatestReleaseResponse>>(new Map())
+const loadingProducts = ref(true)
+
+onMounted(async () => {
+  loadingProducts.value = true
+  // Fetch latest release for each product in parallel
+  const promises = downloadableProducts
+    .filter(p => p.isReleased || p.installMethod === 'binary')
+    .map(async (product) => {
+      const result = await fetchLatestRelease(product.releaseProductId)
+      if (result) {
+        latestReleases.value.set(product.releaseProductId, result)
+      }
+    })
+  await Promise.allSettled(promises)
+  loadingProducts.value = false
+})
+
+// Helper: get version/size/sha256 for a product (API first, then static fallback)
+function getProductVersion(releaseProductId: string): string {
+  const apiRelease = latestReleases.value.get(releaseProductId)
+  if (apiRelease) return apiRelease.release.version
+  return staticFallbacks.get(releaseProductId)?.version ?? '—'
+}
+
+function getProductFileSize(releaseProductId: string): string {
+  const apiRelease = latestReleases.value.get(releaseProductId)
+  if (apiRelease) {
+    const recommended = findRecommendedArtifact(apiRelease.release.artifacts)
+    if (recommended) return formatFileSize(recommended.file_size)
+  }
+  return staticFallbacks.get(releaseProductId)?.size ?? '—'
+}
+
+function getProductSha256(releaseProductId: string): string {
+  const apiRelease = latestReleases.value.get(releaseProductId)
+  if (apiRelease) {
+    const recommended = findRecommendedArtifact(apiRelease.release.artifacts)
+    if (recommended) return recommended.checksum_sha256
+  }
+  return staticFallbacks.get(releaseProductId)?.sha256 ?? ''
+}
+
+// ACEST hero section computed
+const acestVersion = computed(() => getProductVersion('acest-desktop'))
+const acestFileSize = computed(() => getProductFileSize('acest-desktop'))
+const acestSha256 = computed(() => getProductSha256('acest-desktop'))
+
+// Build the all-releases list combining API data + static fallbacks
+const allReleaseItems = computed(() => {
+  return downloadableProducts.map(product => {
+    const apiData = latestReleases.value.get(product.releaseProductId)
+    const release = apiData?.release
+    const recommended = release ? findRecommendedArtifact(release.artifacts) : null
+    const fallback = staticFallbacks.get(product.releaseProductId)
+
+    const hasDownload = !!(release && recommended) || !!fallback
+    const version = release
+      ? `v${release.version}`
+      : fallback ? `v${fallback.version}` : '—'
+    const size = recommended
+      ? formatFileSize(recommended.file_size)
+      : fallback ? fallback.size : '—'
+
+    return {
+      product: product.name,
+      productId: product.id,
+      releaseProductId: product.releaseProductId,
+      version,
+      platform: product.platforms.map(p => getPlatformName(p)).join(' / '),
+      status: (hasDownload ? 'available' : product.isReleased ? 'available' : 'coming-soon') as 'available' | 'coming-soon',
+      size,
+      installMethod: product.installMethod,
+      installCommand: product.installCommand,
+      release,
+      recommended,
+      fallbackUrl: fallback?.url,
+      icon: product.icon,
+      color: product.color,
+      downloadCount: release
+        ? release.artifacts.reduce((sum, a) => sum + a.download_count, 0)
+        : 0,
+    }
+  })
+})
+
+function handleItemDownload(item: typeof allReleaseItems.value[0]) {
+  downloadByProduct(item.releaseProductId)
+}
 
 // Feature cards data
 const features = [
@@ -133,7 +235,7 @@ function copyPipInstall() {
             <!-- Badge -->
             <div class="inline-flex items-center gap-2 px-3 py-1.5 mb-6 border-2 border-ochre/30 bg-ochre/5 text-ochre text-sm font-medium" style="border-radius: 3px 10px 5px 12px / 12px 5px 10px 3px">
               <span class="w-2 h-2 rounded-full bg-ochre animate-pulse"></span>
-              v{{ ACEST_VERSION }} — Windows
+              v{{ acestVersion }} — Windows
             </div>
 
             <!-- Headline -->
@@ -150,14 +252,14 @@ function copyPipInstall() {
             <!-- CTA Buttons -->
             <div class="flex flex-col sm:flex-row gap-4 mb-8">
               <button
-                @click="downloadAcest"
+                @click="downloadByProduct('acest-desktop')"
                 class="btn-hand btn-hand-primary inline-flex items-center justify-center gap-3 text-lg px-8 py-4 group"
               >
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                 </svg>
                 <span>Download for Windows</span>
-                <span class="text-sm opacity-70">({{ ACEST_FILE_SIZE }})</span>
+                <span class="text-sm opacity-70">({{ acestFileSize }})</span>
               </button>
               <a
                 href="#all-releases"
@@ -366,7 +468,7 @@ function copyPipInstall() {
 
         <div class="inline-flex flex-col sm:flex-row gap-4 items-center">
           <button
-            @click="downloadAcest"
+            @click="downloadByProduct('acest-desktop')"
             class="btn-hand btn-hand-primary inline-flex items-center justify-center gap-3 text-lg px-10 py-5 group"
           >
             <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -390,7 +492,7 @@ function copyPipInstall() {
               SHA256 Checksum
             </summary>
             <code class="block mt-2 p-3 bg-cream-200 border border-ink-100 rounded text-xs font-mono text-ink-500 break-all max-w-lg">
-              {{ ACEST_SHA256 }}
+              {{ acestSha256 }}
             </code>
           </details>
         </div>
@@ -670,23 +772,59 @@ results = m.search(<span class="text-green-700">"UI preference"</span>, user_id=
     </section>
 
     <!-- ═══════════════════════════════════════════════════════ -->
-    <!-- ALL RELEASES -->
+    <!-- ALL RELEASES (API-driven) -->
     <!-- ═══════════════════════════════════════════════════════ -->
     <section id="all-releases" class="py-16 bg-cream-50">
       <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 class="text-2xl font-bold text-ink-900 mb-8 text-center font-hand">
-          All Releases
-        </h2>
+        <div class="flex items-center justify-between mb-8">
+          <h2 class="text-2xl font-bold text-ink-900 font-hand">
+            All Products
+          </h2>
+          <router-link
+            to="/releases"
+            class="text-sm text-ochre hover:text-ochre/80 font-medium transition-colors inline-flex items-center gap-1"
+          >
+            Version History
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+          </router-link>
+        </div>
 
-        <div class="space-y-4">
+        <!-- Loading skeleton -->
+        <div v-if="loadingProducts" class="space-y-4">
+          <div v-for="i in 4" :key="i" class="card-sketchy p-6 animate-pulse flex items-center gap-4">
+            <div class="w-10 h-10 rounded-lg bg-cream-200"></div>
+            <div class="flex-1">
+              <div class="w-32 h-5 bg-cream-200 rounded mb-2"></div>
+              <div class="w-48 h-4 bg-cream-200 rounded"></div>
+            </div>
+            <div class="w-24 h-10 bg-cream-200 rounded"></div>
+          </div>
+        </div>
+
+        <!-- Product list -->
+        <div v-else class="space-y-4">
           <div
-            v-for="item in staticReleases"
-            :key="item.product"
+            v-for="item in allReleaseItems"
+            :key="item.productId"
             class="card-sketchy p-6 flex flex-col sm:flex-row sm:items-center gap-4"
             :class="item.status === 'coming-soon' ? 'opacity-60' : ''"
           >
-            <div class="flex-1">
-              <div class="flex items-center gap-3 mb-1">
+            <!-- Product icon -->
+            <div
+              class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+              :style="{ backgroundColor: item.color + '15', border: '2px solid ' + item.color + '30' }"
+            >
+              <svg v-if="productIconPaths[item.icon]" class="w-5 h-5" :style="{ color: item.color }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="productIconPaths[item.icon]" />
+              </svg>
+              <PlatformIcon v-else-if="item.icon === 'mobile'" platform="android" size="md" />
+            </div>
+
+            <!-- Product info -->
+            <div class="flex-1 min-w-0">
+              <div class="flex items-center gap-3 mb-1 flex-wrap">
                 <h3 class="text-lg font-bold text-ink-900 font-hand">{{ item.product }}</h3>
                 <span
                   class="px-2 py-0.5 text-xs font-medium rounded border"
@@ -696,33 +834,59 @@ results = m.search(<span class="text-green-700">"UI preference"</span>, user_id=
                 >
                   {{ item.status === 'available' ? item.version : 'Coming Soon' }}
                 </span>
+                <span v-if="item.release?.release_type === 'beta'" class="px-2 py-0.5 text-xs font-medium rounded border text-yellow-700 bg-yellow-50 border-yellow-300">
+                  Beta
+                </span>
               </div>
               <p class="text-sm text-ink-400">{{ item.platform }}</p>
-              <p v-if="item.size !== '—'" class="text-xs text-ink-300 mt-1">{{ item.size }}</p>
+              <div class="flex items-center gap-3 mt-1">
+                <p v-if="item.size !== '—'" class="text-xs text-ink-300">{{ item.size }}</p>
+                <span v-if="item.downloadCount > 0" class="text-xs text-ink-300">
+                  {{ item.downloadCount.toLocaleString() }} downloads
+                </span>
+              </div>
             </div>
-            <a
-              v-if="item.url"
-              :href="item.url"
-              class="btn-hand btn-hand-primary inline-flex items-center gap-2 text-sm px-5 py-2.5 whitespace-nowrap"
-            >
-              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-              </svg>
-              Download
-            </a>
-            <code
-              v-else-if="item.product === 'MemX'"
-              class="font-mono text-sm px-4 py-2.5 bg-cream-200 border-2 border-ochre/20 text-ink-600 whitespace-nowrap"
-              style="border-radius: 3px 8px 4px 10px / 10px 4px 8px 3px"
-            >
-              pip install memx
-            </code>
-            <span
-              v-else
-              class="btn-hand inline-flex items-center gap-2 text-sm px-5 py-2.5 opacity-50 cursor-not-allowed whitespace-nowrap"
-            >
-              Coming Soon
-            </span>
+
+            <!-- Action button -->
+            <div class="flex-shrink-0">
+              <!-- Binary download (API or static fallback) -->
+              <button
+                v-if="((item.release && item.recommended) || item.fallbackUrl) && item.installMethod === 'binary'"
+                @click="handleItemDownload(item)"
+                class="btn-hand btn-hand-primary inline-flex items-center gap-2 text-sm px-5 py-2.5 whitespace-nowrap"
+              >
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Download
+              </button>
+
+              <!-- Install command (pip/cargo) -->
+              <code
+                v-else-if="item.installCommand"
+                class="font-mono text-sm px-4 py-2.5 bg-cream-200 border-2 border-ochre/20 text-ink-600 whitespace-nowrap"
+                style="border-radius: 3px 8px 4px 10px / 10px 4px 8px 3px"
+              >
+                {{ item.installCommand }}
+              </code>
+
+              <!-- Coming soon -->
+              <span
+                v-else-if="item.status === 'coming-soon'"
+                class="btn-hand inline-flex items-center gap-2 text-sm px-5 py-2.5 opacity-50 cursor-not-allowed whitespace-nowrap"
+              >
+                Coming Soon
+              </span>
+
+              <!-- Changelog link for released products -->
+              <router-link
+                v-if="item.release || item.fallbackUrl"
+                :to="{ path: '/releases', query: { product: item.productId } }"
+                class="block text-xs text-ochre hover:text-ochre/80 mt-2 text-right"
+              >
+                Changelog →
+              </router-link>
+            </div>
           </div>
         </div>
       </div>

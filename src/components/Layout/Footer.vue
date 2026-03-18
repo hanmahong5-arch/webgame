@@ -1,24 +1,9 @@
 <script setup lang="ts">
+import { getFooterProducts } from '../../data/products'
+
 const currentYear = new Date().getFullYear()
 
-const explorers = [
-  { name: 'Lucrum', href: 'https://gushen.lurus.cn' },
-  { name: 'Lurus Creator', href: '/download' },
-  { name: 'Lurus Switch', href: '/download' },
-  { name: 'MemX', href: '/download#memx' },
-]
-
-const entrepreneurs = [
-  { name: 'Lurus API', href: 'https://api.lurus.cn' },
-  { name: 'Lucrum Pro', href: 'https://gushen.lurus.cn' },
-]
-
-const builders = [
-  { name: 'Kova SDK', href: '/for-builders' },
-  { name: 'Lumen', href: '/for-builders' },
-  { name: 'Lurus Identity', href: 'https://identity.lurus.cn' },
-  { name: 'MemX SDK', href: '/download#memx' },
-]
+const { explorers, entrepreneurs, builders } = getFooterProducts()
 
 const resources = [
   { name: 'API 文档', href: 'https://docs.lurus.cn' },

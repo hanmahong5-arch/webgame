@@ -84,6 +84,16 @@ const routes: RouteRecordRaw[] = [
     component: () => import('../pages/ForBuilders.vue')
   },
   {
+    path: '/releases',
+    name: 'Releases',
+    meta: {
+      hideSidebar: true,
+      title: `Release History — ${BASE_TITLE}`,
+      description: 'Track updates across all Lurus products — changelogs, downloads, and version history.',
+    },
+    component: () => import('../pages/Releases.vue')
+  },
+  {
     path: '/terms',
     name: 'Terms',
     meta: {

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
 import { navIconPaths } from '../../data/navItems'
+import { getNavProducts, productIconPaths } from '../../data/products'
 import AccountBadge from '../Portal/AccountBadge.vue'
 import { useAuth } from '../../composables/useAuth'
 
@@ -54,23 +55,10 @@ onUnmounted(() => {
   if (closeTimer) clearTimeout(closeTimer)
 })
 
-const consumerProducts = [
-  { name: 'Lucrum', desc: '自然语言驱动 AI 量化交易', icon: 'chart', href: 'https://gushen.lurus.cn', external: true },
-  { name: 'Lurus Creator', desc: '视频→AI 转录→多平台发布', icon: 'video', href: '/download', external: false },
-  { name: 'MemX', desc: '跨会话持久 AI 记忆引擎', icon: 'database', href: '/download#memx', external: false },
-]
+// Merge product icon paths with nav icon paths for the mega menu
+const allIconPaths = { ...navIconPaths, ...productIconPaths }
 
-const infraProducts = [
-  { name: 'Lurus API', desc: 'LLM 统一网关，50+ 模型一端点', icon: 'api', href: 'https://api.lurus.cn', external: true },
-  { name: 'Lurus Switch', desc: '统一管理所有 AI CLI 工具', icon: 'desktop', href: '/download', external: false },
-]
-
-const devProducts = [
-  { name: 'Kova SDK', desc: 'Rust Agent 持久化执行框架', icon: 'cpu', href: '#', external: false },
-  { name: 'Lumen', desc: 'Agent 执行可视化调试 CLI', icon: 'bug', href: '#', external: false },
-  { name: 'Lurus Identity', desc: '认证 + 订阅 + 计费平台', icon: 'shield', href: 'https://identity.lurus.cn', external: true },
-  { name: 'MemX SDK', desc: '为产品添加 AI 记忆层', icon: 'database', href: '/download#memx', external: false },
-]
+const { consumer: consumerProducts, infra: infraProducts, dev: devProducts } = getNavProducts()
 </script>
 
 <template>
@@ -138,7 +126,7 @@ const devProducts = [
                       @click="openMenu = null"
                     >
                       <svg class="mega-item-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="navIconPaths[item.icon]" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="allIconPaths[item.icon]" />
                       </svg>
                       <span>
                         <span class="mega-item-name">{{ item.name }}</span>
@@ -152,7 +140,7 @@ const devProducts = [
                       @click="openMenu = null"
                     >
                       <svg class="mega-item-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="navIconPaths[item.icon]" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="allIconPaths[item.icon]" />
                       </svg>
                       <span>
                         <span class="mega-item-name">{{ item.name }}</span>
@@ -181,7 +169,7 @@ const devProducts = [
                       @click="openMenu = null"
                     >
                       <svg class="mega-item-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="navIconPaths[item.icon]" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="allIconPaths[item.icon]" />
                       </svg>
                       <span>
                         <span class="mega-item-name">{{ item.name }}</span>
@@ -195,7 +183,7 @@ const devProducts = [
                       @click="openMenu = null"
                     >
                       <svg class="mega-item-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="navIconPaths[item.icon]" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="allIconPaths[item.icon]" />
                       </svg>
                       <span>
                         <span class="mega-item-name">{{ item.name }}</span>
@@ -224,7 +212,7 @@ const devProducts = [
                       @click="openMenu = null"
                     >
                       <svg class="mega-item-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="navIconPaths[item.icon]" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="allIconPaths[item.icon]" />
                       </svg>
                       <span>
                         <span class="mega-item-name">{{ item.name }}</span>
@@ -238,7 +226,7 @@ const devProducts = [
                       @click="openMenu = null"
                     >
                       <svg class="mega-item-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="navIconPaths[item.icon]" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="allIconPaths[item.icon]" />
                       </svg>
                       <span>
                         <span class="mega-item-name">{{ item.name }}</span>
@@ -344,7 +332,7 @@ const devProducts = [
               @click="closeMobile"
             >
               <svg class="w-4 h-4 text-ochre shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="navIconPaths[item.icon]" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="allIconPaths[item.icon]" />
               </svg>
               <span>{{ item.name }}</span>
             </a>
@@ -355,7 +343,7 @@ const devProducts = [
               @click="closeMobile"
             >
               <svg class="w-4 h-4 text-ochre shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="navIconPaths[item.icon]" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="allIconPaths[item.icon]" />
               </svg>
               <span>{{ item.name }}</span>
             </router-link>
@@ -373,7 +361,7 @@ const devProducts = [
               @click="closeMobile"
             >
               <svg class="w-4 h-4 text-ochre shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="navIconPaths[item.icon]" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="allIconPaths[item.icon]" />
               </svg>
               <span>{{ item.name }}</span>
             </a>
@@ -384,7 +372,7 @@ const devProducts = [
               @click="closeMobile"
             >
               <svg class="w-4 h-4 text-ochre shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="navIconPaths[item.icon]" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="allIconPaths[item.icon]" />
               </svg>
               <span>{{ item.name }}</span>
             </router-link>
@@ -402,7 +390,7 @@ const devProducts = [
               @click="closeMobile"
             >
               <svg class="w-4 h-4 text-ochre shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="navIconPaths[item.icon]" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="allIconPaths[item.icon]" />
               </svg>
               <span>{{ item.name }}</span>
             </a>
@@ -413,7 +401,7 @@ const devProducts = [
               @click="closeMobile"
             >
               <svg class="w-4 h-4 text-ochre shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="navIconPaths[item.icon]" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="allIconPaths[item.icon]" />
               </svg>
               <span>{{ item.name }}</span>
             </router-link>

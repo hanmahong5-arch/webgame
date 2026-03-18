@@ -1,46 +1,34 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { defineAsyncComponent } from 'vue'
 import { useScrollReveal } from '../composables/useScrollReveal'
 import { useTracking } from '../composables/useTracking'
 import { useAuth } from '../composables/useAuth'
+import { getProductsForAudience } from '../data/products'
+import { ref } from 'vue'
 
 const pageRef = ref<HTMLElement | null>(null)
 useScrollReveal(pageRef)
 const { track } = useTracking()
 const { login } = useAuth()
 
-const products = [
-  {
-    id: 'api',
-    name: 'Lurus API',
-    tagline: 'LLM 统一网关',
-    description: '一个端点接入 50+ AI 模型。OpenAI 兼容接口，零迁移成本。多租户隔离、用量配额、智能路由 — 企业级 AI 接入从第一天开始。',
-    features: ['50+ AI 模型统一接入', 'OpenAI 兼容 — 零迁移', '多租户隔离与配额管理', '智能路由与自动故障转移', '99.9% 可用性 SLA'],
-    cta: { text: '注册试用', href: 'https://api.lurus.cn', external: true },
-    color: '#6B8BA4',
-    iconPath: 'M8 9l3 3-3 3m5 0h3M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z',
-  },
-  {
-    id: 'switch',
-    name: 'Lurus Switch (团队版)',
-    tagline: '团队 AI 工具管理',
-    description: '统一管理团队的 AI CLI 工具配置。密钥集中管理、代理统一配置、MCP 预设分发 — 从 "每人自己配" 到 "一键同步"。',
-    features: ['团队配置统一管理', '密钥集中分发', '代理与 MCP 预设', '使用量统计', '合规审计'],
-    cta: { text: '下载 Switch', href: '/download' },
-    color: '#FF8C69',
-    iconPath: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
-  },
-  {
-    id: 'lucrum-pro',
-    name: 'Lucrum Pro',
-    tagline: '机构量化服务',
-    description: '面向金融机构的量化交易解决方案。专业级策略引擎、风控系统、合规报告 — 从研究到实盘的完整闭环。',
-    features: ['专业级策略引擎', '风险控制系统', '合规报告生成', '多策略组合管理', '机构级数据安全'],
-    cta: { text: '联系我们', href: 'mailto:support@lurus.cn', external: true },
-    color: '#7D8B6A',
-    iconPath: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z',
-  },
-]
+const products = getProductsForAudience('entrepreneur')
+
+// Lazy-loaded diagram components, keyed by product ID
+const ApiFlowDiagram = defineAsyncComponent(
+  () => import('../components/Illustrations/ApiFlowDiagram.vue'),
+)
+const SwitchDiagram = defineAsyncComponent(
+  () => import('../components/Illustrations/SwitchDiagram.vue'),
+)
+const LucrumChartDiagram = defineAsyncComponent(
+  () => import('../components/Illustrations/LucrumChartDiagram.vue'),
+)
+
+const diagramComponents: Record<string, ReturnType<typeof defineAsyncComponent>> = {
+  api: ApiFlowDiagram,
+  switch: SwitchDiagram,
+  lucrum: LucrumChartDiagram,
+}
 
 const industries = [
   { name: '金融', desc: '量化策略 · 风险评估 · 市场分析', products: 'Lucrum + API' },
@@ -131,17 +119,38 @@ const industries = [
                 @click="track('cta_click', { label: `biz_${product.id}` })"
               >{{ product.cta.text }} →</router-link>
             </div>
+
             <!-- Visual side -->
             <div class="biz-product-visual" :style="{ '--prod-color': product.color }">
-              <div class="biz-product-visual-inner">
-                <div class="biz-product-visual-icon">
-                  <svg class="w-10 h-10" :style="{ color: product.color }" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2" :d="product.iconPath" />
-                  </svg>
+              <!-- Diagram component when available -->
+              <template v-if="diagramComponents[product.id]">
+                <div class="biz-product-visual-diagram">
+                  <component :is="diagramComponents[product.id]" />
                 </div>
-                <p class="biz-product-visual-name">{{ product.name }}</p>
-                <p class="biz-product-visual-tag">{{ product.tagline }}</p>
-              </div>
+              </template>
+
+              <!-- Fallback: code block when showcase.fallbackCode is present -->
+              <template v-else-if="product.showcase?.fallbackCode">
+                <div class="biz-product-visual-code">
+                  <pre
+                    class="biz-product-visual-pre"
+                    :aria-label="product.showcase.fallbackAriaLabel ?? `${product.name} 代码示例`"
+                  ><code>{{ product.showcase.fallbackCode }}</code></pre>
+                </div>
+              </template>
+
+              <!-- Final fallback: icon placeholder -->
+              <template v-else>
+                <div class="biz-product-visual-inner">
+                  <div class="biz-product-visual-icon">
+                    <svg class="w-10 h-10" :style="{ color: product.color }" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.2" :d="product.iconPath" />
+                    </svg>
+                  </div>
+                  <p class="biz-product-visual-name">{{ product.name }}</p>
+                  <p class="biz-product-visual-tag">{{ product.tagline }}</p>
+                </div>
+              </template>
             </div>
           </div>
         </div>
@@ -356,6 +365,34 @@ const industries = [
   pointer-events: none;
 }
 
+/* Diagram container — fills the visual card, adds padding */
+.biz-product-visual-diagram {
+  width: 100%;
+  padding: 20px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Code-block fallback */
+.biz-product-visual-code {
+  width: 100%;
+  padding: 20px;
+  overflow: hidden;
+}
+
+.biz-product-visual-pre {
+  margin: 0;
+  font-size: 0.72rem;
+  font-family: ui-monospace, monospace;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow: hidden;
+}
+
+/* Icon placeholder fallback */
 .biz-product-visual-inner {
   text-align: center;
   padding: 32px;
