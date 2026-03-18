@@ -26,6 +26,23 @@ const products = [
     iconPath: 'M9 3H7a2 2 0 00-2 2v2M9 3h6M9 3v2m6-2h2a2 2 0 012 2v2m0 0V7m0 0h2M3 9v6m0 0v2a2 2 0 002 2h2m-4-4h2M21 9v6m0 0v2a2 2 0 01-2 2h-2m4-4h-2M9 21h6M9 21v-2m6 2v-2M9 19H7a2 2 0 01-2-2v-2m14 4h-2a2 2 0 01-2-2v-2',
   },
   {
+    id: 'forge',
+    name: 'Forge',
+    tagline: 'AI 产品开发工作台',
+    description: '对话即需求 — 用自然语言描述产品想法，AI PM Agent 自动生成结构化需求树。从模糊构想到可执行 Story，一场对话搞定。运行在 Kova 之上，Agent 任务永不丢失。',
+    features: [
+      '对话 → 需求树自动生成',
+      'AI PM / Architect / Code Agent',
+      '产品本体论（7 级知识图谱）',
+      'Kova WAL 保障任务不丢失',
+      '依赖守护者（自动升级分析）',
+      '实时协作 (WebSocket)',
+    ],
+    cta: { text: '了解 Forge', href: 'https://docs.lurus.cn', external: true },
+    color: '#FF6B35',
+    iconPath: 'M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4',
+  },
+  {
     id: 'lumen',
     name: 'Lumen',
     tagline: 'Agent 执行可视化与调试 CLI',
@@ -96,10 +113,10 @@ const products = [
 ]
 
 const architectureSteps = [
-  { step: '1', title: 'Kova SDK', desc: 'Agent 执行引擎，崩溃自动续跑' },
-  { step: '2', title: 'Lurus API', desc: '50+ AI 模型，一个端点' },
-  { step: '3', title: 'MemX SDK', desc: '持久记忆层，用户体验升级' },
-  { step: '4', title: 'Identity', desc: 'OIDC 认证 + 订阅计费闭环' },
+  { step: '1', title: 'Kova SDK', desc: 'Agent 持久执行引擎' },
+  { step: '2', title: 'Forge', desc: '对话式产品开发工作台' },
+  { step: '3', title: 'Lurus API', desc: '50+ AI 模型统一网关' },
+  { step: '4', title: 'Identity', desc: '认证 + 订阅计费闭环' },
 ]
 </script>
 
@@ -115,7 +132,7 @@ const architectureSteps = [
           <span class="text-gradient-gold">平台基座</span>
         </h1>
         <p class="builder-subtitle reveal-fade-up">
-          Kova SDK · Lumen · Identity · MemX SDK · API —— 从 Agent 执行到身份认证的完整开发者工具链
+          Kova · Forge · Lumen · API · Identity · MemX —— 从 Agent 引擎到产品工作台的完整开发者工具链
         </p>
         <div class="builder-cta-row reveal-fade-up">
           <a
@@ -228,8 +245,7 @@ const architectureSteps = [
       <div class="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12 text-center reveal-fade-up">
         <h2 class="builder-section-title">开发者全套工具链</h2>
         <p class="builder-section-sub builder-section-sub--wide">
-          Kova + Lumen + Identity + MemX SDK + API — 完整的 AI 开发者基础设施。
-          Kova 构建 Agent，Lumen 调试追踪，Identity 处理认证计费，MemX 添加持久记忆。
+          Kova 执行 Agent，Forge 管理产品，Lumen 调试追踪，API 接入模型，Identity 认证计费，MemX 持久记忆 — 完整闭环。
         </p>
         <div class="builder-cta-row mt-10">
           <a
