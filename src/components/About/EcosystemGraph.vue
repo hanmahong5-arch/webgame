@@ -8,7 +8,7 @@ let observer: IntersectionObserver | null = null
 const CENTER = { x: 200, y: 150 }
 const NODES = [
   { id: 'api', label: 'API', color: '#6B8BA4', x: 70, y: 50 },
-  { id: 'gushen', label: 'GuShen', color: '#7D8B6A', x: 330, y: 50 },
+  { id: 'lucrum', label: 'Lucrum', color: '#7D8B6A', x: 330, y: 50 },
   { id: 'mail', label: 'Mail', color: '#8B6B7D', x: 70, y: 250 },
   { id: 'switch', label: 'Switch', color: '#C67B5C', x: 330, y: 250 },
 ]

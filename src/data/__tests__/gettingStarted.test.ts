@@ -33,7 +33,7 @@ describe('gettingStartedItems', () => {
     const ids = gettingStartedItems.map((item) => item.id)
     expect(ids).toContain('api-docs')
     expect(ids).toContain('download')
-    expect(ids).toContain('gushen')
+    expect(ids).toContain('lucrum')
   })
 
   it('should mark external links correctly', () => {
@@ -41,9 +41,9 @@ describe('gettingStartedItems', () => {
     expect(apiDocs?.external).toBe(true)
     expect(apiDocs?.href).toMatch(/^https:\/\//)
 
-    const gushen = gettingStartedItems.find((i) => i.id === 'gushen')
-    expect(gushen?.external).toBe(true)
-    expect(gushen?.href).toMatch(/^https:\/\//)
+    const lucrum = gettingStartedItems.find((i) => i.id === 'lucrum')
+    expect(lucrum?.external).toBe(true)
+    expect(lucrum?.href).toMatch(/^https:\/\//)
   })
 
   it('should mark download as internal link', () => {

@@ -131,10 +131,10 @@ describe('ProductSubCard', () => {
       expect(wrapper.find('.card-api').exists()).toBe(true)
     })
 
-    it('should apply correct class for gushen product', () => {
-      const product = createMockProduct({ id: 'gushen' })
+    it('should apply correct class for lucrum product', () => {
+      const product = createMockProduct({ id: 'lucrum' })
       const wrapper = mountComponent(product)
-      expect(wrapper.find('.card-gushen').exists()).toBe(true)
+      expect(wrapper.find('.card-lucrum').exists()).toBe(true)
     })
 
     it('should apply correct class for switch product', () => {

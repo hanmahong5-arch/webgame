@@ -9,13 +9,13 @@ import type { Stat, TrustBadge } from '../types/common'
 export const stats = [
   { value: '99.9%', label: '服务可用性', color: 'text-ochre' },
   { value: '50+', label: '支持模型', color: 'text-product-api' },
-  { value: '<100ms', label: '平均延迟', color: 'text-product-gushen' },
+  { value: '<100ms', label: '平均延迟', color: 'text-product-lucrum' },
   { value: '1M+', label: 'API 调用/天', color: 'text-product-switch' },
 ] satisfies Stat[]
 
 export const trustBadges = [
-  { icon: 'shield', label: '数据安全加密', iconColor: 'text-product-gushen' },
-  { icon: 'check', label: '无需信用卡', iconColor: 'text-product-gushen' },
+  { icon: 'shield', label: '数据安全加密', iconColor: 'text-product-lucrum' },
+  { icon: 'check', label: '无需信用卡', iconColor: 'text-product-lucrum' },
   { icon: 'bolt', label: '即时开通', iconColor: 'text-ochre' },
 ] satisfies TrustBadge[]
 

@@ -54,7 +54,7 @@ const floatingDots = [
               <span class="text-cream-50 font-hand font-bold text-xl">L</span>
             </div>
             <span class="text-ink-700 font-medium">Lurus Technology</span>
-            <span class="w-2 h-2 rounded-full bg-product-gushen animate-pulse"></span>
+            <span class="w-2 h-2 rounded-full bg-product-lucrum animate-pulse"></span>
           </div>
 
           <!-- Main Headline -->

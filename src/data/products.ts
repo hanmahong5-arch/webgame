@@ -2,8 +2,8 @@
  * Products Data
  * Centralized product information for ProductShowcase component
  *
- * Infra layer: Lurus API, Lurus Switch
- * App layer: GuShen, ACEST Desktop, MemX
+ * Infra layer: Lurus API, Lurus Switch, Kova, Lumen
+ * App layer: Lucrum, MemX, Creator
  * Each product has a useCase field for one-line value proposition
  * Each product has an optional showcase field for visual demo area
  */
@@ -38,37 +38,37 @@ export const products = [
   {
     id: 'switch',
     name: 'Lurus Switch',
-    tagline: '智能客户端',
-    description: '桌面端 AI 模型网关，一键切换模型服务，全平台覆盖',
-    useCase: '跨平台桌面应用，一键切换 AI 模型',
-    url: '#',
+    tagline: 'AI 工具管理器',
+    description: '统一管理所有 AI CLI 工具的配置、密钥和代理 — Claude Code、Codex、Gemini CLI，一个面板搞定',
+    useCase: '一个面板管理所有 AI 命令行工具',
+    url: '/download',
     docsUrl: 'https://docs.lurus.cn/switch/',
     icon: 'desktop',
     color: 'product-switch',
-    bgColor: '#C67B5C',
-    features: ['桌面端应用', '本地代理', '多平台支持', '离线可用'],
-    stats: { value: '3', label: '平台支持' },
+    bgColor: '#FF8C69',
+    features: ['多工具统一配置', 'API Key 集中管理', 'MCP 预设分发', '代理与快照管理'],
+    stats: { value: '10+', label: 'CLI 工具支持' },
     layer: 'infra' as const,
     showcase: {
       type: 'features' as const,
       fallbackFeatures: [
-        'Windows / macOS / Linux 全平台',
-        '本地代理与模型路由',
-        '一键切换 AI 模型服务',
-        '离线配置管理',
+        'Claude Code / Codex / Gemini CLI 统一管理',
+        'API Key 集中分发与轮换',
+        'MCP Server 预设一键同步',
+        '代理配置与环境快照',
       ],
     },
   },
   {
-    id: 'gushen',
-    name: 'GuShen',
+    id: 'lucrum',
+    name: 'Lucrum',
     tagline: 'AI 量化交易',
     description: '基于 AI 的智能量化交易平台，自然语言描述策略需求，AI 自动生成可执行代码',
     useCase: '自然语言描述 → AI 生成量化策略',
     url: 'https://gushen.lurus.cn',
-    docsUrl: 'https://docs.lurus.cn/gushen/',
+    docsUrl: 'https://docs.lurus.cn/lucrum/',
     icon: 'chart',
-    color: 'product-gushen',
+    color: 'product-lucrum',
     bgColor: '#7D8B6A',
     features: ['AI 策略引擎', '实时行情', '风险控制', '回测模拟'],
     stats: { value: '50+', label: '量化策略' },
@@ -76,7 +76,7 @@ export const products = [
     showcase: {
       type: 'screenshot' as const,
       screenshotSrc: '',
-      screenshotAlt: 'GuShen 量化交易平台策略编辑器 — 展示自然语言输入与 AI 生成的量化策略代码',
+      screenshotAlt: 'Lucrum 量化交易平台策略编辑器 — 展示自然语言输入与 AI 生成的量化策略代码',
       fallbackCode: `# Natural language → AI-generated strategy
 def strategy(context):
     """Buy when 5-day MA crosses above 20-day MA"""
@@ -86,30 +86,7 @@ def strategy(context):
     if ma5[-1] > ma20[-1] and ma5[-2] <= ma20[-2]:
         context.order_percent("BTC/USDT", 0.5)`,
       fallbackLanguage: 'bash',
-      fallbackAriaLabel: 'GuShen AI 量化策略代码示例',
-    },
-  },
-  {
-    id: 'acest',
-    name: 'ACEST Desktop',
-    tagline: 'Rust 原生 AI 引擎',
-    description: 'Rust 构建的桌面 AI 上下文引擎 — 零 GC 停顿、内存安全、极致性能。实时感知工作区，为任意应用注入 AI 能力。',
-    useCase: 'Rust 原生桌面 AI 上下文引擎',
-    url: '/download',
-    icon: 'brain',
-    color: 'product-acest',
-    bgColor: '#5C7A8B',
-    features: ['Rust 原生性能', '零 GC 停顿', '内存安全保证', '< 8MB 内存占用'],
-    stats: { value: '<8MB', label: '内存占用' },
-    layer: 'app' as const,
-    showcase: {
-      type: 'features' as const,
-      fallbackFeatures: [
-        'Rust 编译 — 零垃圾回收，确定性延迟',
-        '常驻内存 < 8MB，比 Electron 方案轻 20 倍',
-        '全局快捷键唤醒，< 50ms 响应',
-        '所有数据本地处理，网络可选',
-      ],
+      fallbackAriaLabel: 'Lucrum AI 量化策略代码示例',
     },
   },
   {

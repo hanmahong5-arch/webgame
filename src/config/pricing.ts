@@ -225,8 +225,8 @@ export const AUDIENCE_PRODUCTS: Record<AudienceTierCode, ProductPricing[]> = {
       status: 'available',
     },
     {
-      id: 'gushen-team',
-      name: 'GuShen 量化',
+      id: 'lucrum-team',
+      name: 'Lucrum 量化',
       description: 'AI 驱动的量化交易',
       monthlyPrice: null,
       yearlyPrice: null,

@@ -2,7 +2,7 @@
 const currentYear = new Date().getFullYear()
 
 const explorers = [
-  { name: 'GuShen 谷神', href: 'https://gushen.lurus.cn' },
+  { name: 'Lucrum', href: 'https://gushen.lurus.cn' },
   { name: 'Lurus Creator', href: '/download' },
   { name: 'Lurus Switch', href: '/download' },
   { name: 'MemX', href: '/download#memx' },
@@ -10,7 +10,7 @@ const explorers = [
 
 const entrepreneurs = [
   { name: 'Lurus API', href: 'https://api.lurus.cn' },
-  { name: 'GuShen Pro', href: 'https://gushen.lurus.cn' },
+  { name: 'Lucrum Pro', href: 'https://gushen.lurus.cn' },
 ]
 
 const builders = [

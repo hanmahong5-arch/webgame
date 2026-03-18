@@ -28,7 +28,7 @@ export interface TechHighlight {
 export const MILESTONES: Milestone[] = [
   { year: '2024', event: '公司成立，确立 AI 基础设施服务方向' },
   { year: '2025 Q1', event: 'Lurus API 网关上线，支持 OpenAI / Anthropic' },
-  { year: '2025 Q2', event: 'GuShen AI 量化交易平台发布' },
+  { year: '2025 Q2', event: 'Lucrum AI 量化交易平台发布' },
   { year: '2025 Q3', event: '接入 50+ 模型，日均 API 调用突破百万' },
   { year: '2026 Q1', event: 'Lurus Switch 桌面客户端发布，全平台覆盖' },
 ]

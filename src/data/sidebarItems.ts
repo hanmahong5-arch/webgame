@@ -25,7 +25,7 @@ export const sidebarSections: SidebarSection[] = [
       { name: 'ACEST Desktop', path: '/download', icon: 'brain' },
       { name: 'Lurus Switch', path: '/download', icon: 'desktop' },
       { name: 'Lurus API', path: 'https://api.lurus.cn', icon: 'api', external: true },
-      { name: 'GuShen', path: 'https://gushen.lurus.cn', icon: 'chart', external: true },
+      { name: 'Lucrum', path: 'https://gushen.lurus.cn', icon: 'chart', external: true },
       { name: 'MemX', path: '/download#memx', icon: 'database', badge: '即将' },
     ],
   },

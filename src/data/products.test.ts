@@ -2,14 +2,14 @@ import { describe, it, expect } from 'vitest'
 import { products, productIconPaths, curlExample } from './products'
 
 describe('products', () => {
-  it('should export exactly 8 products', () => {
-    expect(products).toHaveLength(8)
+  it('should export exactly 7 products', () => {
+    expect(products).toHaveLength(7)
   })
 
-  it('should contain all core products: api, gushen, switch, memx, kova, creator, lumen', () => {
+  it('should contain all core products: api, lucrum, switch, memx, kova, creator, lumen', () => {
     const ids = products.map((p) => p.id)
     expect(ids).toContain('api')
-    expect(ids).toContain('gushen')
+    expect(ids).toContain('lucrum')
     expect(ids).toContain('switch')
     expect(ids).toContain('memx')
     expect(ids).toContain('kova')
@@ -77,13 +77,13 @@ describe('products', () => {
       expect(api?.showcase?.fallbackAriaLabel).toBeTruthy()
     })
 
-    it('GuShen should have screenshot showcase type with fallback code', () => {
-      const gushen = products.find((p) => p.id === 'gushen')
-      expect(gushen?.showcase?.type).toBe('screenshot')
-      expect(gushen?.showcase?.fallbackCode).toBeTruthy()
-      expect(gushen?.showcase?.fallbackLanguage).toBeTruthy()
-      expect(gushen?.showcase?.fallbackAriaLabel).toBeTruthy()
-      expect(gushen?.showcase?.screenshotAlt).toBeTruthy()
+    it('Lucrum should have screenshot showcase type with fallback code', () => {
+      const lucrum = products.find((p) => p.id === 'lucrum')
+      expect(lucrum?.showcase?.type).toBe('screenshot')
+      expect(lucrum?.showcase?.fallbackCode).toBeTruthy()
+      expect(lucrum?.showcase?.fallbackLanguage).toBeTruthy()
+      expect(lucrum?.showcase?.fallbackAriaLabel).toBeTruthy()
+      expect(lucrum?.showcase?.screenshotAlt).toBeTruthy()
     })
 
     it('Switch should have features showcase type', () => {

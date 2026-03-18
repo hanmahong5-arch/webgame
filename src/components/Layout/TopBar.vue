@@ -55,7 +55,7 @@ onUnmounted(() => {
 })
 
 const consumerProducts = [
-  { name: 'GuShen 谷神', desc: '自然语言驱动 AI 量化交易', icon: 'chart', href: 'https://gushen.lurus.cn', external: true },
+  { name: 'Lucrum', desc: '自然语言驱动 AI 量化交易', icon: 'chart', href: 'https://gushen.lurus.cn', external: true },
   { name: 'Lurus Creator', desc: '视频→AI 转录→多平台发布', icon: 'video', href: '/download', external: false },
   { name: 'MemX', desc: '跨会话持久 AI 记忆引擎', icon: 'database', href: '/download#memx', external: false },
 ]

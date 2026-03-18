@@ -29,7 +29,7 @@ describe('EcosystemGraph', () => {
     const wrapper = mount(EcosystemGraph)
     const text = wrapper.text()
     expect(text).toContain('API')
-    expect(text).toContain('GuShen')
+    expect(text).toContain('Lucrum')
     expect(text).toContain('Mail')
     expect(text).toContain('Switch')
   })

@@ -37,7 +37,7 @@
 
   /* Product colors */
   --color-product-api: #6B8BA4;
-  --color-product-gushen: #7D8B6A;
+  --color-product-lucrum: #7D8B6A;
   --color-product-switch: #C67B5C;
   --color-product-docs: #C9A227;
   --color-product-deaigc: #8B6B7D;
@@ -47,7 +47,7 @@
   /* Neon accent colors for product hero sections */
   --color-neon-api:     #4A9EFF;
   --color-neon-kova:    #B08EFF;
-  --color-neon-gushen:  #7AFF89;
+  --color-neon-lucrum:  #7AFF89;
   --color-neon-creator: #FFB86C;
   --color-neon-lumen:   #FFE566;
   --color-neon-switch:  #FF8C69;
@@ -99,7 +99,7 @@ body {
 
 /* Product-specific card colors */
 .card-api { border-color: var(--color-product-api); }
-.card-gushen { border-color: var(--color-product-gushen); }
+.card-lucrum { border-color: var(--color-product-lucrum); }
 .card-switch { border-color: var(--color-product-switch); }
 .card-docs { border-color: var(--color-product-docs); }
 .card-deaigc { border-color: var(--color-product-deaigc); }
@@ -394,7 +394,7 @@ a, button {
    Product Color Badges
    ============================================ */
 .badge-api { background-color: var(--color-product-api); color: white; }
-.badge-gushen { background-color: var(--color-product-gushen); color: white; }
+.badge-lucrum { background-color: var(--color-product-lucrum); color: white; }
 .badge-switch { background-color: var(--color-product-switch); color: white; }
 .badge-docs { background-color: var(--color-product-docs); color: white; }
 .badge-deaigc { background-color: var(--color-product-deaigc); color: white; }
@@ -432,12 +432,12 @@ a, button {
   background-color: rgba(139, 107, 125, 0.2);
 }
 
-.portal-link-btn-gushen {
+.portal-link-btn-lucrum {
   background-color: rgba(125, 139, 106, 0.1);
-  border-color: var(--color-product-gushen);
+  border-color: var(--color-product-lucrum);
 }
 
-.portal-link-btn-gushen:hover {
+.portal-link-btn-lucrum:hover {
   background-color: rgba(125, 139, 106, 0.2);
 }
 

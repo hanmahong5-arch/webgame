@@ -93,7 +93,7 @@ const solutions = [
                     :key="uc"
                     class="flex items-start gap-2 text-ink-500 text-sm"
                   >
-                    <svg class="w-4 h-4 text-product-gushen flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg class="w-4 h-4 text-product-lucrum flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
                     </svg>
                     {{ uc }}

@@ -20,8 +20,8 @@ describe('ProductShowcaseArea', () => {
   describe('screenshot mode', () => {
     const screenshotShowcase: ProductShowcase = {
       type: 'screenshot',
-      screenshotSrc: '/images/gushen-editor.webp',
-      screenshotAlt: 'GuShen editor screenshot',
+      screenshotSrc: '/images/lucrum-editor.webp',
+      screenshotAlt: 'Lucrum editor screenshot',
       fallbackCode: 'def strategy(): pass',
       fallbackLanguage: 'bash',
       fallbackAriaLabel: 'Fallback code',
@@ -31,7 +31,7 @@ describe('ProductShowcaseArea', () => {
       const wrapper = mountComponent(screenshotShowcase)
       const img = wrapper.find('img')
       expect(img.exists()).toBe(true)
-      expect(img.attributes('src')).toBe('/images/gushen-editor.webp')
+      expect(img.attributes('src')).toBe('/images/lucrum-editor.webp')
     })
 
     it('should apply lazy loading to the image', () => {
@@ -43,7 +43,7 @@ describe('ProductShowcaseArea', () => {
     it('should set alt text on the image', () => {
       const wrapper = mountComponent(screenshotShowcase)
       const img = wrapper.find('img')
-      expect(img.attributes('alt')).toBe('GuShen editor screenshot')
+      expect(img.attributes('alt')).toBe('Lucrum editor screenshot')
     })
 
     it('should switch to code fallback when image fails to load', async () => {

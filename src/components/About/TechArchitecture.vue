@@ -40,7 +40,7 @@ const layers: ArchLayer[] = [
         color: '#6B8BA4',
       },
       {
-        id: 'gushen-ui',
+        id: 'lucrum-ui',
         name: 'gushen.lurus.cn',
         port: '8870',
         detail: 'AI 量化交易平台前端，实时行情与策略管理',
@@ -78,11 +78,11 @@ const layers: ArchLayer[] = [
         color: '#6B8BA4',
       },
       {
-        id: 'gushen-svc',
-        name: 'lurus-gushen',
-        sub: 'GuShen',
+        id: 'lucrum-svc',
+        name: 'lurus-lucrum',
+        sub: 'Lucrum',
         port: '8870',
-        ns: 'ai-qtrd',
+        ns: 'lucrum',
         detail: 'AI 量化引擎，Go + Python vnpy，实时策略执行与回测',
         color: '#7D8B6A',
       },
@@ -106,7 +106,7 @@ const layers: ArchLayer[] = [
         name: 'PostgreSQL',
         sub: 'lurus-pg-rw',
         port: '5432',
-        detail: 'CloudNativePG 集群，多 schema 隔离：lurus_api / identity / billing / gushen / webmail',
+        detail: 'CloudNativePG 集群，多 schema 隔离：lurus_api / identity / billing / lucrum / webmail',
         color: '#5A7A9B',
       },
       {
@@ -114,7 +114,7 @@ const layers: ArchLayer[] = [
         name: 'Redis',
         sub: 'redis.messaging',
         port: '6379',
-        detail: 'DB 分配：api=0 / gushen=1 / ratelimit=2 / identity=3，5min entitlement 缓存',
+        detail: 'DB 分配：api=0 / lucrum=1 / ratelimit=2 / identity=3，5min entitlement 缓存',
         color: '#C9A227',
       },
       {
@@ -122,7 +122,7 @@ const layers: ArchLayer[] = [
         name: 'NATS',
         sub: 'nats.messaging',
         port: '4222',
-        detail: 'Streams: LLM_EVENTS / GUSHEN_EVENTS / IDENTITY_EVENTS，事件驱动通信',
+        detail: 'Streams: LLM_EVENTS / LUCRUM_EVENTS / IDENTITY_EVENTS，事件驱动通信',
         color: '#7D8B6A',
       },
       {

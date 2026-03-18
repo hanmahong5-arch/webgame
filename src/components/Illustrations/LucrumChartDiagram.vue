@@ -47,7 +47,7 @@ const signalY = 86
     fill="none"
     xmlns="http://www.w3.org/2000/svg"
     role="img"
-    aria-label="GuShen AI quantitative trading: candlestick chart with AI buy signal"
+    aria-label="Lucrum AI quantitative trading: candlestick chart with AI buy signal"
     style="width:100%;height:100%"
   >
     <!-- Chart frame -->

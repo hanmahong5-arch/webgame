@@ -18,7 +18,7 @@ const nodes: EcoNode[] = [
   { id: 'notify', name: 'Notification', desc: '多渠道消息触达', color: '#A89B8B', layer: 'infra', gridArea: '1 / 4' },
   { id: 'acest', name: 'ACEST', desc: 'AI 桌面助手', color: '#5C7A8B', layer: 'app', gridArea: '2 / 1' },
   { id: 'switch', name: 'Switch', desc: 'AI 工具管理器', color: '#C67B5C', layer: 'app', gridArea: '2 / 2' },
-  { id: 'gushen', name: 'GuShen', desc: 'AI 量化交易', color: '#7D8B6A', layer: 'app', gridArea: '2 / 3' },
+  { id: 'lucrum', name: 'Lucrum', desc: 'AI 量化交易', color: '#7D8B6A', layer: 'app', gridArea: '2 / 3' },
 ]
 
 const activeNode = ref<string | null>(null)
@@ -26,14 +26,14 @@ const activeNode = ref<string | null>(null)
 /** Connections between nodes (from infra to app) */
 const connections: Array<{ from: string; to: string }> = [
   { from: 'identity', to: 'acest' },
-  { from: 'identity', to: 'gushen' },
+  { from: 'identity', to: 'lucrum' },
   { from: 'identity', to: 'switch' },
   { from: 'api', to: 'acest' },
   { from: 'api', to: 'switch' },
-  { from: 'api', to: 'gushen' },
+  { from: 'api', to: 'lucrum' },
   { from: 'memx', to: 'acest' },
   { from: 'memx', to: 'switch' },
-  { from: 'notify', to: 'gushen' },
+  { from: 'notify', to: 'lucrum' },
 ]
 
 const isNodeHighlighted = (nodeId: string): boolean => {

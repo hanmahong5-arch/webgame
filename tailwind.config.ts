@@ -27,7 +27,7 @@ export default {
         ochre: '#C9A227',
         // Product-specific colors
         'product-api': '#6B8BA4',      // Slate blue
-        'product-gushen': '#7D8B6A',   // Sage green
+        'product-lucrum': '#7D8B6A',   // Sage green
         'product-switch': '#C67B5C',   // Terracotta
         'product-docs': '#C9A227',     // Ochre gold
         'product-deaigc': '#8B6B7D',   // Plum

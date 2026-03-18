@@ -11,7 +11,7 @@ export const navItems: NavDropdownItem[] = [
     path: '/for-explorers',
     children: [
       {
-        name: 'GuShen 谷神',
+        name: 'Lucrum',
         desc: '自然语言驱动的 AI 量化交易',
         path: 'https://gushen.lurus.cn',
         external: true,
@@ -56,7 +56,7 @@ export const navItems: NavDropdownItem[] = [
         icon: 'desktop',
       },
       {
-        name: 'GuShen Pro',
+        name: 'Lucrum Pro',
         desc: '机构级量化交易服务',
         path: 'https://gushen.lurus.cn',
         external: true,

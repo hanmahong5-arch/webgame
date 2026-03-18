@@ -11,7 +11,7 @@ import { stats } from '../data/stats'
 // without blocking initial parse. All have their own IntersectionObserver for animation timing.
 const ApiFlowDiagram    = defineAsyncComponent(() => import('../components/Illustrations/ApiFlowDiagram.vue'))
 const KovaDiagram       = defineAsyncComponent(() => import('../components/Illustrations/KovaDiagram.vue'))
-const GushenChartDiagram = defineAsyncComponent(() => import('../components/Illustrations/GushenChartDiagram.vue'))
+const LucrumChartDiagram = defineAsyncComponent(() => import('../components/Illustrations/LucrumChartDiagram.vue'))
 const MemxGraphDiagram  = defineAsyncComponent(() => import('../components/Illustrations/MemxGraphDiagram.vue'))
 const CreatorDiagram    = defineAsyncComponent(() => import('../components/Illustrations/CreatorDiagram.vue'))
 const SwitchDiagram     = defineAsyncComponent(() => import('../components/Illustrations/SwitchDiagram.vue'))
@@ -26,7 +26,7 @@ const { track } = useTracking()
 const heroTags = [
   { name: 'Lurus API', color: '#4A9EFF', href: 'https://api.lurus.cn' },
   { name: 'Kova',      color: '#B08EFF', href: '/for-builders' },
-  { name: 'GuShen',   color: '#7AFF89', href: 'https://gushen.lurus.cn' },
+  { name: 'Lucrum',   color: '#7AFF89', href: 'https://gushen.lurus.cn' },
   { name: 'Creator',  color: '#FFB86C', href: '/download' },
   { name: 'Lumen',    color: '#FFE566', href: '/for-builders' },
   { name: 'Switch',   color: '#FF8C69', href: '/download' },
@@ -58,7 +58,7 @@ const kovaFeatures = [
   'Agent Loop 断点自动恢复',
 ]
 
-const gushenFeatures = [
+const lucrumFeatures = [
   '自然语言描述 → AI 生成策略代码',
   '实时行情接入，毫秒级数据更新',
   '内置回测引擎，一键历史验证',
@@ -108,7 +108,7 @@ const paths = [
 ]
 
 // Switch & Lumen features
-const switchFeatures = ['跨平台桌面应用', '一键切换 AI 服务', '本地代理管理', '离线配置可用']
+const switchFeatures = ['Claude Code / Codex / Gemini CLI 统一管理', 'API Key 集中分发', 'MCP 预设一键同步', '代理与环境快照']
 const lumenFeatures  = ['实时 Agent 追踪', '断点调试注入', '状态树可视化', 'CLI 日志导出']
 </script>
 
@@ -297,8 +297,8 @@ const lumenFeatures  = ['实时 Agent 追踪', '断点调试注入', '状态树�
       </div>
     </section>
 
-    <!-- S5: GuShen -->
-    <section class="section-dark-raised py-24" aria-label="GuShen AI量化交易">
+    <!-- S5: Lucrum -->
+    <section class="section-dark-raised py-24" aria-label="Lucrum AI量化交易">
       <div class="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12">
         <div class="product-section-grid reveal-fade-up">
           <!-- Copy -->
@@ -314,7 +314,7 @@ const lumenFeatures  = ['实时 Agent 追踪', '断点调试注入', '状态树�
               告别手写量化代码。用中文描述你的交易逻辑，谷神 AI 自动生成可执行策略，内置回测引擎即时验证，风险控制全自动化。
             </p>
             <ul class="product-feature-list" role="list">
-              <li v-for="feat in gushenFeatures" :key="feat">
+              <li v-for="feat in lucrumFeatures" :key="feat">
                 <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#7AFF89" aria-hidden="true">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
                 </svg>
@@ -327,7 +327,7 @@ const lumenFeatures  = ['实时 Agent 追踪', '断点调试注入', '状态树�
               rel="noopener noreferrer"
               class="btn-primary"
               style="align-self:flex-start;padding:10px 28px;background:#7AFF89;color:#0D0B09"
-              @click="track('cta_click', { label: 'gushen_section' })"
+              @click="track('cta_click', { label: 'lucrum_section' })"
             >
               进入谷神 →
             </a>
@@ -335,7 +335,7 @@ const lumenFeatures  = ['实时 Agent 追踪', '断点调试注入', '状态树�
 
           <!-- Diagram -->
           <div class="diagram-wrapper">
-            <GushenChartDiagram />
+            <LucrumChartDiagram />
           </div>
         </div>
       </div>
@@ -434,10 +434,10 @@ const lumenFeatures  = ['实时 Agent 追踪', '断点调试注入', '状态树�
           <div class="dual-card" :style="{ '--card-accent': '#FF8C69' }">
             <span class="neon-badge" style="color:#FF8C69;margin-bottom:16px;display:inline-flex">
               <span class="neon-dot" style="color:#FF8C69"></span>
-              智能客户端
+              AI 工具管理器
             </span>
             <h3 class="dual-card-title">Lurus Switch</h3>
-            <p class="dual-card-desc">跨平台桌面应用，统一管理所有 AI CLI 工具，一键切换模型服务配置</p>
+            <p class="dual-card-desc">Claude Code、Codex、Gemini CLI —— 所有 AI 命令行工具的配置、密钥、MCP，一个面板搞定</p>
             <div class="dual-diagram-wrapper">
               <SwitchDiagram />
             </div>

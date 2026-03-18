@@ -27,12 +27,12 @@ const products = [
     description: '统一管理团队的 AI CLI 工具配置。密钥集中管理、代理统一配置、MCP 预设分发 — 从 "每人自己配" 到 "一键同步"。',
     features: ['团队配置统一管理', '密钥集中分发', '代理与 MCP 预设', '使用量统计', '合规审计'],
     cta: { text: '下载 Switch', href: '/download' },
-    color: '#C67B5C',
+    color: '#FF8C69',
     iconPath: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
   },
   {
-    id: 'gushen-pro',
-    name: 'GuShen Pro',
+    id: 'lucrum-pro',
+    name: 'Lucrum Pro',
     tagline: '机构量化服务',
     description: '面向金融机构的量化交易解决方案。专业级策略引擎、风控系统、合规报告 — 从研究到实盘的完整闭环。',
     features: ['专业级策略引擎', '风险控制系统', '合规报告生成', '多策略组合管理', '机构级数据安全'],
@@ -43,7 +43,7 @@ const products = [
 ]
 
 const industries = [
-  { name: '金融', desc: '量化策略 · 风险评估 · 市场分析', products: 'GuShen + API' },
+  { name: '金融', desc: '量化策略 · 风险评估 · 市场分析', products: 'Lucrum + API' },
   { name: '学术', desc: '文献综述 · 数据处理 · 论文写作', products: 'API + MemX' },
   { name: '医疗', desc: '文献检索 · 临床辅助 · 报告生成', products: 'API + Identity' },
   { name: '法律', desc: '法规检索 · 合同审查 · 案例分析', products: 'API + MemX' },
@@ -175,7 +175,7 @@ const industries = [
       <div class="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12 text-center reveal-fade-up">
         <h2 class="biz-section-title">企业 AI 套餐</h2>
         <p class="biz-section-sub biz-section-sub--wide">
-          Lurus API + Switch (团队版) + GuShen Pro + Identity SSO — 企业级 AI 基础设施，开箱即用。
+          Lurus API + Switch (团队版) + Lucrum Pro + Identity SSO — 企业级 AI 基础设施，开箱即用。
         </p>
         <div class="biz-cta-row mt-10">
           <a href="mailto:support@lurus.cn" class="btn-primary px-8 py-3 text-base">联系销售</a>

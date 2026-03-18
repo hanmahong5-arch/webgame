@@ -25,7 +25,7 @@ function bezierPath(from: { x: number; y: number }, to: { x: number; y: number }
   return `M${from.x},${from.y} Q${mx + offset},${my - offset} ${to.x},${to.y}`
 }
 
-const LABELS = ['API', 'GuShen', 'Mail', 'Switch']
+const LABELS = ['API', 'Lucrum', 'Mail', 'Switch']
 
 onMounted(() => {
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {

@@ -5,7 +5,7 @@ import AnimatedProductGraph from '../AnimatedProductGraph.vue'
 
 const mockProducts = [
   { id: 'api', name: 'API', bgColor: '#6B8BA4' },
-  { id: 'gushen', name: 'GuShen', bgColor: '#7D8B6A' },
+  { id: 'lucrum', name: 'Lucrum', bgColor: '#7D8B6A' },
   { id: 'switch', name: 'Switch', bgColor: '#C67B5C' },
   { id: 'acest', name: 'ACEST', bgColor: '#5C7A8B' },
 ] as unknown as Product[]
