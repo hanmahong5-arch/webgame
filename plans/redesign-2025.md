@@ -76,7 +76,7 @@
 
 /* === 产品色（提亮以适应暗底） === */
 --color-product-api:     #7BACC8;  /* 蓝 */
---color-product-gushen:  #8DAD7A;  /* 绿 */
+--color-product-lucrum:  #8DAD7A;  /* 绿 */
 --color-product-switch:  #D98B6A;  /* 橙 */
 --color-product-acest:   #6D9DB0;  /* 青蓝 */
 --color-product-memx:    #A8966E;  /* 沙棕 */
@@ -195,7 +195,7 @@ Logo  |  产品 ▾  |  解决方案 ▾  |  定价  |  文档  |  博客      [
 │  个人工具                    开发者 / 平台            │
 │  ─────────                  ────────────────        │
 │  ACEST Desktop  桌面AI助手   Lurus API   LLM网关     │
-│  GuShen         AI量化交易   Switch      工具管理     │
+│  Lucrum         AI量化交易   Switch      工具管理     │
 │  MemX           AI记忆扩展   Identity    认证计费     │
 │                             Notification 通知中枢    │
 └─────────────────────────────────────────────────────┘
@@ -213,7 +213,7 @@ Logo  |  产品 ▾  |  解决方案 ▾  |  定价  |  文档  |  博客      [
 | `/for-builders` | 构建者（To B） | 优化 |
 | `/pricing` | 定价（仅To C可见完整版）| 重构 |
 | `/products/api` | API 产品详情 | **新增** |
-| `/products/gushen` | GuShen 产品详情 | **新增** |
+| `/products/lucrum` | Lucrum 产品详情 | **新增** |
 | `/products/switch` | Switch 产品详情 | **新增** |
 | `/products/acest` | ACEST 产品详情 | **新增** |
 | `/models` | 模型库 | **新增** |
@@ -232,7 +232,7 @@ S1  Hero — 全屏冲击，定义 Lurus 是什么
 S2  社会证明条 — 数字/统计快速建立信任
 S3  产品矩阵 Bento — 一屏看懂所有产品
 S4  核心能力展示 — API 代码示例 (交互式)
-S5  GuShen 亮点 — 差异化最强产品
+S5  Lucrum 亮点 — 差异化最强产品
 S6  生态地图 — 产品间协作关系
 S7  用户路径导航 — 我是谁 → 进入对应页
 S8  Final CTA
@@ -296,7 +296,7 @@ S8  Final CTA
 ```
 ┌───────────────┬──────────┬──────────────────────────┐
 │               │  Switch  │                           │
-│  Lurus API    │  AI工具  │     GuShen 谷神           │
+│  Lurus API    │  AI工具  │     Lucrum 谷神           │
 │  LLM统一网关  │  管家    │     AI量化交易            │
 │  2×1 大卡    │  1×1    │     2×2 超大卡（主推）      │
 │               │          │                           │
@@ -335,9 +335,9 @@ S8  Final CTA
 
 ---
 
-### S5: GuShen 差异化展示（重构）
+### S5: Lucrum 差异化展示（重构）
 
-GuShen 是最独特的产品（竞品无），用较大篇幅展示：
+Lucrum 是最独特的产品（竞品无），用较大篇幅展示：
 
 ```
 左侧：                              右侧：
@@ -388,7 +388,7 @@ Identity（认证）→ 所有产品（用户体系统一）
 新设计方向：
 - 每个产品用全宽分屏展示（左文字，右交互演示/截图/动效）
 - ACEST：右侧展示"浮动面板"截图 + 快捷键动效
-- GuShen：右侧展示代码生成过程（逐字打字动效）
+- Lucrum：右侧展示代码生成过程（逐字打字动效）
 - Switch：右侧展示工具管理面板截图
 - MemX：右侧展示记忆图谱可视化
 

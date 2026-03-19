@@ -41,7 +41,7 @@
 
 /* 产品专属荧光色 — 替代统一 ochre */
 --color-api:      #4A9EFF;   /* Electric Blue — API Gateway */
---color-gushen:   #7AFF89;   /* Electric Green — 量化 */
+--color-lucrum:   #7AFF89;   /* Electric Green — 量化 */
 --color-switch:   #FFB86C;   /* Warm Amber — 桌面应用 */
 --color-memx:     #4AFFCB;   /* Teal — 记忆 */
 --color-identity: #B08EFF;   /* Violet — Identity */
@@ -55,7 +55,7 @@
 ```css
 /* 发光节点效果 */
 .glow-node-api      { box-shadow: 0 0 20px rgba(74,158,255,0.4); }
-.glow-node-gushen   { box-shadow: 0 0 20px rgba(122,255,137,0.4); }
+.glow-node-lucrum   { box-shadow: 0 0 20px rgba(122,255,137,0.4); }
 
 /* 噪点纹理叠加（替代径向发光装饰） */
 .noise-overlay::after { background-image: url("data:image/svg+xml..."); opacity: 0.03; }
@@ -112,7 +112,7 @@
 | 组件 | 产品 | 可视化内容 | 荧光色 |
 |------|------|-----------|--------|
 | `ApiFlowDiagram.vue` | Lurus API | 50+ 模型节点 → Gateway → 你的应用，粒子流 | `#4A9EFF` |
-| `GushenChartDiagram.vue` | GuShen | K 线图 + AI 信号指标 + 策略触发动画 | `#7AFF89` |
+| `GushenChartDiagram.vue` | Lucrum | K 线图 + AI 信号指标 + 策略触发动画 | `#7AFF89` |
 | `SwitchDashDiagram.vue` | Switch | 桌面 UI 模拟截图（3D tilt 效果） | `#FFB86C` |
 | `MemxGraphDiagram.vue` | MemX | 知识图谱节点扩展动画 | `#4AFFCB` |
 | `IdentityFlowDiagram.vue` | Identity | 认证链路图：用户 → PKCE → Token → 服务 | `#B08EFF` |
@@ -170,7 +170,7 @@
 右: ApiFlowDiagram（升级版，更大更复杂）
 ```
 
-#### C4: GuShen 区段
+#### C4: Lucrum 区段
 
 ```
 左: GushenChartDiagram（K 线动画）
@@ -208,7 +208,7 @@ Logo | 产品▼  解决方案▼  文档  定价 | [控制台] [登录]
 第一列：消费者产品          第二列：平台产品
   ○ Lurus API                ○ Lurus Identity
     50+ 模型统一网关            认证 + 订阅 + 计费
-  ○ GuShen 量化              ○ MemX SDK
+  ○ Lucrum 量化              ○ MemX SDK
     AI 量化交易                 跨会话持久记忆
   ○ Switch 桌面端
     AI 工具统一管理
@@ -228,7 +228,7 @@ Logo | 产品▼  解决方案▼  文档  定价 | [控制台] [登录]
 ```
 产品          开发者         公司          法律
 Lurus API     文档           关于我们      隐私政策
-GuShen        Changelog      博客           服务条款
+Lucrum        Changelog      博客           服务条款
 Switch        GitHub         联系我们
 MemX          API 状态        加入我们
 Identity
@@ -251,7 +251,7 @@ Identity
 
 ```
 Week 1（本周）:
-  A1 登录 fix → A2 邮件 fix → B1 API/GuShen Diagram 升级 → C1 Hero 重设计
+  A1 登录 fix → A2 邮件 fix → B1 API/Lucrum Diagram 升级 → C1 Hero 重设计
 
 Week 2:
   C2–C8 Home.vue 各区段 → D1 TopBar mega-menu → D2 Footer
