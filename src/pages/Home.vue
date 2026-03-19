@@ -8,6 +8,7 @@ import { useCountUp } from '../composables/useCountUp'
 import { useMouseGlow } from '../composables/useMouseGlow'
 import { stats } from '../data/stats'
 import { partners } from '../data/partners'
+import { products as allProducts, curlExample } from '../data/products'
 import ParticleField from '../components/Effects/ParticleField.vue'
 import SectionDividerDark from '../components/Layout/SectionDividerDark.vue'
 import TestimonialsSection from '../components/Features/TestimonialsSection.vue'
@@ -28,16 +29,10 @@ useMouseGlow(heroRef)
 const { login } = useAuth()
 const { track } = useTracking()
 
-// Hero product tags
-const heroTags = [
-  { name: 'Lurus API', color: '#4A9EFF', href: 'https://api.lurus.cn' },
-  { name: 'Kova',      color: '#B08EFF', href: '/for-builders' },
-  { name: 'Lucrum',   color: '#7AFF89', href: 'https://gushen.lurus.cn' },
-  { name: 'Creator',  color: '#FFB86C', href: '/download' },
-  { name: 'Lumen',    color: '#FFE566', href: '/for-builders' },
-  { name: 'Switch',   color: '#FF8C69', href: '/download' },
-  { name: 'MemX',     color: '#4AFFCB', href: '/download#memx' },
-]
+// Hero product tags — derived from centralized product data
+const heroTags = allProducts
+  .filter(p => !['forge', 'identity'].includes(p.id))
+  .map(p => ({ name: p.name, color: p.neonColor!, href: p.url }))
 
 // Stats count-up refs
 const statRef0 = ref<HTMLElement | null>(null)
@@ -76,14 +71,8 @@ const memxFeatures = [
   'SDK / REST API，3 行代码接入',
 ]
 
-// API code example
-const apiCode = `curl https://api.lurus.cn/v1/chat/completions \\
-  -H "Authorization: Bearer $LURUS_KEY" \\
-  -H "Content-Type: application/json" \\
-  -d '{
-    "model": "claude-3-5-sonnet",
-    "messages": [{"role":"user","content":"Hello"}]
-  }'`
+// API code example — from centralized product data
+const apiCode = curlExample
 
 // Path cards
 const paths = [
@@ -221,8 +210,8 @@ const lumenFeatures  = ['实时 Agent 追踪', '断点调试注入', '状态树�
         <div class="partner-marquee-wrapper">
           <div class="partner-marquee animate-marquee">
             <span
-              v-for="p in [...partners, ...partners]"
-              :key="p.name + Math.random()"
+              v-for="(p, i) in [...partners, ...partners]"
+              :key="'partner-' + i"
               class="partner-badge"
               :style="{ borderColor: p.color + '40', color: p.color }"
             >
@@ -274,8 +263,7 @@ const lumenFeatures  = ['实时 Agent 追踪', '断点调试注入', '状态树�
               href="https://api.lurus.cn"
               target="_blank"
               rel="noopener noreferrer"
-              class="btn-primary"
-              style="align-self:flex-start;padding:10px 28px"
+              class="btn-primary product-cta-start"
               @click="track('cta_click', { label: 'api_section' })"
             >
               注册获取 API Key →
@@ -332,8 +320,8 @@ const lumenFeatures  = ['实时 Agent 追踪', '断点调试注入', '状态树�
             </ul>
             <a
               href="/for-builders"
-              class="btn-outline"
-              style="align-self:flex-start;padding:10px 24px;border-color:#B08EFF;color:#B08EFF"
+              class="btn-outline product-cta-start"
+              :style="{ borderColor: '#B08EFF', color: '#B08EFF' }"
               @click="track('cta_click', { label: 'kova_section' })"
             >
               了解 Kova →
@@ -367,8 +355,8 @@ const lumenFeatures  = ['实时 Agent 追踪', '断点调试注入', '状态树�
               href="https://gushen.lurus.cn"
               target="_blank"
               rel="noopener noreferrer"
-              class="btn-primary"
-              style="align-self:flex-start;padding:10px 24px;background:#7AFF89;color:#0D0B09"
+              class="btn-primary product-cta-start"
+              :style="{ background: '#7AFF89', color: '#0D0B09' }"
               @click="track('cta_click', { label: 'lucrum_section' })"
             >
               进入谷神 →
@@ -412,7 +400,7 @@ const lumenFeatures  = ['实时 Agent 追踪', '断点调试注入', '状态树�
           <a
             href="/download#memx"
             class="btn-outline btn-outline--lg"
-            style="border-color:#4AFFCB;color:#4AFFCB"
+            :style="{ borderColor: '#4AFFCB', color: '#4AFFCB' }"
             @click="track('cta_click', { label: 'memx_section' })"
           >
             下载 MemX →
@@ -447,7 +435,7 @@ const lumenFeatures  = ['实时 Agent 追踪', '断点调试注入', '状态树�
           <a
             href="/download"
             class="btn-primary btn-primary--lg"
-            style="background:#FFB86C;color:#0D0B09"
+            :style="{ background: '#FFB86C', color: '#0D0B09' }"
             @click="track('cta_click', { label: 'creator_section' })"
           >
             下载 Lurus Creator →
@@ -490,8 +478,8 @@ const lumenFeatures  = ['实时 Agent 追踪', '断点调试注入', '状态树�
             </ul>
             <a
               href="/download"
-              class="btn-outline"
-              style="padding:8px 20px;font-size:0.875rem;border-color:#FF8C69;color:#FF8C69"
+              class="btn-outline btn-outline--sm"
+              :style="{ borderColor: '#FF8C69', color: '#FF8C69' }"
               @click="track('cta_click', { label: 'switch_card' })"
             >
               下载 Switch →
@@ -519,8 +507,8 @@ const lumenFeatures  = ['实时 Agent 追踪', '断点调试注入', '状态树�
             </ul>
             <a
               href="/for-builders"
-              class="btn-outline"
-              style="padding:8px 20px;font-size:0.875rem;border-color:#FFE566;color:#FFE566"
+              class="btn-outline btn-outline--sm"
+              :style="{ borderColor: '#FFE566', color: '#FFE566' }"
               @click="track('cta_click', { label: 'lumen_card' })"
             >
               了解 Lumen →
@@ -1112,6 +1100,11 @@ const lumenFeatures  = ['实时 Agent 追踪', '断点调试注入', '状态树�
   gap: 8px;
   font-size: 0.9rem;
   color: var(--color-text-secondary);
+}
+
+/* ── Product CTA alignment ───────────────────────── */
+.product-cta-start {
+  align-self: flex-start;
 }
 
 /* ── Reverse layout: diagram visually left, copy right ────── */

@@ -313,6 +313,7 @@ async fn main() {
     url: 'https://identity.lurus.cn',
     icon: 'shield',
     color: 'product-deaigc',
+    neonColor: '#C77DBA',
     bgColor: '#8B6B7D',
     features: ['OIDC + gRPC 双协议', '订阅管理 + 钱包', '多支付网关', '角色权限 + 审计'],
     stats: { value: '3', label: '天完成集成' },

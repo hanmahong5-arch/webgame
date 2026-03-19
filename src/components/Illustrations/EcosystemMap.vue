@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 
 interface EcoNode {
   id: string
@@ -75,8 +76,16 @@ onUnmounted(() => {
   observer?.disconnect()
 })
 
+const router = useRouter()
+
 function isExternal(href: string) {
   return href.startsWith('http')
+}
+
+function onNodeClick(node: EcoNode) {
+  if (!isExternal(node.href)) {
+    router.push(node.href)
+  }
 }
 </script>
 
@@ -118,6 +127,7 @@ function isExternal(href: string) {
           :target="isExternal(node.href) ? '_blank' : undefined"
           :rel="isExternal(node.href) ? 'noopener noreferrer' : undefined"
           class="eco-node-link"
+          @click="!isExternal(node.href) && onNodeClick(node)"
         >
           <circle
             :cx="getNodePos(node).x"

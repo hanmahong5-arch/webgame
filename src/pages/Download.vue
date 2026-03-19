@@ -37,9 +37,9 @@ const staticFallbacks = new Map<string, StaticFallback>([
   }],
   ['lurus-creator', {
     url: '/releases/lurus-creator/v0.3.0/lurus-creator_0.3.0_windows_x64.exe',
-    size: '15 MB',
+    size: '21 MB',
     version: '0.3.0',
-    sha256: '1b11275d629fe0b60e61b4c02ed1dab904d373bee8ca92791b244b57bd458d40',
+    sha256: '69745bb5d6ff6b2a9c914e71a98ab83758308bbcc2cb4304a61730c518f2f3b8',
   }],
 ])
 

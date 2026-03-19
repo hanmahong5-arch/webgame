@@ -14,20 +14,10 @@ const { login } = useAuth()
 const products = getProductsForAudience('entrepreneur')
 
 // Lazy-loaded diagram components, keyed by product ID
-const ApiFlowDiagram = defineAsyncComponent(
-  () => import('../components/Illustrations/ApiFlowDiagram.vue'),
-)
-const SwitchDiagram = defineAsyncComponent(
-  () => import('../components/Illustrations/SwitchDiagram.vue'),
-)
-const LucrumChartDiagram = defineAsyncComponent(
-  () => import('../components/Illustrations/LucrumChartDiagram.vue'),
-)
-
 const diagramComponents: Record<string, ReturnType<typeof defineAsyncComponent>> = {
-  api: ApiFlowDiagram,
-  switch: SwitchDiagram,
-  lucrum: LucrumChartDiagram,
+  api: defineAsyncComponent(() => import('../components/Illustrations/ApiFlowDiagram.vue')),
+  switch: defineAsyncComponent(() => import('../components/Illustrations/SwitchDiagram.vue')),
+  lucrum: defineAsyncComponent(() => import('../components/Illustrations/LucrumChartDiagram.vue')),
 }
 
 const industries = [

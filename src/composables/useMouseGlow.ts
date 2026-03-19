@@ -26,6 +26,26 @@ export function useMouseGlow(
 
   const lerp = (a: number, b: number, t: number) => a + (b - a) * t
 
+  const tick = () => {
+    if (!active || !containerRef.value) {
+      animFrame = 0
+      return
+    }
+    currentX = lerp(currentX, mouseX, 0.08)
+    currentY = lerp(currentY, mouseY, 0.08)
+    const el = containerRef.value
+    el.style.setProperty('--glow-x', `${currentX}px`)
+    el.style.setProperty('--glow-y', `${currentY}px`)
+    el.style.setProperty('--glow-opacity', '1')
+    animFrame = requestAnimationFrame(tick)
+  }
+
+  const startLoop = () => {
+    if (!animFrame) {
+      animFrame = requestAnimationFrame(tick)
+    }
+  }
+
   const onMouseMove = (e: MouseEvent) => {
     const el = containerRef.value
     if (!el) return
@@ -36,6 +56,7 @@ export function useMouseGlow(
       active = true
       currentX = mouseX
       currentY = mouseY
+      startLoop()
     }
   }
 
@@ -49,31 +70,17 @@ export function useMouseGlow(
     }
   }
 
-  const tick = () => {
-    if (active && containerRef.value) {
-      currentX = lerp(currentX, mouseX, 0.08)
-      currentY = lerp(currentY, mouseY, 0.08)
-      const el = containerRef.value
-      el.style.setProperty('--glow-x', `${currentX}px`)
-      el.style.setProperty('--glow-y', `${currentY}px`)
-      el.style.setProperty('--glow-opacity', '1')
-    }
-    animFrame = requestAnimationFrame(tick)
-  }
-
   onMounted(() => {
     if (prefersReducedMotion || isTouch) return
     const el = containerRef.value
     if (!el) return
 
-    // Inject the glow pseudo-element background
     el.style.setProperty('--glow-color', color)
     el.style.setProperty('--glow-size', `${size}px`)
     el.style.setProperty('--glow-opacity', '0')
 
     el.addEventListener('mousemove', onMouseMove, { passive: true })
     el.addEventListener('mouseleave', onMouseLeave)
-    animFrame = requestAnimationFrame(tick)
   })
 
   onUnmounted(() => {

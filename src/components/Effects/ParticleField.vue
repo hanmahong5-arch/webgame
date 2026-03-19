@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, onMounted, onUnmounted } from 'vue'
 
 interface Props {
   count?: number
@@ -15,12 +15,17 @@ const prefersReducedMotion =
   typeof window !== 'undefined' &&
   window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
-const isMobile =
+const isMobile = ref(
   typeof window !== 'undefined' && window.innerWidth < 768
+)
+
+const onResize = () => { isMobile.value = window.innerWidth < 768 }
+onMounted(() => window.addEventListener('resize', onResize, { passive: true }))
+onUnmounted(() => window.removeEventListener('resize', onResize))
 
 const particles = computed(() => {
   if (prefersReducedMotion) return []
-  const effectiveCount = isMobile ? Math.ceil(props.count / 2) : props.count
+  const effectiveCount = isMobile.value ? Math.ceil(props.count / 2) : props.count
   return Array.from({ length: effectiveCount }, (_, i) => {
     const size = 3 + Math.random() * 5
     const left = Math.random() * 100

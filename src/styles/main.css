@@ -988,3 +988,8 @@ a, button {
   padding: 14px 40px;
   font-size: 1.1rem;
 }
+
+.btn-outline--sm {
+  padding: 8px 20px;
+  font-size: 0.875rem;
+}
