@@ -3,11 +3,11 @@
  * NFR-B4: Performance ≥ 90
  */
 
-module.exports = {
+export default {
   ci: {
     collect: {
       url: ['http://localhost:4173/'],
-      startServerCommand: 'npm run preview',
+      startServerCommand: 'bun run preview',
       startServerReadyPattern: 'Local',
       numberOfRuns: 3,
     },
