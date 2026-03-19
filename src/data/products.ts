@@ -322,6 +322,12 @@ async fn main() {
     navDesc: '认证 + 订阅 + 计费平台',
     external: true,
     iconPath: 'M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z',
+    showcase: {
+      type: 'code' as const,
+      fallbackCode: `# OIDC token exchange — integrate in minutes\ncurl -X POST https://auth.lurus.cn/oauth/v2/token \\\n  -d grant_type=client_credentials \\\n  -d client_id=$CLIENT_ID \\\n  -d client_secret=$CLIENT_SECRET \\\n  -d scope="openid profile email"\n\n# Subscribe user to a plan\ncurl -X POST https://identity.lurus.cn/v1/subscriptions \\\n  -H "Authorization: Bearer $TOKEN" \\\n  -d '{"plan_id":"pro","user_id":"usr_123"}'`,
+      fallbackLanguage: 'bash',
+      fallbackAriaLabel: 'Lurus Identity OIDC and subscription API example',
+    },
     audiences: {
       builder: {
         description: '不再重复造认证和计费系统。OIDC 标准认证、订阅管理、钱包系统、角色权限 — 3 天集成而不是 3 个月。适用于任何需要用户体系的 SaaS 产品。',

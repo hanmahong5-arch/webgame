@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { products, productIconPaths, curlExample } from './products'
 
 describe('products', () => {
-  it('should export exactly 7 products', () => {
-    expect(products).toHaveLength(7)
+  it('should export exactly 9 products', () => {
+    expect(products).toHaveLength(9)
   })
 
   it('should contain all core products: api, lucrum, switch, memx, kova, creator, lumen', () => {

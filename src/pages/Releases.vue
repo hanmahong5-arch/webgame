@@ -411,10 +411,8 @@ function selectProduct(releaseProductId: string | null) {
                       v-if="expandedReleases.has(release.id)"
                       class="px-5 sm:px-6 pb-5 sm:pb-6"
                     >
-                      <div
-                        class="changelog-content prose-sm text-ink-500"
-                        v-html="renderChangelog(release.changelog_md)"
-                      ></div>
+                      <!-- eslint-disable-next-line vue/no-v-html -->
+                      <div class="changelog-content prose-sm text-ink-500" v-html="renderChangelog(release.changelog_md)"></div>
                     </div>
                   </div>
                 </div>
