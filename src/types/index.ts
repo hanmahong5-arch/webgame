@@ -9,9 +9,6 @@ export type { NavItem, NavDropdownItem } from './navigation'
 // Product types
 export type { Product, ProductStats, ProductIconPaths } from './products'
 
-// Code example types
-export type { CodeExample } from './codeExample'
-
 // API health types
 export type { ApiHealthStatus, ApiHealthConfig } from './apiHealth'
 
