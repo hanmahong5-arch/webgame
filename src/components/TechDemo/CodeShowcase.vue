@@ -211,7 +211,7 @@ async function handleCopy() {
 .code-showcase {
   border-radius: 8px;
   overflow: hidden;
-  border: 1px solid var(--color-ink-700);
+  border: 1px solid var(--color-surface-border);
 }
 
 .code-header {
@@ -219,14 +219,14 @@ async function handleCopy() {
   align-items: center;
   justify-content: space-between;
   padding: 8px 16px;
-  background-color: var(--color-ink-900);
-  border-bottom: 1px solid var(--color-ink-700);
+  background-color: var(--color-surface-raised);
+  border-bottom: 1px solid var(--color-surface-border);
 }
 
 .code-language {
   font-family: monospace;
   font-size: 12px;
-  color: var(--color-ink-300);
+  color: var(--color-text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -253,7 +253,7 @@ async function handleCopy() {
   border: none;
   border-radius: 4px;
   background-color: transparent;
-  color: var(--color-ink-300);
+  color: var(--color-text-secondary);
   cursor: pointer;
   transition: color 0.2s ease, background-color 0.2s ease;
   font-size: 12px;
@@ -281,7 +281,7 @@ async function handleCopy() {
 }
 
 .code-body {
-  background-color: var(--color-ink-900);
+  background-color: var(--color-surface-raised);
   overflow-x: auto;
 }
 
@@ -291,7 +291,7 @@ async function handleCopy() {
   font-family: 'Cascadia Code', 'Fira Code', 'JetBrains Mono', monospace;
   font-size: 14px;
   line-height: 1.6;
-  color: var(--color-cream-100);
+  color: var(--color-text-primary);
   white-space: pre;
 }
 
@@ -300,8 +300,8 @@ async function handleCopy() {
   width: 2em;
   margin-right: 1em;
   text-align: right;
-  color: var(--color-ink-500);
-  border-right: 1px solid var(--color-ink-700);
+  color: var(--color-text-muted);
+  border-right: 1px solid var(--color-surface-border);
   padding-right: 0.75em;
   user-select: none;
 }
@@ -321,11 +321,11 @@ async function handleCopy() {
 }
 
 .token-flag {
-  color: var(--color-cream-300);
+  color: #F5E6B8;
 }
 
 .token-plain {
-  color: var(--color-cream-100);
+  color: var(--color-text-primary);
 }
 
 
@@ -343,7 +343,7 @@ async function handleCopy() {
 }
 
 .token-null {
-  color: var(--color-ink-300);
+  color: var(--color-text-secondary);
 }
 
 /* Reduced motion: disable copy-flash transition */

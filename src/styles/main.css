@@ -2,37 +2,23 @@
 @import "./fonts.css";
 
 /* ============================================
-   Lurus Design System - Hand-drawn Paper Theme
-   Based on Golden Ratio (φ = 1.618)
+   Lurus Design System — Dark Theme
    ============================================ */
 
 /* Theme Colors */
 @theme {
-  /* === Dark Surface (new primary theme) === */
+  /* === Dark Surface === */
   --color-surface-base:    #0D0B09;
   --color-surface-raised:  #141210;
   --color-surface-overlay: #1C1916;
   --color-surface-border:  #2A2520;
 
-  /* === Dark Text === */
+  /* === Text === */
   --color-text-primary:   #F5F0E8;
   --color-text-secondary: #A89B8B;
   --color-text-muted:     #6B5D4D;
 
-  /* === Cream/Paper tones (kept for ForExplorers light theme) === */
-  --color-cream-50: #FFFDF7;
-  --color-cream-100: #FEF9E7;
-  --color-cream-200: #FCF4D6;
-  --color-cream-300: #F5E6B8;
-
-  /* Ink/Text tones (kept for light theme) */
-  --color-ink-900: #2C2416;
-  --color-ink-700: #4A3F2F;
-  --color-ink-500: #6B5D4D;
-  --color-ink-300: #A89B8B;
-  --color-ink-100: #D4CCC0;
-
-  /* Accent — elevated for dark background */
+  /* Accent — ochre gold */
   --color-ochre: #D4A827;
 
   /* Product colors */
@@ -58,13 +44,6 @@
   --color-product-creator: #FFB86C;
   --color-product-lumen:   #FFE566;
 
-  /* Portal category colors */
-  --color-portal-academic: #8B6B7D;
-  --color-portal-finance: #7D8B6A;
-  --color-portal-ai: #6B8BA4;
-  --color-portal-engineering: #C67B5C;
-  --color-portal-medical: #4A8B6A;
-  --color-portal-legal: #8B4A6A;
 }
 
 /* Smooth scrolling */
@@ -79,130 +58,6 @@ body {
   font-family: 'Noto Sans SC', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-/* ============================================
-   Hand-drawn Card Styles
-   ============================================ */
-.card-sketchy {
-  background-color: var(--color-cream-100);
-  border: 2px solid var(--color-ink-300);
-  border-radius: 4px 15px 8px 12px / 12px 8px 15px 4px;
-  box-shadow: 3px 3px 0 var(--color-ink-100);
-  transition: all 0.3s ease;
-}
-
-.card-sketchy:hover {
-  box-shadow: 5px 5px 0 var(--color-ink-100);
-  transform: translate(-2px, -2px);
-}
-
-/* Product-specific card colors */
-.card-api { border-color: var(--color-product-api); }
-.card-lucrum { border-color: var(--color-product-lucrum); }
-.card-switch { border-color: var(--color-product-switch); }
-.card-docs { border-color: var(--color-product-docs); }
-.card-deaigc { border-color: var(--color-product-deaigc); }
-
-/* ============================================
-   Hand-drawn Button Styles
-   ============================================ */
-.btn-hand {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 12px 24px;
-  font-weight: 600;
-  border: 2px solid var(--color-ink-500);
-  border-radius: 3px 10px 5px 12px / 12px 5px 10px 3px;
-  background-color: transparent;
-  color: var(--color-ink-900);
-  transition: all 0.2s ease;
-  cursor: pointer;
-}
-
-.btn-hand:hover {
-  background-color: var(--color-ink-900);
-  color: var(--color-cream-50);
-  transform: rotate(-1deg);
-}
-
-.btn-hand-primary {
-  background-color: var(--color-ochre);
-  border-color: var(--color-ochre);
-  color: var(--color-cream-50);
-}
-
-.btn-hand-primary:hover {
-  background-color: color-mix(in srgb, var(--color-ochre), #000 12%);
-  border-color: color-mix(in srgb, var(--color-ochre), #000 12%);
-  transform: scale(1.02) rotate(1deg);
-  box-shadow: 0 4px 12px rgba(201, 162, 39, 0.3);
-}
-
-/* ============================================
-   Typography - Hand-drawn Style
-   ============================================ */
-.font-hand {
-  font-family: 'Caveat', cursive;
-}
-
-.text-gradient-ochre {
-  background: linear-gradient(135deg, var(--color-ochre), #E0B830);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* ============================================
-   Decorative Elements
-   ============================================ */
-
-/* Doodle underline */
-.underline-doodle {
-  position: relative;
-}
-
-.underline-doodle::after {
-  content: '';
-  position: absolute;
-  bottom: -4px;
-  left: 0;
-  width: 100%;
-  height: 3px;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 6'%3E%3Cpath d='M0,3 Q25,0 50,3 T100,3' stroke='%23C9A227' stroke-width='2' fill='none'/%3E%3C/svg%3E") repeat-x;
-  background-size: 100px 6px;
-}
-
-/* Corner doodle decoration */
-.doodle-corner {
-  position: absolute;
-  width: 80px;
-  height: 80px;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 80 80'%3E%3Cpath d='M5,5 Q20,15 15,30 T25,50 Q40,60 35,75' stroke='%23A89B8B' stroke-width='1.5' fill='none' stroke-dasharray='4,4'/%3E%3Ccircle cx='10' cy='10' r='3' fill='%23C9A227'/%3E%3Ccircle cx='35' cy='55' r='2' fill='%23C9A227'/%3E%3C/svg%3E") no-repeat;
-  opacity: 0.6;
-  pointer-events: none;
-}
-
-/* Star burst decoration */
-.doodle-star {
-  display: inline-block;
-  width: 24px;
-  height: 24px;
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12,2 L14,9 L21,9 L15,14 L17,21 L12,17 L7,21 L9,14 L3,9 L10,9 Z' stroke='%23C9A227' stroke-width='1.5' fill='none'/%3E%3C/svg%3E") no-repeat center;
-}
-
-/* ============================================
-   Sketchy Border Utilities
-   ============================================ */
-.border-sketchy {
-  border: 2px solid var(--color-ink-300);
-  border-radius: 4px 15px 8px 12px / 12px 8px 15px 4px;
-}
-
-.border-sketchy-light {
-  border: 1.5px solid var(--color-ink-100);
-  border-radius: 4px 15px 8px 12px / 12px 8px 15px 4px;
 }
 
 /* ============================================
@@ -238,7 +93,7 @@ body {
 /* Selection styles */
 ::selection {
   background-color: rgba(201, 162, 39, 0.3);
-  color: var(--color-ink-900);
+  color: var(--color-text-primary);
 }
 
 /* ============================================
@@ -291,14 +146,6 @@ body {
     scroll-behavior: auto !important;
   }
 
-  /* Ensure elements are visible without animation */
-  .animate-float,
-  .animate-wiggle,
-  .ecosystem-center-node,
-  .product-graph-center {
-    animation: none;
-  }
-
   .has-light-sweep::after {
     animation: none;
     display: none;
@@ -312,30 +159,6 @@ body {
 /* ============================================
    Animations
    ============================================ */
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
-@keyframes wiggle {
-  0%, 100% {
-    transform: rotate(-1deg);
-  }
-  50% {
-    transform: rotate(1deg);
-  }
-}
-
-@keyframes draw {
-  to {
-    stroke-dashoffset: 0;
-  }
-}
-
 @keyframes draw-line {
   from {
     stroke-dashoffset: 200;
@@ -358,153 +181,11 @@ body {
   }
 }
 
-@keyframes flow-pulse {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 0.8; }
-}
-
-.animate-float {
-  animation: float 6s ease-in-out infinite;
-}
-
-.animate-wiggle {
-  animation: wiggle 3s ease-in-out infinite;
-}
-
 /* ============================================
    Transitions
    ============================================ */
 a, button {
   transition: all 0.2s ease;
-}
-
-/* ============================================
-   Golden Ratio Layout Helpers
-   ============================================ */
-.w-golden {
-  width: 61.8%;
-}
-
-.w-golden-minor {
-  width: 38.2%;
-}
-
-.min-h-golden-vh {
-  min-height: 61.8vh;
-}
-
-/* Fibonacci gap utilities */
-.gap-fib-3 { gap: 13px; }
-.gap-fib-4 { gap: 21px; }
-.gap-fib-5 { gap: 34px; }
-.gap-fib-6 { gap: 55px; }
-
-/* ============================================
-   Product Color Badges
-   ============================================ */
-.badge-api { background-color: var(--color-product-api); color: white; }
-.badge-lucrum { background-color: var(--color-product-lucrum); color: white; }
-.badge-switch { background-color: var(--color-product-switch); color: white; }
-.badge-docs { background-color: var(--color-product-docs); color: white; }
-.badge-deaigc { background-color: var(--color-product-deaigc); color: white; }
-
-/* ============================================
-   Portal Link Button Styles
-   ============================================ */
-.portal-link-btn {
-  display: inline-flex;
-  align-items: center;
-  padding: 10px 18px;
-  font-size: 14px;
-  font-weight: 500;
-  border: 1.5px solid;
-  border-radius: 3px 8px 4px 10px / 10px 4px 8px 3px;
-  transition: all 0.2s ease;
-  text-decoration: none;
-  color: var(--color-ink-700);
-  background-color: transparent;
-  white-space: nowrap;
-}
-
-.portal-link-btn:hover {
-  transform: translateY(-2px);
-  box-shadow: 2px 2px 0 var(--color-ink-100);
-  color: var(--color-ink-900);
-}
-
-.portal-link-btn-deaigc {
-  background-color: rgba(139, 107, 125, 0.1);
-  border-color: var(--color-product-deaigc);
-}
-
-.portal-link-btn-deaigc:hover {
-  background-color: rgba(139, 107, 125, 0.2);
-}
-
-.portal-link-btn-lucrum {
-  background-color: rgba(125, 139, 106, 0.1);
-  border-color: var(--color-product-lucrum);
-}
-
-.portal-link-btn-lucrum:hover {
-  background-color: rgba(125, 139, 106, 0.2);
-}
-
-/* ============================================
-   Portal Category Link Styles
-   ============================================ */
-.portal-academic {
-  background-color: rgba(139, 107, 125, 0.1);
-  border-color: var(--color-portal-academic);
-}
-
-.portal-academic:hover {
-  background-color: rgba(139, 107, 125, 0.2);
-}
-
-.portal-finance {
-  background-color: rgba(125, 139, 106, 0.1);
-  border-color: var(--color-portal-finance);
-}
-
-.portal-finance:hover {
-  background-color: rgba(125, 139, 106, 0.2);
-}
-
-.portal-ai {
-  background-color: rgba(107, 139, 164, 0.1);
-  border-color: var(--color-portal-ai);
-}
-
-.portal-ai:hover {
-  background-color: rgba(107, 139, 164, 0.2);
-}
-
-.portal-engineering {
-  background-color: rgba(198, 123, 92, 0.1);
-  border-color: var(--color-portal-engineering);
-}
-
-.portal-engineering:hover {
-  background-color: rgba(198, 123, 92, 0.2);
-}
-
-.portal-medical {
-  background-color: rgba(74, 139, 106, 0.1);
-  border-color: var(--color-portal-medical);
-}
-
-.portal-medical:hover {
-  background-color: rgba(74, 139, 106, 0.2);
-}
-
-.portal-legal {
-  background-color: rgba(139, 74, 106, 0.1);
-  border-color: var(--color-portal-legal);
-}
-
-.portal-legal:hover {
-  background-color: rgba(139, 74, 106, 0.2);
 }
 
 /* ============================================
@@ -517,7 +198,7 @@ a, button {
   z-index: 9999;
   padding: 12px 24px;
   background-color: var(--color-ochre);
-  color: var(--color-cream-50);
+  color: #0D0B09;
   font-weight: 600;
   border-radius: 0 0 8px 8px;
   text-decoration: none;
@@ -531,10 +212,10 @@ a, button {
 }
 
 /* ============================================
-   Dark Theme — New Buttons
+   Buttons
    ============================================ */
 
-/* Primary filled button (dark bg context) */
+/* Primary filled button */
 .btn-primary {
   display: inline-flex;
   align-items: center;
@@ -559,7 +240,7 @@ a, button {
   box-shadow: 0 4px 16px rgba(212, 168, 39, 0.35);
 }
 
-/* Outline button (dark bg context) */
+/* Outline button */
 .btn-outline {
   display: inline-flex;
   align-items: center;
@@ -584,33 +265,11 @@ a, button {
   background-color: rgba(255, 255, 255, 0.04);
 }
 
-/* Code/terminal button */
-.btn-code {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 18px;
-  font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
-  font-size: 13px;
-  background-color: var(--color-surface-raised);
-  color: var(--color-text-secondary);
-  border: 1px solid var(--color-surface-border);
-  border-radius: 6px;
-  cursor: pointer;
-  transition: border-color 0.2s ease, color 0.2s ease;
-  text-decoration: none;
-}
-
-.btn-code:hover {
-  border-color: var(--color-ochre);
-  color: var(--color-text-primary);
-}
-
 /* ============================================
-   Dark Theme — Cards
+   Cards
    ============================================ */
 
-/* Standard dark card */
+/* Standard card */
 .card-dark {
   background-color: var(--color-surface-raised);
   border: 1px solid var(--color-surface-border);
@@ -639,14 +298,14 @@ a, button {
 }
 
 /* ============================================
-   Dark Theme — Monospace / Code
+   Monospace / Code
    ============================================ */
 .font-mono {
   font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
 }
 
 /* ============================================
-   Dark Theme — Section utilities
+   Section Utilities
    ============================================ */
 .section-dark {
   background-color: var(--color-surface-base);
@@ -806,15 +465,6 @@ a, button {
   color: var(--color-text-secondary);
 }
 
-/* Radial glow background decoration */
-.neon-glow-bg {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  pointer-events: none;
-  opacity: 0.12;
-}
-
 /* Dual product grid (Switch + Lumen) */
 .dual-product-grid {
   display: grid;
@@ -921,31 +571,6 @@ a, button {
   box-shadow: 0 0 24px color-mix(in srgb, var(--glow-color, var(--color-ochre)) 18%, transparent),
               0 8px 32px rgba(0, 0, 0, 0.3);
   transform: translateY(-3px);
-}
-
-/* Glass card effect */
-.card-glass {
-  background: rgba(20, 18, 16, 0.6);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-}
-
-/* Section fade-in gradient */
-.section-fade-in {
-  position: relative;
-}
-
-.section-fade-in::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 80px;
-  background: linear-gradient(to bottom, var(--color-surface-base), transparent);
-  pointer-events: none;
-  z-index: 1;
 }
 
 /* Light sweep overlay */

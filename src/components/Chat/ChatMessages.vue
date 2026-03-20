@@ -135,7 +135,7 @@ const handleDelete = (id: string) => {
   width: 64px;
   height: 64px;
   margin-bottom: 16px;
-  color: var(--color-ink-300);
+  color: var(--color-text-secondary);
   opacity: 0.5;
 }
 
@@ -147,19 +147,19 @@ const handleDelete = (id: string) => {
 .empty-title {
   font-size: 16px;
   font-weight: 600;
-  color: var(--color-ink-500);
+  color: var(--color-text-muted);
   margin: 0 0 8px 0;
 }
 
 .empty-subtitle {
   font-size: 14px;
-  color: var(--color-ink-300);
+  color: var(--color-text-secondary);
   margin: 0 0 4px 0;
 }
 
 .empty-hint {
   font-size: 12px;
-  color: var(--color-ink-300);
+  color: var(--color-text-secondary);
   margin: 0;
   opacity: 0.8;
 }

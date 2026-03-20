@@ -48,25 +48,25 @@ const isNodeHighlighted = (nodeId: string): boolean => {
 </script>
 
 <template>
-  <section class="py-fib-7 bg-cream-50" aria-label="Product Ecosystem">
+  <section class="section-dark py-20" aria-label="Product Ecosystem">
     <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
       <!-- Section header -->
-      <div class="text-center mb-fib-6 reveal-fade-up">
-        <h2 class="text-phi-2xl sm:text-phi-3xl text-ink-900 mb-fib-3 font-semibold">一个生态，无限可能</h2>
-        <p class="text-phi-lg text-ink-500 max-w-2xl mx-auto">每个产品独立强大，组合使用更加强大</p>
+      <div class="text-center mb-12 reveal-fade-up">
+        <h2 class="text-phi-2xl sm:text-phi-3xl text-[var(--color-text-primary)] mb-5 font-semibold">一个生态，无限可能</h2>
+        <p class="text-phi-lg text-[var(--color-text-secondary)] max-w-2xl mx-auto">每个产品独立强大，组合使用更加强大</p>
       </div>
 
       <!-- Layer labels + node grid -->
-      <div class="space-y-fib-4 reveal-fade-up" @mouseleave="activeNode = null">
+      <div class="space-y-8 reveal-fade-up" @mouseleave="activeNode = null">
         <!-- Infrastructure layer -->
         <div>
-          <p class="text-xs text-ink-300 uppercase tracking-wider mb-fib-3 font-semibold">基础设施层</p>
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-fib-3">
+          <p class="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-5 font-semibold">基础设施层</p>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div
               v-for="node in nodes.filter(n => n.layer === 'infra')"
               :key="node.id"
-              class="eco-node border-sketchy p-fib-4 transition-all duration-300 cursor-pointer"
-              :class="isNodeHighlighted(node.id) ? 'bg-cream-100 opacity-100' : 'bg-cream-50 opacity-30'"
+              class="eco-node border border-[var(--color-surface-border)] rounded-xl p-6 transition-all duration-300 cursor-pointer"
+              :class="isNodeHighlighted(node.id) ? 'bg-[var(--color-surface-raised)] opacity-100' : 'bg-[var(--color-surface-base)] opacity-30'"
               @mouseenter="activeNode = node.id"
             >
               <div class="flex items-center gap-2 mb-2">
@@ -74,17 +74,17 @@ const isNodeHighlighted = (nodeId: string): boolean => {
                   class="w-3 h-3 rounded-full shrink-0"
                   :style="{ backgroundColor: node.color }"
                 ></div>
-                <span class="text-sm font-bold text-ink-900">{{ node.name }}</span>
+                <span class="text-sm font-bold text-[var(--color-text-primary)]">{{ node.name }}</span>
               </div>
-              <p class="text-xs text-ink-400">{{ node.desc }}</p>
+              <p class="text-xs text-[var(--color-text-muted)]">{{ node.desc }}</p>
             </div>
           </div>
         </div>
 
         <!-- Connection indicator -->
         <div class="flex justify-center">
-          <div class="flex items-center gap-2 text-ink-300">
-            <div class="w-8 h-px bg-ink-200"></div>
+          <div class="flex items-center gap-2 text-[var(--color-text-muted)]">
+            <div class="w-8 h-px bg-[var(--color-surface-border)]"></div>
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
             </svg>
@@ -92,19 +92,19 @@ const isNodeHighlighted = (nodeId: string): boolean => {
             <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
             </svg>
-            <div class="w-8 h-px bg-ink-200"></div>
+            <div class="w-8 h-px bg-[var(--color-surface-border)]"></div>
           </div>
         </div>
 
         <!-- Application layer -->
         <div>
-          <p class="text-xs text-ink-300 uppercase tracking-wider mb-fib-3 font-semibold">应用产品层</p>
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-fib-3">
+          <p class="text-xs text-[var(--color-text-muted)] uppercase tracking-wider mb-5 font-semibold">应用产品层</p>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div
               v-for="node in nodes.filter(n => n.layer === 'app')"
               :key="node.id"
-              class="eco-node border-sketchy p-fib-4 transition-all duration-300 cursor-pointer"
-              :class="isNodeHighlighted(node.id) ? 'bg-cream-100 opacity-100' : 'bg-cream-50 opacity-30'"
+              class="eco-node border border-[var(--color-surface-border)] rounded-xl p-6 transition-all duration-300 cursor-pointer"
+              :class="isNodeHighlighted(node.id) ? 'bg-[var(--color-surface-raised)] opacity-100' : 'bg-[var(--color-surface-base)] opacity-30'"
               @mouseenter="activeNode = node.id"
             >
               <div class="flex items-center gap-2 mb-2">
@@ -112,16 +112,16 @@ const isNodeHighlighted = (nodeId: string): boolean => {
                   class="w-3 h-3 rounded-full shrink-0"
                   :style="{ backgroundColor: node.color }"
                 ></div>
-                <span class="text-sm font-bold text-ink-900">{{ node.name }}</span>
+                <span class="text-sm font-bold text-[var(--color-text-primary)]">{{ node.name }}</span>
               </div>
-              <p class="text-xs text-ink-400">{{ node.desc }}</p>
+              <p class="text-xs text-[var(--color-text-muted)]">{{ node.desc }}</p>
             </div>
           </div>
         </div>
       </div>
 
       <!-- Hint text -->
-      <p class="text-center text-xs text-ink-300 mt-fib-4 reveal-fade-up">
+      <p class="text-center text-xs text-[var(--color-text-muted)] mt-6 reveal-fade-up">
         Hover 任意节点查看关联关系
       </p>
     </div>
@@ -136,6 +136,7 @@ const isNodeHighlighted = (nodeId: string): boolean => {
 }
 
 .eco-node:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  border-color: var(--color-ochre);
 }
 </style>

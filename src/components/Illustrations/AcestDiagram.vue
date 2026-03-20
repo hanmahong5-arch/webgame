@@ -36,13 +36,13 @@ const metrics = [
     <!-- Desktop outline -->
     <rect
       x="30" y="25" width="180" height="120" rx="8"
-      stroke="#5C7A8B" stroke-width="2" fill="#FEF9E7"
+      stroke="#5C7A8B" stroke-width="2" fill="#1C1916"
       :class="isVisible ? 'animate-draw' : ''"
     />
     <!-- Screen area -->
     <rect
       x="40" y="35" width="160" height="85" rx="4"
-      stroke="#A89B8B" stroke-width="1" stroke-dasharray="3 2" fill="#FFFDF7"
+      stroke="#A89B8B" stroke-width="1" stroke-dasharray="3 2" fill="#141210"
       :class="isVisible ? 'animate-draw' : ''"
       style="animation-delay: 200ms"
     />
@@ -74,7 +74,7 @@ const metrics = [
     <!-- Rust badge inside screen -->
     <text
       x="120" y="55" text-anchor="middle"
-      class="text-[10px] fill-ink-500 font-mono"
+      class="text-[10px] fill-[var(--color-text-muted)] font-mono"
       :class="isVisible ? 'animate-fade-in' : ''"
       style="animation-delay: 400ms"
     >Rust Native</text>
@@ -100,13 +100,13 @@ const metrics = [
       <!-- Metric pill -->
       <rect
         :x="metric.x - 10" :y="metric.y - 12" width="100" height="24" rx="12"
-        stroke="#5C7A8B" stroke-width="1.5" fill="#FEF9E7"
+        stroke="#5C7A8B" stroke-width="1.5" fill="#1C1916"
         :class="isVisible ? 'animate-draw' : ''"
         :style="{ animationDelay: `${700 + i * 150}ms` }"
       />
       <text
         :x="metric.x + 40" :y="metric.y + 4" text-anchor="middle"
-        class="text-[10px] fill-ink-700 font-mono font-semibold"
+        class="text-[10px] fill-[var(--color-text-secondary)] font-mono font-semibold"
       >{{ metric.label }}</text>
 
       <!-- Pulsing dot -->

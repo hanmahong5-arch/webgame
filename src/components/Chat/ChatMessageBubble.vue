@@ -119,7 +119,7 @@ const handleDelete = () => {
   display: inline-block;
   width: 2px;
   height: 1em;
-  background: var(--color-ink-500);
+  background: var(--color-text-muted);
   margin-left: 2px;
   vertical-align: text-bottom;
   animation: blink 0.8s step-end infinite;
@@ -175,14 +175,14 @@ const handleDelete = () => {
 
 .is-user .message-bubble {
   background: var(--color-ochre);
-  color: var(--color-cream-50);
+  color: var(--color-text-primary);
   border-radius: 16px 16px 4px 16px;
 }
 
 .is-assistant .message-bubble {
-  background: var(--color-cream-100);
-  color: var(--color-ink-900);
-  border: 1px solid var(--color-ink-100);
+  background: var(--color-surface-raised);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-surface-border);
   border-radius: 16px 16px 16px 4px;
 }
 
@@ -287,7 +287,7 @@ const handleDelete = () => {
 
 .timestamp {
   font-size: 11px;
-  color: var(--color-ink-300);
+  color: var(--color-text-secondary);
   padding: 0 4px;
 }
 </style>

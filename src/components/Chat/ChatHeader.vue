@@ -112,8 +112,8 @@ const handleClose = () => {
 
 .chat-header {
   padding: 16px;
-  background: var(--color-cream-100);
-  border-bottom: 1px solid var(--color-ink-100);
+  background: var(--color-surface-raised);
+  border-bottom: 1px solid var(--color-surface-border);
 }
 
 .header-top {
@@ -142,14 +142,13 @@ const handleClose = () => {
 .icon-wrapper .icon {
   width: 16px;
   height: 16px;
-  color: var(--color-cream-50);
+  color: var(--color-text-primary);
 }
 
 .title {
-  font-family: 'Caveat', cursive;
   font-size: 20px;
   font-weight: 600;
-  color: var(--color-ink-900);
+  color: var(--color-text-primary);
   margin: 0;
 }
 
@@ -168,14 +167,14 @@ const handleClose = () => {
   background: transparent;
   border: none;
   border-radius: 6px;
-  color: var(--color-ink-300);
+  color: var(--color-text-secondary);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .action-btn:hover {
-  background: var(--color-cream-200);
-  color: var(--color-ink-500);
+  background: var(--color-surface-overlay);
+  color: var(--color-text-muted);
 }
 
 .action-btn:focus-visible {
@@ -213,9 +212,9 @@ const handleClose = () => {
   padding: 10px 36px 10px 12px;
   font-size: 14px;
   font-family: inherit;
-  color: var(--color-ink-700);
-  background: var(--color-cream-50);
-  border: 1.5px solid var(--color-ink-100);
+  color: var(--color-text-secondary);
+  background: var(--color-surface-base);
+  border: 1.5px solid var(--color-surface-border);
   border-radius: 4px 12px 6px 10px / 10px 6px 12px 4px;
   cursor: pointer;
   appearance: none;
@@ -223,7 +222,7 @@ const handleClose = () => {
 }
 
 .model-select:hover {
-  border-color: var(--color-ink-300);
+  border-color: var(--color-surface-border);
 }
 
 .model-select:focus {
@@ -239,7 +238,7 @@ const handleClose = () => {
   transform: translateY(-50%);
   width: 16px;
   height: 16px;
-  color: var(--color-ink-300);
+  color: var(--color-text-secondary);
   pointer-events: none;
 }
 </style>

@@ -328,7 +328,7 @@ onUnmounted(() => {
   top: 0;
   height: 100%;
   width: 400px;
-  background: var(--color-cream-50);
+  background: var(--color-surface-base);
   box-shadow: -4px 0 20px rgba(0, 0, 0, 0.1);
   z-index: 40;
   display: flex;
@@ -353,14 +353,14 @@ onUnmounted(() => {
 .chat-footer {
   padding: 8px 16px;
   text-align: center;
-  border-top: 1px solid var(--color-ink-100);
-  background: var(--color-cream-100);
+  border-top: 1px solid var(--color-surface-border);
+  background: var(--color-surface-raised);
 }
 
 .footer-text {
   margin: 0;
   font-size: 11px;
-  color: var(--color-ink-300);
+  color: var(--color-text-secondary);
 }
 
 /* Drag-drop overlay */

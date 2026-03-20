@@ -38,9 +38,9 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <section class="py-fib-6 bg-cream-50">
+  <section id="timeline" class="py-20 section-dark">
     <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-      <h2 class="text-phi-2xl font-hand font-bold text-ink-900 mb-fib-5 text-center reveal-fade-up">
+      <h2 class="text-phi-2xl font-bold text-[var(--color-text-primary)] mb-10 text-center reveal-fade-up">
         发展历程
       </h2>
       <div
@@ -59,7 +59,7 @@ onUnmounted(() => {
             y1="0"
             x2="8"
             y2="100%"
-            stroke="#C9A227"
+            stroke="var(--color-ochre)"
             stroke-width="2"
             stroke-dasharray="4 3"
             class="timeline-line"
@@ -70,14 +70,14 @@ onUnmounted(() => {
           <div
             v-for="(m, idx) in milestones"
             :key="idx"
-            class="flex gap-fib-4 items-start timeline-item"
+            class="flex gap-5 items-start timeline-item"
             :style="{ transitionDelay: `${idx * 150}ms` }"
           >
             <div class="flex-shrink-0 w-24 text-right">
-              <span class="font-hand font-bold text-ochre text-phi-lg">{{ m.year }}</span>
+              <span class="font-bold text-ochre text-phi-lg">{{ m.year }}</span>
             </div>
-            <div class="flex-shrink-0 w-3 h-3 mt-2 rounded-full bg-ochre border-2 border-cream-50 ring-2 ring-ochre/30 relative z-10 timeline-dot"></div>
-            <p class="text-ink-500 flex-1">{{ m.event }}</p>
+            <div class="flex-shrink-0 w-3 h-3 mt-2 rounded-full bg-ochre border-2 border-[var(--color-surface-base)] ring-2 ring-ochre/30 relative z-10 timeline-dot"></div>
+            <p class="text-[var(--color-text-secondary)] flex-1">{{ m.event }}</p>
           </div>
         </div>
       </div>

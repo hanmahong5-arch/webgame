@@ -39,7 +39,7 @@ const handleSelect = (prompt: string) => {
   flex-wrap: wrap;
   gap: 8px;
   padding: 12px;
-  border-bottom: 1px solid var(--color-ink-100);
+  border-bottom: 1px solid var(--color-surface-border);
   background: rgba(254, 249, 231, 0.5);
 }
 
@@ -49,18 +49,18 @@ const handleSelect = (prompt: string) => {
   gap: 4px;
   padding: 6px 10px;
   font-size: 12px;
-  background: var(--color-cream-100);
-  border: 1.5px solid var(--color-ink-100);
+  background: var(--color-surface-raised);
+  border: 1.5px solid var(--color-surface-border);
   border-radius: 4px 10px 6px 8px / 8px 6px 10px 4px;
-  color: var(--color-ink-700);
+  color: var(--color-text-secondary);
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
 }
 
 .prompt-btn:hover {
-  background: var(--color-cream-200);
-  border-color: var(--color-ink-300);
+  background: var(--color-surface-overlay);
+  border-color: var(--color-surface-border);
   transform: translateY(-1px);
 }
 

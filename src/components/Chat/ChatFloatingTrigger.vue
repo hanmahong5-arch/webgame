@@ -193,12 +193,12 @@ const isVisible = () => !isHeroVisible.value
   height: 56px;
 
   background-color: var(--color-ochre);
-  color: var(--color-cream-50);
+  color: var(--color-text-primary);
   border: 2px solid color-mix(in srgb, var(--color-ochre), #000 10%);
   border-radius: 6px 16px 10px 14px / 14px 10px 16px 6px;
 
   cursor: pointer;
-  box-shadow: 3px 3px 0 var(--color-ink-100), 0 4px 16px rgba(201, 162, 39, 0.25);
+  box-shadow: 3px 3px 0 var(--color-surface-border), 0 4px 16px rgba(201, 162, 39, 0.25);
 
   /* GPU-accelerated transition properties */
   transition: transform 0.3s ease, box-shadow 0.3s ease, opacity 0.3s ease;
@@ -207,7 +207,7 @@ const isVisible = () => !isHeroVisible.value
 /* Hover breathe effect */
 .floating-trigger:hover {
   transform: scale(1.08);
-  box-shadow: 5px 5px 0 var(--color-ink-100), 0 8px 24px rgba(201, 162, 39, 0.35);
+  box-shadow: 5px 5px 0 var(--color-surface-border), 0 8px 24px rgba(201, 162, 39, 0.35);
 }
 
 /* Active press feedback */
@@ -219,26 +219,26 @@ const isVisible = () => !isHeroVisible.value
 /* Focus ring for keyboard navigation */
 .floating-trigger:focus-visible {
   outline: none;
-  box-shadow: 3px 3px 0 var(--color-ink-100), 0 0 0 3px var(--color-ochre), 0 0 0 5px var(--color-cream-50);
+  box-shadow: 3px 3px 0 var(--color-surface-border), 0 0 0 3px var(--color-ochre), 0 0 0 5px var(--color-surface-base);
 }
 
 /* Drag hover: enlarge + highlight when portal link is dragged over */
 .floating-trigger.is-drag-hover {
   transform: scale(1.2);
-  box-shadow: 0 0 0 4px rgba(201, 162, 39, 0.4), 5px 5px 0 var(--color-ink-100);
+  box-shadow: 0 0 0 4px rgba(201, 162, 39, 0.4), 5px 5px 0 var(--color-surface-border);
   background-color: color-mix(in srgb, var(--color-ochre), #fff 15%);
 }
 
 /* When Chat panel is open, subtle style change */
 .floating-trigger.is-open {
-  background-color: var(--color-ink-700);
-  border-color: var(--color-ink-500);
-  box-shadow: 2px 2px 0 var(--color-ink-100);
+  background-color: var(--color-surface-border);
+  border-color: var(--color-text-muted);
+  box-shadow: 2px 2px 0 var(--color-surface-border);
 }
 
 .floating-trigger.is-open:hover {
-  background-color: var(--color-ink-900);
-  box-shadow: 3px 3px 0 var(--color-ink-100);
+  background-color: var(--color-surface-raised);
+  box-shadow: 3px 3px 0 var(--color-surface-border);
 }
 
 /* Icon sizing */

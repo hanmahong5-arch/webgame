@@ -38,13 +38,13 @@ const models = [
     <g v-for="(model, i) in models" :key="model.label">
       <rect
         :x="10" :y="model.y - 12" width="70" height="26" rx="5"
-        stroke="#A89B8B" stroke-width="1.5" stroke-dasharray="4 3" fill="#FEF9E7"
+        stroke="#A89B8B" stroke-width="1.5" stroke-dasharray="4 3" fill="#1C1916"
         :class="isVisible ? 'animate-draw' : ''"
         :style="{ animationDelay: `${i * 100}ms` }"
       />
       <text
         x="45" :y="model.y + 4" text-anchor="middle"
-        class="text-[10px] fill-ink-700 font-mono"
+        class="text-[10px] fill-[var(--color-text-secondary)] font-mono"
       >{{ model.label }}</text>
 
       <!-- Connector to gateway -->
@@ -69,12 +69,12 @@ const models = [
     <!-- Center: API Gateway box -->
     <rect
       x="145" y="65" width="90" height="60" rx="10"
-      stroke="#6B8BA4" stroke-width="2" fill="#FEF9E7"
+      stroke="#6B8BA4" stroke-width="2" fill="#1C1916"
       :class="isVisible ? 'animate-draw' : ''"
       style="animation-delay: 500ms"
     />
-    <text x="190" y="90" text-anchor="middle" class="text-[11px] fill-ink-900 font-semibold">Lurus API</text>
-    <text x="190" y="106" text-anchor="middle" class="text-[10px] fill-ink-500">Gateway</text>
+    <text x="190" y="90" text-anchor="middle" class="text-[11px] fill-[var(--color-text-primary)] font-semibold">Lurus API</text>
+    <text x="190" y="106" text-anchor="middle" class="text-[10px] fill-[var(--color-text-muted)]">Gateway</text>
 
     <!-- Right arrow -->
     <line
@@ -97,11 +97,11 @@ const models = [
     <!-- Right: Your App -->
     <rect
       x="320" y="72" width="70" height="46" rx="8"
-      stroke="#C9A227" stroke-width="2" fill="#FEF9E7"
+      stroke="#C9A227" stroke-width="2" fill="#1C1916"
       :class="isVisible ? 'animate-draw' : ''"
       style="animation-delay: 850ms"
     />
-    <text x="355" y="98" text-anchor="middle" class="text-[11px] fill-ink-900 font-semibold">Your App</text>
+    <text x="355" y="98" text-anchor="middle" class="text-[11px] fill-[var(--color-text-primary)] font-semibold">Your App</text>
   </svg>
 </template>
 

@@ -25,31 +25,26 @@ const diagramComponents: Record<string, ReturnType<typeof defineAsyncComponent>>
 <template>
   <div ref="pageRef">
     <!-- Hero -->
-    <section class="relative overflow-hidden bg-cream-50 py-fib-7">
-      <div
-        class="absolute inset-0 opacity-[0.03]"
-        style="background-image: linear-gradient(#A89B8B 1px, transparent 1px), linear-gradient(90deg, #A89B8B 1px, transparent 1px); background-size: 34px 34px;"
-        aria-hidden="true"
-      ></div>
+    <section id="hero" class="relative overflow-hidden section-dark py-24">
       <div class="relative max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
         <span
-          class="inline-block text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-full mb-fib-4"
+          class="inline-block text-xs font-semibold uppercase tracking-wider px-3 py-1 rounded-full mb-6"
           style="background-color: #5C7A8B20; color: #5C7A8B;"
         >
           探索者
         </span>
-        <h1 class="text-phi-2xl md:text-phi-3xl lg:text-[58px] text-ink-900 mb-fib-4 leading-tight font-bold reveal-fade-up">
+        <h1 class="text-phi-2xl md:text-phi-3xl lg:text-[58px] text-[var(--color-text-primary)] mb-6 leading-tight font-bold reveal-fade-up">
           用 AI 武装你的
-          <span class="text-gradient-ochre font-hand">每一天</span>
+          <span class="text-gradient-gold">每一天</span>
         </h1>
-        <p class="text-phi-lg text-ink-500 max-w-2xl mx-auto leading-relaxed mb-fib-5 reveal-fade-up">
+        <p class="text-phi-lg text-[var(--color-text-secondary)] max-w-2xl mx-auto leading-relaxed mb-10 reveal-fade-up">
           视频内容创作、量化交易、工具管理、持久记忆 — 个人效率的无限延伸
         </p>
-        <div class="flex flex-col sm:flex-row gap-fib-3 justify-center reveal-fade-up">
-          <router-link to="/download" class="btn-hand btn-hand-primary text-center">
+        <div class="flex flex-col sm:flex-row gap-4 justify-center reveal-fade-up">
+          <router-link to="/download" class="btn-primary text-center">
             下载开始
           </router-link>
-          <button @click="login({ prompt: 'create' })" class="btn-hand text-center">
+          <button @click="login({ prompt: 'create' })" class="btn-outline text-center">
             免费注册
           </button>
         </div>
@@ -57,22 +52,23 @@ const diagramComponents: Record<string, ReturnType<typeof defineAsyncComponent>>
     </section>
 
     <!-- Products -->
-    <section class="py-fib-7 bg-cream-100" aria-label="产品列表">
+    <section class="py-24 section-dark-raised" aria-label="产品列表">
       <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div
           v-for="(product, index) in products"
+          :id="product.id"
           :key="product.id"
-          class="mb-fib-7 last:mb-0 reveal-fade-up"
+          class="mb-24 last:mb-0 reveal-fade-up"
         >
           <div
-            class="grid grid-cols-1 md:grid-cols-2 gap-fib-5 items-center"
+            class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center"
             :class="index % 2 === 1 ? 'md:[direction:rtl] md:[&>*]:[direction:ltr]' : ''"
           >
             <!-- Text side -->
             <div>
-              <div class="flex items-center gap-3 mb-fib-3">
+              <div class="flex items-center gap-3 mb-4">
                 <div
-                  class="w-10 h-10 rounded-lg flex items-center justify-center border-2 border-ink-200 shrink-0"
+                  class="w-10 h-10 rounded-lg flex items-center justify-center border border-[var(--color-surface-border)] shrink-0"
                   :style="{ backgroundColor: product.color + '20' }"
                 >
                   <svg
@@ -87,16 +83,16 @@ const diagramComponents: Record<string, ReturnType<typeof defineAsyncComponent>>
                   </svg>
                 </div>
                 <div>
-                  <h2 class="text-xl font-bold text-ink-900">{{ product.name }}</h2>
-                  <p class="text-sm text-ink-400">{{ product.tagline }}</p>
+                  <h2 class="text-xl font-bold text-[var(--color-text-primary)]">{{ product.name }}</h2>
+                  <p class="text-sm text-[var(--color-text-muted)]">{{ product.tagline }}</p>
                 </div>
               </div>
-              <p class="text-ink-500 leading-relaxed mb-fib-4">{{ product.description }}</p>
-              <ul class="space-y-2 mb-fib-4">
+              <p class="text-[var(--color-text-secondary)] leading-relaxed mb-6">{{ product.description }}</p>
+              <ul class="space-y-2 mb-6">
                 <li
                   v-for="feature in product.features"
                   :key="feature"
-                  class="flex items-center gap-2 text-sm text-ink-700"
+                  class="flex items-center gap-2 text-sm text-[var(--color-text-secondary)]"
                 >
                   <svg class="w-4 h-4 text-ochre shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
@@ -109,7 +105,7 @@ const diagramComponents: Record<string, ReturnType<typeof defineAsyncComponent>>
                 :href="product.cta.href"
                 target="_blank"
                 rel="noopener noreferrer"
-                class="btn-hand btn-hand-primary inline-block"
+                class="btn-primary inline-block"
                 @click="track('cta_click', { label: `explorer_${product.id}` })"
               >
                 {{ product.cta.text }}
@@ -117,7 +113,7 @@ const diagramComponents: Record<string, ReturnType<typeof defineAsyncComponent>>
               <router-link
                 v-else
                 :to="product.cta.href"
-                class="btn-hand btn-hand-primary inline-block"
+                class="btn-primary inline-block"
                 @click="track('cta_click', { label: `explorer_${product.id}` })"
               >
                 {{ product.cta.text }}
@@ -161,7 +157,7 @@ const diagramComponents: Record<string, ReturnType<typeof defineAsyncComponent>>
                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" :d="product.iconPath" />
                     </svg>
                   </div>
-                  <p class="diagram-icon-label font-hand">{{ product.name }}</p>
+                  <p class="diagram-icon-label">{{ product.name }}</p>
                 </div>
               </template>
             </div>
@@ -171,19 +167,21 @@ const diagramComponents: Record<string, ReturnType<typeof defineAsyncComponent>>
     </section>
 
     <!-- Pricing Preview -->
-    <PricingPreview />
+    <div id="pricing-preview">
+      <PricingPreview />
+    </div>
 
     <!-- Bundle CTA -->
-    <section class="py-fib-7 bg-cream-50" aria-label="个人套餐">
+    <section id="bundle" class="py-24 section-dark" aria-label="个人套餐">
       <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center reveal-fade-up">
-        <h2 class="text-phi-2xl text-ink-900 mb-fib-3 font-semibold">个人智能套餐</h2>
-        <p class="text-ink-500 max-w-2xl mx-auto mb-fib-5 leading-relaxed">
+        <h2 class="text-phi-2xl text-[var(--color-text-primary)] mb-4 font-semibold">个人智能套餐</h2>
+        <p class="text-[var(--color-text-secondary)] max-w-2xl mx-auto mb-10 leading-relaxed">
           Creator + MemX + Switch + API 个人配额 — 一个订阅，完整的 AI 桌面体验。
           Creator 制作内容，MemX 持久记忆，Switch 管理工具，API 驱动一切。
         </p>
-        <div class="flex flex-col sm:flex-row gap-fib-3 justify-center">
-          <router-link to="/pricing" class="btn-hand btn-hand-primary text-center">查看定价</router-link>
-          <button @click="login({ prompt: 'create' })" class="btn-hand text-center">免费开始</button>
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+          <router-link to="/pricing" class="btn-primary text-center">查看定价</router-link>
+          <button @click="login({ prompt: 'create' })" class="btn-outline text-center">免费开始</button>
         </div>
       </div>
     </section>
@@ -196,8 +194,8 @@ const diagramComponents: Record<string, ReturnType<typeof defineAsyncComponent>>
 /* Diagram container — cream-tinted panel with subtle product-color glow */
 .diagram-wrapper {
   position: relative;
-  background-color: #FDFAF6;
-  border: 1.5px solid #E8E0D4;
+  background-color: var(--color-surface-overlay);
+  border: 1.5px solid var(--color-surface-border);
   border-radius: 16px;
   min-height: 220px;
   display: flex;
@@ -242,7 +240,7 @@ const diagramComponents: Record<string, ReturnType<typeof defineAsyncComponent>>
   width: 56px;
   height: 56px;
   border-radius: 14px;
-  border: 2px solid #E8E0D4;
+  border: 2px solid var(--color-surface-border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -253,7 +251,7 @@ const diagramComponents: Record<string, ReturnType<typeof defineAsyncComponent>>
   width: 100%;
   font-size: 0.75rem;
   font-family: ui-monospace, monospace;
-  color: #6B5D4D;
+  color: var(--color-text-muted);
   background: transparent;
   white-space: pre-wrap;
   word-break: break-all;
@@ -274,7 +272,7 @@ const diagramComponents: Record<string, ReturnType<typeof defineAsyncComponent>>
   width: 64px;
   height: 64px;
   border-radius: 16px;
-  border: 2px solid #E8E0D4;
+  border: 2px solid var(--color-surface-border);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -282,6 +280,6 @@ const diagramComponents: Record<string, ReturnType<typeof defineAsyncComponent>>
 
 .diagram-icon-label {
   font-size: 0.85rem;
-  color: #A89B8B;
+  color: var(--color-text-muted);
 }
 </style>

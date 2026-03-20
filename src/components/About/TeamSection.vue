@@ -3,11 +3,11 @@ import { team } from '../../data/team'
 </script>
 
 <template>
-  <section class="py-fib-7 bg-cream-100">
+  <section id="team" class="py-24 section-dark-raised">
     <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-      <div class="text-center mb-fib-5 reveal-fade-up">
-        <h2 class="text-phi-2xl font-hand font-bold text-ink-900 mb-fib-2">我们的团队</h2>
-        <p class="text-ink-500 max-w-xl mx-auto">
+      <div class="text-center mb-10 reveal-fade-up">
+        <h2 class="text-phi-2xl font-bold text-[var(--color-text-primary)] mb-2">我们的团队</h2>
+        <p class="text-[var(--color-text-secondary)] max-w-xl mx-auto">
           一群热爱构建工具的工程师和设计师，致力于让 AI 基础设施触手可及。
         </p>
       </div>
@@ -45,9 +45,16 @@ import { team } from '../../data/team'
 .team-card {
   text-align: center;
   padding: 28px 16px;
-  border: 2px solid var(--color-ink-100);
-  border-radius: 4px 15px 8px 12px / 12px 8px 15px 4px;
-  background-color: var(--color-cream-50);
+  border: 1px solid var(--color-surface-border);
+  border-radius: 12px;
+  background-color: var(--color-surface-raised);
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.team-card:hover {
+  border-color: rgba(212, 168, 39, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 
 .team-avatar {
@@ -65,13 +72,13 @@ import { team } from '../../data/team'
 .team-name {
   font-size: 1rem;
   font-weight: 700;
-  color: var(--color-ink-900);
+  color: var(--color-text-primary);
   margin-bottom: 4px;
 }
 
 .team-role {
   font-size: 0.75rem;
-  color: var(--color-ink-300);
+  color: var(--color-text-muted);
   margin-bottom: 10px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -79,7 +86,7 @@ import { team } from '../../data/team'
 
 .team-bio {
   font-size: 0.8rem;
-  color: var(--color-ink-500);
+  color: var(--color-text-secondary);
   line-height: 1.6;
 }
 </style>

@@ -124,13 +124,13 @@ const handleBlur = () => {
 
 .chat-input-wrapper {
   padding: 12px 16px;
-  background: var(--color-cream-100);
-  border-top: 1px solid var(--color-ink-100);
+  background: var(--color-surface-raised);
+  border-top: 1px solid var(--color-surface-border);
   transition: background 0.2s ease;
 }
 
 .chat-input-wrapper.is-focused {
-  background: var(--color-cream-50);
+  background: var(--color-surface-base);
 }
 
 .chat-input-wrapper.is-disabled {
@@ -158,9 +158,9 @@ const handleBlur = () => {
   font-size: 14px;
   font-family: inherit;
   line-height: 1.5;
-  color: var(--color-ink-900);
-  background: var(--color-cream-50);
-  border: 1.5px solid var(--color-ink-100);
+  color: var(--color-text-primary);
+  background: var(--color-surface-base);
+  border: 1.5px solid var(--color-surface-border);
   border-radius: 8px;
   resize: none;
   overflow-y: auto;
@@ -168,7 +168,7 @@ const handleBlur = () => {
 }
 
 .chat-textarea::placeholder {
-  color: var(--color-ink-300);
+  color: var(--color-text-secondary);
 }
 
 .chat-textarea:focus {
@@ -178,7 +178,7 @@ const handleBlur = () => {
 }
 
 .chat-textarea:disabled {
-  background: var(--color-cream-200);
+  background: var(--color-surface-overlay);
   cursor: not-allowed;
 }
 
@@ -192,7 +192,7 @@ const handleBlur = () => {
 
 .char-count {
   font-size: 11px;
-  color: var(--color-ink-300);
+  color: var(--color-text-secondary);
   font-variant-numeric: tabular-nums;
 }
 
@@ -204,7 +204,7 @@ const handleBlur = () => {
 .hint {
   flex: 1;
   font-size: 11px;
-  color: var(--color-ink-300);
+  color: var(--color-text-secondary);
   text-align: center;
 }
 
@@ -213,8 +213,8 @@ const handleBlur = () => {
   padding: 1px 5px;
   font-size: 10px;
   font-family: inherit;
-  background: var(--color-cream-200);
-  border: 1px solid var(--color-ink-100);
+  background: var(--color-surface-overlay);
+  border: 1px solid var(--color-surface-border);
   border-radius: 3px;
 }
 
@@ -225,7 +225,7 @@ const handleBlur = () => {
   width: 36px;
   height: 36px;
   background: var(--color-ochre);
-  color: var(--color-cream-50);
+  color: var(--color-text-primary);
   border: none;
   border-radius: 8px;
   cursor: pointer;
@@ -242,8 +242,8 @@ const handleBlur = () => {
 }
 
 .send-btn:disabled {
-  background: var(--color-ink-100);
-  color: var(--color-ink-300);
+  background: var(--color-surface-border);
+  color: var(--color-text-secondary);
   cursor: not-allowed;
 }
 

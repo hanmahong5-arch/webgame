@@ -26,30 +26,30 @@ const advantages = [
 </script>
 
 <template>
-  <section class="py-fib-6 bg-cream-100" data-testid="advantages-section">
+  <section id="advantages" class="py-20 section-dark-raised" data-testid="advantages-section">
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-      <h2 class="text-phi-2xl font-hand font-bold text-ink-900 mb-fib-5 text-center reveal-fade-up">
+      <h2 class="text-phi-2xl font-bold text-[var(--color-text-primary)] mb-10 text-center reveal-fade-up">
         我们的优势
       </h2>
-      <div class="grid md:grid-cols-2 gap-fib-5 mb-fib-5">
+      <div class="grid md:grid-cols-2 gap-6 mb-10">
         <div
           v-for="item in advantages"
           :key="item.title"
-          class="border-sketchy bg-cream-50 p-fib-5 hover-breathe reveal-fade-up"
+          class="card-dark p-8 hover-breathe reveal-fade-up"
         >
-          <div class="w-12 h-12 border-sketchy bg-cream-100 flex items-center justify-center mb-fib-4">
+          <div class="w-12 h-12 rounded-lg bg-[var(--color-surface-overlay)] flex items-center justify-center mb-4">
             <svg class="w-6 h-6 text-ochre" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" :d="item.icon" />
             </svg>
           </div>
-          <h3 class="text-phi-lg font-hand font-bold text-ink-900 mb-fib-3">{{ item.title }}</h3>
-          <p class="text-ink-500 text-phi-base leading-relaxed">{{ item.desc }}</p>
+          <h3 class="text-phi-lg font-bold text-[var(--color-text-primary)] mb-4">{{ item.title }}</h3>
+          <p class="text-[var(--color-text-secondary)] text-phi-base leading-relaxed">{{ item.desc }}</p>
         </div>
       </div>
 
       <!-- Ecosystem Graph -->
       <div class="reveal-fade-up">
-        <h3 class="text-phi-lg font-hand font-bold text-ink-900 mb-fib-3 text-center">
+        <h3 class="text-phi-lg font-bold text-[var(--color-text-primary)] mb-4 text-center">
           产品生态
         </h3>
         <EcosystemGraph />
@@ -67,6 +67,6 @@ const advantages = [
 
 .hover-breathe:hover {
   transform: translateY(-2px);
-  box-shadow: 3px 5px 0 var(--color-ink-100);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
 }
 </style>

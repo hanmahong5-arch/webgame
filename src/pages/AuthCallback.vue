@@ -38,28 +38,28 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-cream-50 flex items-center justify-center px-4">
+  <div class="min-h-screen bg-[var(--color-surface-base)] flex items-center justify-center px-4">
     <div class="max-w-md w-full text-center">
       <!-- Loading state -->
       <div v-if="!error" class="space-y-4">
-        <div class="w-12 h-12 mx-auto rounded-lg bg-ochre flex items-center justify-center border-2 border-ink-300 animate-pulse">
-          <span class="text-cream-50 font-hand font-bold text-xl">L</span>
+        <div class="w-12 h-12 mx-auto rounded-lg bg-[var(--color-ochre)] flex items-center justify-center border-2 border-[var(--color-surface-border)] animate-pulse">
+          <span class="text-white font-bold text-xl">L</span>
         </div>
-        <p class="text-ink-500 font-hand text-xl">正在登录...</p>
+        <p class="text-[var(--color-text-secondary)] text-xl">正在登录...</p>
       </div>
 
       <!-- Error state -->
       <div v-else class="space-y-4">
-        <div class="w-12 h-12 mx-auto rounded-lg bg-red-100 flex items-center justify-center border-2 border-red-300">
-          <svg class="w-6 h-6 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div class="w-12 h-12 mx-auto rounded-lg bg-red-900/30 flex items-center justify-center border-2 border-red-500/40">
+          <svg class="w-6 h-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </div>
-        <p class="text-ink-900 font-semibold">登录失败</p>
-        <p class="text-ink-500 text-sm">{{ error }}</p>
+        <p class="text-[var(--color-text-primary)] font-semibold">登录失败</p>
+        <p class="text-[var(--color-text-secondary)] text-sm">{{ error }}</p>
         <button
           @click="router.replace('/')"
-          class="btn-hand btn-hand-primary mt-4"
+          class="btn-primary mt-4"
         >
           返回首页
         </button>

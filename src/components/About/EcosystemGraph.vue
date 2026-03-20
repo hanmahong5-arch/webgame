@@ -59,7 +59,7 @@ onUnmounted(() => {
         <path
           :d="bezierPath(node, CENTER)"
           stroke="currentColor"
-          class="text-ink-300 ecosystem-line"
+          class="text-[var(--color-text-muted)] ecosystem-line"
           stroke-width="1.5"
           stroke-dasharray="4 3"
           :style="{ animationDelay: `${idx * 200}ms` }"
@@ -97,7 +97,7 @@ onUnmounted(() => {
         fill="#C9A227"
         font-size="14"
         font-weight="600"
-        class="font-hand"
+        class="font-semibold"
       >
         Lurus
       </text>

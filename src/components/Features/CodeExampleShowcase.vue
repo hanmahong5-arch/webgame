@@ -100,7 +100,7 @@ function handleTabKeydown(event: KeyboardEvent) {
 .tab-bar {
   display: flex;
   gap: 0;
-  border-bottom: 2px solid var(--color-ink-300);
+  border-bottom: 2px solid var(--color-surface-border);
   margin-bottom: 0;
 }
 
@@ -108,7 +108,7 @@ function handleTabKeydown(event: KeyboardEvent) {
   padding: 8px 20px;
   font-size: 13px;
   font-weight: 500;
-  color: var(--color-ink-500);
+  color: var(--color-text-muted);
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
@@ -121,7 +121,7 @@ function handleTabKeydown(event: KeyboardEvent) {
 }
 
 .tab-button:hover {
-  color: var(--color-ink-900);
+  color: var(--color-text-primary);
 }
 
 .tab-button--active {

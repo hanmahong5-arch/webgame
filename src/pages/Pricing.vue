@@ -34,7 +34,7 @@ function toggleFaq(index: number) {
 <template>
   <div>
     <!-- S1: Hero + Billing Toggle -->
-    <section class="section-dark py-16 md:py-20 text-center relative overflow-hidden">
+    <section id="pricing-hero" class="section-dark py-16 md:py-20 text-center relative overflow-hidden">
       <div
         class="absolute inset-0 opacity-[0.03]"
         aria-hidden="true"
@@ -72,7 +72,7 @@ function toggleFaq(index: number) {
     </section>
 
     <!-- S2: Audience Selector -->
-    <section class="section-dark-raised py-6 border-b border-surface-border sticky top-16 z-10">
+    <section id="audience-selector" class="section-dark-raised py-6 border-b border-surface-border sticky top-16 z-10">
       <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-center justify-center gap-3 flex-wrap">
           <button
@@ -91,7 +91,7 @@ function toggleFaq(index: number) {
     </section>
 
     <!-- S3: Product Pricing Cards -->
-    <section class="section-dark py-16">
+    <section id="pricing-cards" class="section-dark py-16">
       <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="pricing-grid">
           <div
@@ -206,7 +206,7 @@ function toggleFaq(index: number) {
     </section>
 
     <!-- S5: Comparison Table -->
-    <section class="section-dark py-16">
+    <section id="comparison" class="section-dark py-16">
       <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
         <h2 class="text-2xl sm:text-3xl font-bold text-text-primary mb-10 text-center">功能对比</h2>
         <div class="comparison-table">
@@ -268,7 +268,7 @@ function toggleFaq(index: number) {
     </section>
 
     <!-- S7: FAQ -->
-    <section class="section-dark py-16">
+    <section id="faq" class="section-dark py-16">
       <div class="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
         <h2 class="text-2xl sm:text-3xl font-bold text-text-primary mb-10 text-center">常见问题</h2>
         <div class="space-y-2">

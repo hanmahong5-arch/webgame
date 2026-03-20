@@ -158,29 +158,28 @@ function selectProduct(releaseProductId: string | null) {
 <template>
   <div>
     <!-- Header -->
-    <section class="py-16 sm:py-20 bg-cream-100">
+    <section id="top" class="py-16 sm:py-20 section-dark-raised">
       <div class="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <h1 class="text-4xl sm:text-5xl font-bold text-ink-900 mb-4 font-hand">
+        <h1 class="text-4xl sm:text-5xl font-bold text-[var(--color-text-primary)] mb-4">
           Release History
         </h1>
-        <p class="text-lg text-ink-500 max-w-2xl mx-auto">
+        <p class="text-lg text-[var(--color-text-secondary)] max-w-2xl mx-auto">
           Track updates across all Lurus products — changelogs, downloads, and version history
         </p>
       </div>
     </section>
 
     <!-- Filter Bar -->
-    <section class="sticky top-16 z-30 bg-cream-50 border-b-2 border-ink-100">
+    <section id="filters" class="sticky top-16 z-30 bg-[var(--color-surface-base)] border-b border-[var(--color-surface-border)]">
       <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-center gap-3 py-3 overflow-x-auto">
           <!-- Product filter tabs -->
           <button
             @click="selectProduct(null)"
-            class="px-4 py-2 text-sm font-medium whitespace-nowrap border-2 transition-all"
+            class="px-4 py-2 text-sm font-medium whitespace-nowrap border transition-all rounded-lg"
             :class="selectedProduct === null
               ? 'bg-ochre/10 text-ochre border-ochre/30'
-              : 'bg-transparent text-ink-400 border-transparent hover:text-ink-600 hover:border-ink-200'"
-            style="border-radius: 3px 10px 5px 12px / 12px 5px 10px 3px"
+              : 'bg-transparent text-[var(--color-text-muted)] border-transparent hover:text-[var(--color-text-secondary)] hover:border-[var(--color-surface-border)]'"
           >
             All
           </button>
@@ -188,11 +187,10 @@ function selectProduct(releaseProductId: string | null) {
             v-for="product in downloadableProducts"
             :key="product.id"
             @click="selectProduct(product.releaseProductId)"
-            class="px-4 py-2 text-sm font-medium whitespace-nowrap border-2 transition-all inline-flex items-center gap-2"
+            class="px-4 py-2 text-sm font-medium whitespace-nowrap border transition-all inline-flex items-center gap-2 rounded-lg"
             :class="selectedProduct === product.releaseProductId
               ? 'bg-ochre/10 text-ochre border-ochre/30'
-              : 'bg-transparent text-ink-400 border-transparent hover:text-ink-600 hover:border-ink-200'"
-            style="border-radius: 3px 10px 5px 12px / 12px 5px 10px 3px"
+              : 'bg-transparent text-[var(--color-text-muted)] border-transparent hover:text-[var(--color-text-secondary)] hover:border-[var(--color-surface-border)]'"
           >
             {{ product.name }}
           </button>
@@ -203,8 +201,7 @@ function selectProduct(releaseProductId: string | null) {
           <!-- Release type filter -->
           <select
             v-model="selectedType"
-            class="px-3 py-2 text-sm border-2 border-ink-200 bg-cream-50 text-ink-600 focus:border-ochre/50 focus:outline-none"
-            style="border-radius: 3px 10px 5px 12px / 12px 5px 10px 3px"
+            class="px-3 py-2 text-sm border border-[var(--color-surface-border)] bg-[var(--color-surface-raised)] text-[var(--color-text-secondary)] focus:border-ochre/50 focus:outline-none rounded-lg"
           >
             <option :value="null">All Types</option>
             <option value="stable">Stable</option>
@@ -213,7 +210,7 @@ function selectProduct(releaseProductId: string | null) {
           </select>
 
           <!-- Pre-release toggle -->
-          <label class="hidden sm:inline-flex items-center gap-2 text-sm text-ink-400 cursor-pointer whitespace-nowrap">
+          <label class="hidden sm:inline-flex items-center gap-2 text-sm text-[var(--color-text-muted)] cursor-pointer whitespace-nowrap">
             <input
               type="checkbox"
               v-model="includePrerelease"
@@ -226,32 +223,32 @@ function selectProduct(releaseProductId: string | null) {
     </section>
 
     <!-- Content -->
-    <section class="py-12 bg-cream-50 min-h-[50vh]">
+    <section class="py-12 section-dark min-h-[50vh]">
       <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
 
         <!-- Loading skeleton -->
         <div v-if="isLoading && releases.length === 0" class="space-y-6">
-          <div v-for="i in 3" :key="i" class="card-sketchy p-6 animate-pulse">
+          <div v-for="i in 3" :key="i" class="card-dark p-6 animate-pulse">
             <div class="flex items-center gap-3 mb-4">
-              <div class="w-20 h-5 bg-cream-200 rounded"></div>
-              <div class="w-16 h-5 bg-cream-200 rounded"></div>
+              <div class="w-20 h-5 bg-[var(--color-surface-overlay)] rounded"></div>
+              <div class="w-16 h-5 bg-[var(--color-surface-overlay)] rounded"></div>
             </div>
-            <div class="w-full h-4 bg-cream-200 rounded mb-2"></div>
-            <div class="w-2/3 h-4 bg-cream-200 rounded"></div>
+            <div class="w-full h-4 bg-[var(--color-surface-overlay)] rounded mb-2"></div>
+            <div class="w-2/3 h-4 bg-[var(--color-surface-overlay)] rounded"></div>
           </div>
         </div>
 
         <!-- Error state -->
         <div v-else-if="error && releases.length === 0" class="text-center py-16">
-          <div class="card-sketchy inline-block p-8 max-w-md border-orange-300">
+          <div class="card-dark inline-block p-8 max-w-md border-orange-300">
             <svg class="w-12 h-12 text-orange-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
-            <p class="text-ink-700 font-medium mb-2">Unable to load releases</p>
-            <p class="text-ink-400 text-sm mb-4">{{ error }}</p>
+            <p class="text-[var(--color-text-secondary)] font-medium mb-2">Unable to load releases</p>
+            <p class="text-[var(--color-text-muted)] text-sm mb-4">{{ error }}</p>
             <button
               @click="loadReleases()"
-              class="btn-hand btn-hand-primary text-sm px-6 py-2"
+              class="btn-primary text-sm px-6 py-2"
             >
               Retry
             </button>
@@ -260,12 +257,12 @@ function selectProduct(releaseProductId: string | null) {
 
         <!-- Empty state -->
         <div v-else-if="!isLoading && releases.length === 0" class="text-center py-16">
-          <div class="card-sketchy inline-block p-8 max-w-md">
-            <svg class="w-12 h-12 text-ink-300 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div class="card-dark inline-block p-8 max-w-md">
+            <svg class="w-12 h-12 text-[var(--color-text-muted)] mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
             </svg>
-            <p class="text-ink-700 font-medium mb-2">No releases found</p>
-            <p class="text-ink-400 text-sm">
+            <p class="text-[var(--color-text-secondary)] font-medium mb-2">No releases found</p>
+            <p class="text-[var(--color-text-muted)] text-sm">
               {{ selectedProduct ? 'This product has no releases yet. Check back later.' : 'No releases match your filters.' }}
             </p>
           </div>
@@ -276,9 +273,9 @@ function selectProduct(releaseProductId: string | null) {
           <div v-for="group in groupedReleases" :key="group.label">
             <!-- Month separator -->
             <div class="flex items-center gap-4 mb-4">
-              <div class="h-px flex-1 bg-ink-100"></div>
-              <span class="text-sm font-medium text-ink-300 whitespace-nowrap">{{ group.label }}</span>
-              <div class="h-px flex-1 bg-ink-100"></div>
+              <div class="h-px flex-1 bg-[var(--color-surface-border)]"></div>
+              <span class="text-sm font-medium text-[var(--color-text-muted)] whitespace-nowrap">{{ group.label }}</span>
+              <div class="h-px flex-1 bg-[var(--color-surface-border)]"></div>
             </div>
 
             <!-- Release cards -->
@@ -289,11 +286,11 @@ function selectProduct(releaseProductId: string | null) {
                 class="relative"
               >
                 <!-- Timeline dot -->
-                <div class="absolute -left-8 top-6 w-3 h-3 rounded-full border-2 border-cream-50 hidden lg:block"
+                <div class="absolute -left-8 top-6 w-3 h-3 rounded-full border-2 border-[var(--color-surface-base)] hidden lg:block"
                   :style="{ backgroundColor: getProductColor(release.product_id) }"
                 ></div>
 
-                <div class="card-sketchy overflow-hidden hover:border-ink-300 transition-colors">
+                <div class="card-dark overflow-hidden hover:border-[var(--color-text-muted)] transition-colors">
                   <!-- Release header -->
                   <div class="p-5 sm:p-6">
                     <div class="flex items-start justify-between gap-4 flex-wrap">
@@ -321,7 +318,7 @@ function selectProduct(releaseProductId: string | null) {
                           </span>
 
                           <!-- Version -->
-                          <span class="text-lg font-bold text-ink-900">v{{ release.version }}</span>
+                          <span class="text-lg font-bold text-[var(--color-text-primary)]">v{{ release.version }}</span>
 
                           <!-- Release type badge -->
                           <span
@@ -345,8 +342,8 @@ function selectProduct(releaseProductId: string | null) {
                         </div>
 
                         <!-- Title + date -->
-                        <h3 v-if="release.title" class="text-ink-700 font-medium mb-1">{{ release.title }}</h3>
-                        <div class="flex items-center gap-3 text-sm text-ink-300">
+                        <h3 v-if="release.title" class="text-[var(--color-text-secondary)] font-medium mb-1">{{ release.title }}</h3>
+                        <div class="flex items-center gap-3 text-sm text-[var(--color-text-muted)]">
                           <time :datetime="release.published_at || release.created_at" :title="fullDate(release.published_at || release.created_at)">
                             {{ relativeDate(release.published_at || release.created_at) }}
                           </time>
@@ -362,7 +359,7 @@ function selectProduct(releaseProductId: string | null) {
                         <button
                           v-if="findRecommendedArtifact(release.artifacts)"
                           @click="downloadArtifact(release.id, findRecommendedArtifact(release.artifacts)!.id)"
-                          class="btn-hand btn-hand-primary text-sm px-4 py-2 inline-flex items-center gap-2"
+                          class="btn-primary text-sm px-4 py-2 inline-flex items-center gap-2"
                         >
                           <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -373,7 +370,7 @@ function selectProduct(releaseProductId: string | null) {
                     </div>
 
                     <!-- Description -->
-                    <p v-if="release.description" class="text-ink-500 text-sm mt-3">
+                    <p v-if="release.description" class="text-[var(--color-text-secondary)] text-sm mt-3">
                       {{ release.description }}
                     </p>
 
@@ -383,25 +380,24 @@ function selectProduct(releaseProductId: string | null) {
                         v-for="artifact in release.artifacts"
                         :key="artifact.id"
                         :href="getDownloadUrl(release.id, artifact.id)"
-                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs border-2 border-ink-100 hover:border-ink-300 text-ink-500 transition-colors"
-                        style="border-radius: 3px 8px 4px 10px / 10px 4px 8px 3px"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs border border-[var(--color-surface-border)] hover:border-[var(--color-text-muted)] text-[var(--color-text-secondary)] transition-colors rounded-lg"
                       >
                         <PlatformIcon :platform="artifact.platform" size="sm" />
                         {{ getPlatformName(artifact.platform) }} {{ getArchName(artifact.arch) }}
-                        <span class="text-ink-300">({{ formatFileSize(artifact.file_size) }})</span>
+                        <span class="text-[var(--color-text-muted)]">({{ formatFileSize(artifact.file_size) }})</span>
                       </a>
                     </div>
                   </div>
 
                   <!-- Changelog toggle -->
-                  <div v-if="release.changelog_md" class="border-t-2 border-ink-100">
+                  <div v-if="release.changelog_md" class="border-t border-[var(--color-surface-border)]">
                     <button
                       @click="toggleChangelog(release.id)"
-                      class="w-full px-5 sm:px-6 py-3 flex items-center justify-between text-left hover:bg-cream-100/50 transition-colors"
+                      class="w-full px-5 sm:px-6 py-3 flex items-center justify-between text-left hover:bg-[var(--color-surface-overlay)] transition-colors"
                     >
-                      <span class="text-sm text-ink-600 font-medium">Changelog</span>
+                      <span class="text-sm text-[var(--color-text-secondary)] font-medium">Changelog</span>
                       <svg
-                        :class="['w-4 h-4 text-ink-300 transition-transform', expandedReleases.has(release.id) ? 'rotate-180' : '']"
+                        :class="['w-4 h-4 text-[var(--color-text-muted)] transition-transform', expandedReleases.has(release.id) ? 'rotate-180' : '']"
                         fill="none" viewBox="0 0 24 24" stroke="currentColor"
                       >
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
@@ -412,7 +408,7 @@ function selectProduct(releaseProductId: string | null) {
                       class="px-5 sm:px-6 pb-5 sm:pb-6"
                     >
                       <!-- eslint-disable-next-line vue/no-v-html -->
-                      <div class="changelog-content prose-sm text-ink-500" v-html="renderChangelog(release.changelog_md)"></div>
+                      <div class="changelog-content prose-sm text-[var(--color-text-secondary)]" v-html="renderChangelog(release.changelog_md)"></div>
                     </div>
                   </div>
                 </div>
@@ -426,19 +422,17 @@ function selectProduct(releaseProductId: string | null) {
           <button
             :disabled="currentPage <= 1"
             @click="loadPage(currentPage - 1)"
-            class="px-4 py-2 text-sm border-2 border-ink-200 text-ink-500 hover:border-ink-300 disabled:opacity-30 disabled:cursor-not-allowed"
-            style="border-radius: 3px 10px 5px 12px / 12px 5px 10px 3px"
+            class="px-4 py-2 text-sm border border-[var(--color-surface-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-text-muted)] disabled:opacity-30 disabled:cursor-not-allowed rounded-lg"
           >
             Previous
           </button>
-          <span class="text-sm text-ink-400 px-3">
+          <span class="text-sm text-[var(--color-text-muted)] px-3">
             {{ currentPage }} / {{ totalPages }}
           </span>
           <button
             :disabled="currentPage >= totalPages"
             @click="loadPage(currentPage + 1)"
-            class="px-4 py-2 text-sm border-2 border-ink-200 text-ink-500 hover:border-ink-300 disabled:opacity-30 disabled:cursor-not-allowed"
-            style="border-radius: 3px 10px 5px 12px / 12px 5px 10px 3px"
+            class="px-4 py-2 text-sm border border-[var(--color-surface-border)] text-[var(--color-text-secondary)] hover:border-[var(--color-text-muted)] disabled:opacity-30 disabled:cursor-not-allowed rounded-lg"
           >
             Next
           </button>
@@ -448,10 +442,10 @@ function selectProduct(releaseProductId: string | null) {
     </section>
 
     <!-- CTA: Back to downloads -->
-    <section class="py-12 bg-cream-100">
+    <section class="py-12 section-dark-raised">
       <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-        <p class="text-ink-500 mb-4">Looking for the latest downloads?</p>
-        <router-link to="/download" class="btn-hand btn-hand-primary inline-flex items-center gap-2 px-6 py-3">
+        <p class="text-[var(--color-text-secondary)] mb-4">Looking for the latest downloads?</p>
+        <router-link to="/download" class="btn-primary inline-flex items-center gap-2 px-6 py-3">
           <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
           </svg>
@@ -467,7 +461,7 @@ function selectProduct(releaseProductId: string | null) {
 .changelog-content :deep(h2) {
   font-size: 1rem;
   font-weight: 700;
-  color: var(--color-ink-900, #1a1a1a);
+  color: var(--color-text-primary, #1a1a1a);
   margin-top: 1rem;
   margin-bottom: 0.5rem;
 }
@@ -475,7 +469,7 @@ function selectProduct(releaseProductId: string | null) {
 .changelog-content :deep(h3) {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--color-ink-700, #4a4a4a);
+  color: var(--color-text-secondary, #4a4a4a);
   margin-top: 0.75rem;
   margin-bottom: 0.375rem;
 }
@@ -497,7 +491,7 @@ function selectProduct(releaseProductId: string | null) {
   font-size: 0.8125rem;
   padding: 0.125rem 0.375rem;
   border-radius: 3px;
-  background-color: var(--color-cream-200, #e8e0d4);
+  background-color: var(--color-surface-overlay, #e8e0d4);
 }
 
 .changelog-content :deep(p) {

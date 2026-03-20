@@ -21,8 +21,8 @@
   align-items: center;
   gap: 8px;
   padding: 12px 16px;
-  background: var(--color-cream-100);
-  border: 1px solid var(--color-ink-100);
+  background: var(--color-surface-raised);
+  border: 1px solid var(--color-surface-border);
   border-radius: 0 12px 12px 12px;
   width: fit-content;
   max-width: 200px;
@@ -37,7 +37,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: var(--color-ink-300);
+  background: var(--color-text-secondary);
   animation: bounce 1.4s infinite ease-in-out;
 }
 
@@ -66,7 +66,7 @@
 
 .label {
   font-size: 12px;
-  color: var(--color-ink-500);
+  color: var(--color-text-muted);
   white-space: nowrap;
 }
 /* Respect reduced motion preference */

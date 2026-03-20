@@ -12,7 +12,7 @@ import { useAccountOverview } from '../../composables/useAccountOverview'
 
 const { overview } = useAccountOverview()
 
-// VIP level → CSS color class (www light theme: ink/ochre palette)
+// VIP level → CSS color class
 const VIP_COLORS: Record<number, string> = {
   0: '#9CA3AF', // Standard — gray
   1: '#C0C0C0', // Silver
@@ -37,7 +37,7 @@ const topupUrl = computed(() => {
 <template>
   <div
     v-if="overview"
-    class="flex items-center gap-2 px-2 py-1 rounded-lg bg-cream-100 border border-cream-300"
+    class="flex items-center gap-2 px-2 py-1 rounded-lg bg-[var(--color-surface-raised)] border border-[var(--color-surface-border)]"
   >
     <!-- VIP color dot -->
     <span
@@ -47,8 +47,8 @@ const topupUrl = computed(() => {
     />
 
     <!-- Lubell balance -->
-    <span class="text-sm font-mono tabular-nums text-ink-800">
-      🦌 {{ balance?.toFixed(2) }} <span class="text-xs text-ink-500">LB</span>
+    <span class="text-sm font-mono tabular-nums text-[var(--color-text-primary)]">
+      🦌 {{ balance?.toFixed(2) }} <span class="text-xs text-[var(--color-text-muted)]">LB</span>
     </span>
 
     <!-- Top-up link -->

@@ -1,6 +1,6 @@
 /**
  * API Health Check type definitions
- * Used by useApiHealth composable and ApiStatusBanner component
+ * Used by useApiHealth composable
  */
 
 /**
@@ -19,14 +19,4 @@ export interface ApiHealthConfig {
   timeoutMs: number
   /** Maximum retry attempts on failure */
   maxRetries: number
-}
-
-/**
- * Status banner display configuration
- */
-export interface ApiStatusBannerConfig {
-  /** Message shown when API is unavailable */
-  unavailableMessage: string
-  /** Accessible label for the banner */
-  ariaLabel: string
 }

@@ -31,7 +31,7 @@ const industries = [
 <template>
   <div ref="pageRef">
     <!-- Hero -->
-    <section class="biz-hero section-dark" aria-label="For Entrepreneurs">
+    <section id="hero" class="biz-hero section-dark" aria-label="For Entrepreneurs">
       <div class="biz-hero-glow" aria-hidden="true"></div>
       <div class="relative max-w-4xl mx-auto px-6 sm:px-8 lg:px-12 py-28 sm:py-36 text-center">
         <span class="biz-eyebrow reveal-fade-up">创业者</span>
@@ -68,6 +68,7 @@ const industries = [
         <div
           v-for="(product, index) in products"
           :key="product.id"
+          :id="product.id"
           class="biz-product reveal-fade-up"
           :class="{ 'biz-product--last': index === products.length - 1 }"
         >
@@ -148,7 +149,7 @@ const industries = [
     </section>
 
     <!-- Industry Solutions -->
-    <section class="section-dark py-20" aria-label="行业解决方案">
+    <section id="industries" class="section-dark py-20" aria-label="行业解决方案">
       <div class="max-w-5xl mx-auto px-6 sm:px-8 lg:px-12">
         <div class="text-center mb-12 reveal-fade-up">
           <h2 class="biz-section-title">行业解决方案</h2>
@@ -170,7 +171,7 @@ const industries = [
     </section>
 
     <!-- Bundle CTA -->
-    <section class="section-dark-raised py-24" aria-label="企业套餐">
+    <section id="bundle" class="section-dark-raised py-24" aria-label="企业套餐">
       <div class="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12 text-center reveal-fade-up">
         <h2 class="biz-section-title">企业 AI 套餐</h2>
         <p class="biz-section-sub biz-section-sub--wide">

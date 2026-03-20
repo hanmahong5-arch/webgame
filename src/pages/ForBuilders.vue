@@ -29,7 +29,7 @@ const architectureSteps = [
 <template>
   <div ref="pageRef">
     <!-- Hero -->
-    <section class="builder-hero section-dark" aria-label="For Builders">
+    <section id="hero" class="builder-hero section-dark" aria-label="For Builders">
       <div class="builder-hero-glow" aria-hidden="true"></div>
       <div class="relative max-w-4xl mx-auto px-6 sm:px-8 lg:px-12 py-28 sm:py-36 text-center">
         <span class="builder-eyebrow reveal-fade-up">构建者</span>
@@ -61,7 +61,7 @@ const architectureSteps = [
     </section>
 
     <!-- Integration Path -->
-    <section class="section-dark-raised py-20" aria-label="集成路径">
+    <section id="integration-path" class="section-dark-raised py-20" aria-label="集成路径">
       <div class="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12">
         <div class="text-center mb-12 reveal-fade-up">
           <h2 class="builder-section-title">4 步构建完整 AI 平台</h2>
@@ -88,6 +88,7 @@ const architectureSteps = [
         <div
           v-for="(product, index) in products"
           :key="product.id"
+          :id="product.id"
           class="builder-product reveal-fade-up"
           :class="{ 'builder-product--last': index === products.length - 1 }"
         >
@@ -173,7 +174,7 @@ const architectureSteps = [
     </section>
 
     <!-- Platform Bundle CTA -->
-    <section class="section-dark-raised py-24" aria-label="平台构建者套件">
+    <section id="bundle" class="section-dark-raised py-24" aria-label="平台构建者套件">
       <div class="max-w-4xl mx-auto px-6 sm:px-8 lg:px-12 text-center reveal-fade-up">
         <h2 class="builder-section-title">开发者全套工具链</h2>
         <p class="builder-section-sub builder-section-sub--wide">

@@ -2,14 +2,15 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import TopBar from './TopBar.vue'
-import AppSidebar from './AppSidebar.vue'
+import PageSidebar from './PageSidebar/PageSidebar.vue'
 import Footer from './Footer.vue'
 import { useSidebar } from '../../composables/useSidebar'
 
 const route = useRoute()
 const { isCollapsed } = useSidebar()
 
-const hideSidebar = computed(() => route.meta.hideSidebar === true)
+const showSidebar = computed(() => route.meta.pageSidebar === true)
+const hideSidebar = computed(() => !showSidebar.value)
 </script>
 
 <template>
@@ -17,11 +18,11 @@ const hideSidebar = computed(() => route.meta.hideSidebar === true)
     class="app-shell"
     :class="{
       'app-shell--no-sidebar': hideSidebar,
-      'app-shell--collapsed': !hideSidebar && isCollapsed,
+      'app-shell--collapsed': showSidebar && isCollapsed,
     }"
   >
     <TopBar />
-    <AppSidebar v-if="!hideSidebar" />
+    <PageSidebar v-if="showSidebar" />
     <main id="main-content" class="app-main" tabindex="-1">
       <slot />
       <Footer />
