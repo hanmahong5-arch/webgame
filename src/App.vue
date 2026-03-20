@@ -1,12 +1,35 @@
 <script setup lang="ts">
 import { defineAsyncComponent, ref, nextTick, onMounted, onUnmounted } from 'vue'
-import { RouterView } from 'vue-router'
+import { RouterView, useRoute } from 'vue-router'
 import AppShell from './components/Layout/AppShell.vue'
+import GlobalToast from './components/Feedback/GlobalToast.vue'
 import { useChatFeature } from './composables/useChatFeature'
 import { useTracking } from './composables/useTracking'
+import { scrollState } from './router'
 
 const { isChatEnabled } = useChatFeature()
 const { track } = useTracking()
+const route = useRoute()
+
+/**
+ * Scroll .app-main after route transition leave phase completes.
+ * This fires AFTER the old content is invisible but BEFORE the new content appears —
+ * the perfect moment to scroll without the user seeing a jump.
+ * scrollBehavior { top: 0 } doesn't work because .app-main is the scroll container, not window.
+ */
+const onPageTransitionLeave = () => {
+  if (route.hash) return
+  const main = document.getElementById('main-content')
+  if (!main) return
+
+  if (scrollState.isPopState) {
+    const saved = scrollState.positions.get(route.fullPath)
+    main.scrollTop = saved ?? 0
+  } else {
+    main.scrollTop = 0
+  }
+  scrollState.isPopState = false
+}
 
 // Chat panel open/close state managed at App level (shared by Trigger + Sidebar + Preview)
 const isChatOpen = ref(false)
@@ -72,8 +95,15 @@ const ChatFloatingTrigger = defineAsyncComponent(
     </a>
 
     <AppShell>
-      <RouterView />
+      <RouterView v-slot="{ Component }">
+        <Transition name="page-fade" mode="out-in" @after-leave="onPageTransitionLeave">
+          <component :is="Component" :key="$route.path" />
+        </Transition>
+      </RouterView>
     </AppShell>
+
+    <!-- Global toast notifications -->
+    <GlobalToast />
 
     <!-- AI Chat: conditional load via env flag (ADR-001) -->
     <template v-if="isChatEnabled">

@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
+import { createRouter, createWebHistory, type RouteRecordRaw, type NavigationFailure } from 'vue-router'
 
 const BASE_TITLE = 'Lurus — AI 基础设施生态'
 
@@ -119,35 +119,52 @@ const routes: RouteRecordRaw[] = [
     meta: { hideSidebar: true },
     component: () => import('../pages/AuthCallback.vue')
   },
-  // Catch-all redirect to home for unknown routes
+  // 404 — show helpful page instead of silent redirect
   {
     path: '/:pathMatch(.*)*',
-    redirect: '/'
+    name: 'NotFound',
+    meta: {
+      hideSidebar: true,
+      title: `Page Not Found — ${BASE_TITLE}`,
+    },
+    component: () => import('../pages/NotFound.vue')
   }
 ]
+
+// Track scroll positions for back/forward restoration (exported for App.vue @after-leave)
+export const scrollState = {
+  positions: new Map<string, number>(),
+  isPopState: false,
+}
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
   scrollBehavior(to, _from, savedPosition) {
-    // Handle hash links (e.g., #pricing, #download)
+    // Hash links — scrollIntoView works on .app-main as nearest scrollable ancestor
     if (to.hash) {
-      return {
-        el: to.hash,
-        behavior: 'smooth'
-      }
+      return { el: to.hash, behavior: 'smooth' }
     }
-    // Restore position when navigating back
-    if (savedPosition) {
-      return savedPosition
-    }
-    // Scroll to top for new navigation
-    return { top: 0 }
+    // Flag popstate for App.vue @after-leave scroll handler
+    scrollState.isPopState = savedPosition !== null
+    // Return false — .app-main is the scroll container, not window.
+    // window.scrollTo (used by scrollBehavior) has no effect. Scroll handled in afterEach.
+    return false
+  }
+})
+
+// Save scroll position before leaving current route
+router.beforeEach((_to, from) => {
+  const main = document.getElementById('main-content')
+  if (main && from.name) {
+    scrollState.positions.set(from.fullPath, main.scrollTop)
   }
 })
 
 // Update document title and meta description on each navigation
-router.afterEach((to) => {
+router.afterEach((to, _from, failure?: NavigationFailure | void) => {
+  if (failure) return
+
   const title = to.meta.title as string | undefined
   if (title) document.title = title
 
@@ -160,6 +177,21 @@ router.afterEach((to) => {
       document.head.appendChild(metaDesc)
     }
     metaDesc.content = description
+  }
+  // NOTE: scroll is handled by App.vue @after-leave callback, not here.
+  // scrollBehavior { top: 0 } doesn't work because .app-main is the scroll container, not window.
+})
+
+// Recover from lazy chunk loading failures (e.g., after a new deployment invalidates old chunk hashes)
+router.onError((error, to) => {
+  const msg = error?.message || ''
+  if (
+    msg.includes('Failed to fetch dynamically imported module') ||
+    msg.includes('Importing a module script failed') ||
+    msg.includes('error loading dynamically imported module')
+  ) {
+    // Force full page reload to get updated chunk manifest
+    window.location.href = to.fullPath
   }
 })
 

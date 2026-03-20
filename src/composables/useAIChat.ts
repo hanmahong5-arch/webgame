@@ -5,10 +5,10 @@
 
 import { ref, computed } from 'vue'
 import type { ChatMessage } from '../types/chat'
-import { NetworkError } from '../types/chat'
 import { useChatPersist } from './useChatPersist'
 import { useChatApi, getErrorCode } from './useChatApi'
 import { useNetworkStatus } from './useNetworkStatus'
+import { useToast } from './useToast'
 import { chatModels, quickPrompts, chatConfig, DOCS_URL } from '../data/chatModels'
 import { checkRateLimit } from '../utils/rateLimiter'
 
@@ -30,6 +30,9 @@ export const useAIChat = () => {
   // Mutex lock and debounce state
   let sendingPromise: Promise<void> | null = null
   let lastSendTime = 0
+
+  // AbortController for active streaming — allows cancellation on navigation/unmount
+  let streamController: AbortController | null = null
 
   // Computed
   const canSend = computed(() => {
@@ -81,11 +84,13 @@ export const useAIChat = () => {
     const messageContent = (content || inputMessage.value).trim()
     if (!messageContent) return
 
-    // Rate limit check
+    // Rate limit check — notify via toast, don't throw (caller doesn't catch)
     const rateResult = checkRateLimit()
     if (!rateResult.allowed) {
       const waitSec = Math.ceil((rateResult.retryAfterMs || 0) / 1000)
-      throw new NetworkError(`请求过于频繁，请 ${waitSec} 秒后再试`)
+      const toast = useToast()
+      toast.warning('请求过于频繁', `请等待 ${waitSec} 秒后再发送。`)
+      return
     }
 
     // Debounce check
@@ -125,6 +130,11 @@ export const useAIChat = () => {
       isLoading.value = true
       isTyping.value = true
 
+      // Create fresh AbortController for this stream
+      streamController?.abort()
+      const controller = new AbortController()
+      streamController = controller
+
       try {
         // Prepare messages for API (exclude streaming placeholder)
         const apiMessages = messages.value
@@ -140,7 +150,7 @@ export const useAIChat = () => {
           isOptimistic: false
         })
 
-        // Stream tokens into the assistant message
+        // Stream tokens into the assistant message (pass abort signal)
         await sendStreamMessage(apiMessages, selectedModel.value, (token) => {
           const idx = messages.value.findIndex(m => m.id === assistantMsgId)
           if (idx !== -1) {
@@ -149,7 +159,7 @@ export const useAIChat = () => {
               content: messages.value[idx].content + token
             }
           }
-        })
+        }, controller.signal)
 
         // Stream complete - finalize assistant message
         const finalMsg = messages.value.find(m => m.id === assistantMsgId)
@@ -166,6 +176,15 @@ export const useAIChat = () => {
 
         isStreamingComplete.value = true
       } catch (error) {
+        // User-initiated cancel (navigation away, clearChat) — clean up silently
+        if (error instanceof DOMException && error.name === 'AbortError') {
+          const assistantIdx = messages.value.findIndex(m => m.id === assistantMsgId)
+          if (assistantIdx !== -1 && !messages.value[assistantIdx].content) {
+            messages.value.splice(assistantIdx, 1)
+          }
+          return
+        }
+
         const errorCode = getErrorCode(error)
         const assistantMsg = messages.value.find(m => m.id === assistantMsgId)
 
@@ -191,6 +210,9 @@ export const useAIChat = () => {
         isLoading.value = false
         isTyping.value = false
         sendingPromise = null
+        if (streamController === controller) {
+          streamController = null
+        }
       }
     })()
 
@@ -223,6 +245,11 @@ export const useAIChat = () => {
       status: 'streaming'
     })
 
+    // Create fresh AbortController for this retry stream
+    streamController?.abort()
+    const controller = new AbortController()
+    streamController = controller
+
     try {
       const messageIndex = messages.value.findIndex(m => m.id === messageId)
       const apiMessages = messages.value
@@ -246,11 +273,20 @@ export const useAIChat = () => {
             content: messages.value[idx].content + token
           }
         }
-      })
+      }, controller.signal)
 
       updateMessage(assistantMsgId, { status: 'sent' })
       isStreamingComplete.value = true
     } catch (error) {
+      // User-initiated cancel — clean up silently
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        const idx = messages.value.findIndex(m => m.id === assistantMsgId)
+        if (idx !== -1 && !messages.value[idx].content) {
+          messages.value.splice(idx, 1)
+        }
+        return
+      }
+
       const errorCode = getErrorCode(error)
       const currentRetryCount = message.retryCount || 0
       const assistantMsg = messages.value.find(m => m.id === assistantMsgId)
@@ -270,6 +306,9 @@ export const useAIChat = () => {
     } finally {
       isLoading.value = false
       isTyping.value = false
+      if (streamController === controller) {
+        streamController = null
+      }
     }
   }
 
@@ -284,9 +323,22 @@ export const useAIChat = () => {
   }
 
   /**
+   * Cancel any active streaming request.
+   * Call on component unmount to prevent stale updates.
+   */
+  const cancelStreaming = () => {
+    streamController?.abort()
+    streamController = null
+    sendingPromise = null
+    isLoading.value = false
+    isTyping.value = false
+  }
+
+  /**
    * Clear all messages
    */
   const clearChat = () => {
+    cancelStreaming()
     clearPersist()
   }
 
@@ -323,6 +375,7 @@ export const useAIChat = () => {
     deleteMessage,
     clearChat,
     applyPrompt,
-    updateMessage
+    updateMessage,
+    cancelStreaming
   }
 }

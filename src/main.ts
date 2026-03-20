@@ -14,5 +14,11 @@ if (redirectUrl) {
   // Mount Vue app for internal routes
   const app = createApp(App)
   app.use(router)
+
+  // Global error handler — prevents silent crashes during navigation/render
+  app.config.errorHandler = (err, _instance, info) => {
+    console.error(`[Vue Error] ${info}:`, err)
+  }
+
   app.mount('#app')
 }

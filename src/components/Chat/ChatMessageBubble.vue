@@ -25,11 +25,31 @@ const formattedTime = computed(() => {
   return `${hours}:${minutes}`
 })
 
+/**
+ * User-friendly status text based on error code.
+ * Tells the user what happened + what to do.
+ */
 const statusText = computed(() => {
-  if (isSending.value) return '发送中...'
-  if (props.message.status === 'timeout') return '请求超时'
-  if (isFailed.value) return '发送失败'
-  return ''
+  if (isSending.value) return '发送中…'
+  if (!isFailed.value) return ''
+
+  const code = props.message.errorCode
+  switch (code) {
+    case 'TIMEOUT':
+      return '请求超时 — 请重试'
+    case 'NETWORK_ERROR':
+      return '网络异常 — 请检查连接'
+    case 'HTTP_401':
+      return '认证已过期 — 请刷新页面'
+    case 'HTTP_429':
+      return '请求过于频繁 — 请稍候'
+    case 'HTTP_500':
+    case 'HTTP_502':
+    case 'HTTP_503':
+      return '服务繁忙 — 请稍后重试'
+    default:
+      return '发送失败 — 点击重试'
+  }
 })
 
 const handleRetry = () => {

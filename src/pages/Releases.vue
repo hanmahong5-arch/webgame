@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useReleases } from '../composables/useReleases'
 import {
@@ -27,6 +27,7 @@ const {
   getArchName,
   downloadArtifact,
   getDownloadUrl,
+  cancelPending,
 } = useReleases()
 
 const marked = new Marked({ async: false })
@@ -38,6 +39,11 @@ const includePrerelease = ref(false)
 
 // Expand state for changelog
 const expandedReleases = ref<Set<number>>(new Set())
+
+// Cancel all pending fetches on unmount (navigation away)
+onUnmounted(() => {
+  cancelPending()
+})
 
 // Set initial filter from route param
 onMounted(() => {
@@ -240,18 +246,24 @@ function selectProduct(releaseProductId: string | null) {
 
         <!-- Error state -->
         <div v-else-if="error && releases.length === 0" class="text-center py-16">
-          <div class="card-dark inline-block p-8 max-w-md border-orange-300">
-            <svg class="w-12 h-12 text-orange-400 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <div class="card-dark inline-block p-8 max-w-md" style="border-color: rgba(201, 162, 39, 0.3)">
+            <svg class="w-12 h-12 mx-auto mb-4" style="color: var(--color-ochre)" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
-            <p class="text-[var(--color-text-secondary)] font-medium mb-2">Unable to load releases</p>
-            <p class="text-[var(--color-text-muted)] text-sm mb-4">{{ error }}</p>
-            <button
-              @click="loadReleases()"
-              class="btn-primary text-sm px-6 py-2"
-            >
-              Retry
-            </button>
+            <p class="text-[var(--color-text-primary)] font-semibold mb-2 text-base">无法加载版本列表</p>
+            <p class="text-[var(--color-text-secondary)] text-sm mb-5 leading-relaxed">{{ error }}</p>
+            <div class="flex justify-center gap-3">
+              <button
+                @click="loadReleases()"
+                class="btn-primary text-sm px-6 py-2.5 inline-flex items-center gap-2"
+              >
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h5M20 20v-5h-5M20.49 9A9 9 0 015.64 5.64L1 10m23 4l-4.64 4.36A9 9 0 013.51 15" /></svg>
+                重试
+              </button>
+              <a href="/download" class="btn-outline text-sm px-5 py-2.5">
+                下载中心
+              </a>
+            </div>
           </div>
         </div>
 
@@ -261,10 +273,17 @@ function selectProduct(releaseProductId: string | null) {
             <svg class="w-12 h-12 text-[var(--color-text-muted)] mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
             </svg>
-            <p class="text-[var(--color-text-secondary)] font-medium mb-2">No releases found</p>
-            <p class="text-[var(--color-text-muted)] text-sm">
-              {{ selectedProduct ? 'This product has no releases yet. Check back later.' : 'No releases match your filters.' }}
+            <p class="text-[var(--color-text-primary)] font-semibold mb-2">暂无版本</p>
+            <p class="text-[var(--color-text-muted)] text-sm mb-4">
+              {{ selectedProduct ? '该产品暂无已发布的版本，请稍后查看。' : '当前筛选条件下没有匹配的版本。' }}
             </p>
+            <button
+              v-if="selectedProduct"
+              @click="selectProduct(null)"
+              class="btn-outline text-sm px-5 py-2"
+            >
+              查看全部产品
+            </button>
           </div>
         </div>
 

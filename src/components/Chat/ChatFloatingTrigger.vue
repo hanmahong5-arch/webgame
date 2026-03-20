@@ -116,6 +116,10 @@ onMounted(() => {
 
 onUnmounted(() => {
   cleanupObserver()
+  if (dragLeaveTimer) {
+    clearTimeout(dragLeaveTimer)
+    dragLeaveTimer = null
+  }
 })
 
 /** Computed visibility: show when Hero is NOT visible */

@@ -60,6 +60,11 @@ export const useSidebar = () => {
 
   onUnmounted(() => {
     window.removeEventListener('resize', handleResize)
+    // Ensure body scroll lock is released if component unmounts while mobile drawer is open
+    if (isMobileOpen.value) {
+      isMobileOpen.value = false
+      document.body.style.overflow = ''
+    }
   })
 
   return { isCollapsed, isMobileOpen, toggle, closeMobile }

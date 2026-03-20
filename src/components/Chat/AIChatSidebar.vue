@@ -96,6 +96,7 @@ const {
   retryMessage,
   deleteMessage,
   clearChat,
+  cancelStreaming,
 } = useAIChat()
 
 // Check if mobile on mount and resize
@@ -224,6 +225,13 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('resize', checkMobile)
   window.removeEventListener('keydown', handleKeydown)
+  // Cancel any active streaming to prevent stale updates after unmount
+  cancelStreaming()
+  // Clean up drag-leave debounce timer
+  if (dragLeaveTimer) {
+    clearTimeout(dragLeaveTimer)
+    dragLeaveTimer = null
+  }
 })
 </script>
 

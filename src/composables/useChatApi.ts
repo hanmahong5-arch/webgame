@@ -23,14 +23,15 @@ function getApiKey(): string {
 }
 
 /**
- * Get human-readable error message based on error type and status code
+ * Get human-readable error message based on error type and status code.
+ * Each message follows the pattern: what happened + what to do.
  */
 export const getErrorMessage = (error: unknown, statusCode?: number): string => {
   if (error instanceof DOMException && error.name === 'AbortError') {
-    return '请求超时(30秒)，请检查网络后重试'
+    return '请求超时（30秒），请检查网络后重试'
   }
   if (error instanceof TypeError && error.message.includes('fetch')) {
-    return '网络连接失败，请检查网络'
+    return '网络连接失败，请检查网络设置'
   }
   if (error instanceof TimeoutError) {
     return error.message
@@ -38,25 +39,37 @@ export const getErrorMessage = (error: unknown, statusCode?: number): string => 
   if (error instanceof NetworkError) {
     return error.message
   }
-  if (statusCode === 401) return '认证失败，请刷新页面'
-  if (statusCode === 429) return '请求过于频繁，请稍后再试'
-  if (statusCode === 500) return '服务器繁忙，请稍后重试'
-  if (statusCode && statusCode >= 500) return '服务器错误，请稍后重试'
-  return '未知错误，请稍后再试'
+  if (statusCode === 401) return '认证已过期，请刷新页面重新登录 (401)'
+  if (statusCode === 429) return '请求过于频繁，请稍后再试 (429)'
+  if (statusCode === 500) return 'AI 服务暂时繁忙，请稍后重试 (500)'
+  if (statusCode === 502) return 'AI 服务暂不可用，请稍后重试 (502)'
+  if (statusCode === 503) return 'AI 服务暂不可用，请稍后重试 (503)'
+  if (statusCode && statusCode >= 400) return `请求失败 (${statusCode})，请重试`
+  return '发生意外错误，请重试'
 }
 
 /**
- * Get error code from error for tracking
+ * Get error code from error for tracking and UI display.
+ * Extracts HTTP status from NetworkError messages when available.
  */
 export const getErrorCode = (error: unknown, statusCode?: number): string => {
+  if (error instanceof TimeoutError) {
+    return 'TIMEOUT'
+  }
   if (error instanceof DOMException && error.name === 'AbortError') {
     return 'TIMEOUT'
   }
   if (error instanceof TypeError && error.message.includes('fetch')) {
     return 'NETWORK_ERROR'
   }
+  if (error instanceof NetworkError) {
+    // Prefer structured statusCode over message parsing
+    if (error.statusCode) return 'HTTP_' + error.statusCode
+    const httpMatch = error.message.match(/\((\d{3})\)/)
+    if (httpMatch) return 'HTTP_' + httpMatch[1]
+  }
   if (statusCode) {
-    return "HTTP_" + statusCode
+    return 'HTTP_' + statusCode
   }
   return 'UNKNOWN'
 }
@@ -120,13 +133,13 @@ const sendWithTimeout = async (
 
     if (!response.ok) {
       const errorMsg = getErrorMessage(null, response.status)
-      throw new NetworkError(errorMsg)
+      throw new NetworkError(errorMsg, response.status)
     }
 
     return await response.json()
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
-      throw new TimeoutError('请求超时(30秒)，请检查网络后重试')
+      throw new TimeoutError('请求超时（30秒），请检查网络后重试')
     }
     throw error
   } finally {
@@ -137,24 +150,29 @@ const sendWithTimeout = async (
 /**
  * Send message with exponential backoff retry (non-streaming)
  * Retry delays: 1s -> 2s -> 4s (max 3 attempts)
+ * Accepts optional abortSignal to cancel the entire retry loop.
  */
 export const sendWithRetry = async (
   messages: Array<{ role: string; content: string }>,
   model: string,
-  maxRetries: number = MAX_RETRIES
+  maxRetries: number = MAX_RETRIES,
+  abortSignal?: AbortSignal
 ): Promise<ChatApiResponse> => {
   let lastError: unknown
 
   for (let attempt = 0; attempt < maxRetries; attempt++) {
+    if (abortSignal?.aborted) {
+      throw new DOMException('Aborted', 'AbortError')
+    }
+
     try {
       return await sendWithTimeout(messages, model)
     } catch (error) {
       lastError = error
 
-      // Don't retry on specific errors
-      if (error instanceof NetworkError) {
-        const msg = error.message
-        if (msg.includes('认证失败') || msg.includes('请求过于频繁')) {
+      // Don't retry on auth or rate-limit errors — retrying won't help
+      if (error instanceof NetworkError && error.statusCode) {
+        if (error.statusCode === 401 || error.statusCode === 429) {
           throw error
         }
       }
@@ -164,9 +182,15 @@ export const sendWithRetry = async (
         throw error
       }
 
-      // Exponential backoff: 1s, 2s, 4s...
+      // Exponential backoff: 1s, 2s, 4s... (cancellable via abort signal)
       const delay = Math.min(1000 * Math.pow(2, attempt), 8000)
-      await new Promise(resolve => setTimeout(resolve, delay))
+      await new Promise<void>((resolve, reject) => {
+        const timer = setTimeout(resolve, delay)
+        abortSignal?.addEventListener('abort', () => {
+          clearTimeout(timer)
+          reject(new DOMException('Aborted', 'AbortError'))
+        }, { once: true })
+      })
     }
   }
 
@@ -189,9 +213,13 @@ export const sendStreamMessage = async (
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), TIMEOUT_MS)
 
-  // Link external abort signal if provided
+  // Link external abort signal — { once: true } prevents listener leak
   if (abortSignal) {
-    abortSignal.addEventListener('abort', () => controller.abort())
+    if (abortSignal.aborted) {
+      controller.abort()
+    } else {
+      abortSignal.addEventListener('abort', () => controller.abort(), { once: true })
+    }
   }
 
   try {
@@ -211,7 +239,7 @@ export const sendStreamMessage = async (
 
     if (!response.ok) {
       const errorMsg = getErrorMessage(null, response.status)
-      throw new NetworkError(errorMsg)
+      throw new NetworkError(errorMsg, response.status)
     }
 
     if (!response.body) {
@@ -253,7 +281,11 @@ export const sendStreamMessage = async (
     }
   } catch (error) {
     if (error instanceof DOMException && error.name === 'AbortError') {
-      throw new TimeoutError('请求超时(30秒)，请检查网络后重试')
+      // Distinguish user-initiated cancel from timeout
+      if (abortSignal?.aborted) {
+        throw error // Re-throw as AbortError for caller to handle
+      }
+      throw new TimeoutError('请求超时（30秒），请检查网络后重试')
     }
     throw error
   } finally {

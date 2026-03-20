@@ -618,3 +618,21 @@ a, button {
   padding: 8px 20px;
   font-size: 0.875rem;
 }
+
+/* ═══════════ Route transition ═══════════ */
+.page-fade-enter-active,
+.page-fade-leave-active {
+  transition: opacity 0.15s ease;
+}
+
+.page-fade-enter-from,
+.page-fade-leave-to {
+  opacity: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-fade-enter-active,
+  .page-fade-leave-active {
+    transition: none;
+  }
+}

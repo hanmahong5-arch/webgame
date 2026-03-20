@@ -67,8 +67,10 @@ export class TimeoutError extends Error {
 }
 
 export class NetworkError extends Error {
-  constructor(message: string) {
+  statusCode?: number
+  constructor(message: string, statusCode?: number) {
     super(message)
     this.name = 'NetworkError'
+    this.statusCode = statusCode
   }
 }

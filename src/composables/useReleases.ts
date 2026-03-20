@@ -1,6 +1,7 @@
 /**
  * Composable for managing releases and downloads
- * Always fetches from real API; shows friendly error on failure
+ * Always fetches from real API; shows friendly error on failure.
+ * All fetch methods use AbortController to cancel stale requests on rapid navigation.
  */
 
 import { ref, type Ref } from 'vue'
@@ -15,6 +16,15 @@ import type {
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://api.lurus.cn'
 
+/** Convert HTTP status to user-friendly error text */
+function friendlyHttpError(status: number): string {
+  if (status === 404) return '请求的资源未找到。'
+  if (status === 429) return '请求过于频繁，请稍后再试。'
+  if (status >= 500) return '服务器暂时不可用，请稍后重试。'
+  if (status === 403) return '访问被拒绝，你可能没有访问权限。'
+  return `请求失败 (HTTP ${status})，请重试。`
+}
+
 export function useReleases() {
   const releases: Ref<Release[]> = ref([])
   const total: Ref<number> = ref(0)
@@ -23,7 +33,25 @@ export function useReleases() {
   const isLoading: Ref<boolean> = ref(false)
   const error: Ref<string | null> = ref(null)
 
+  // Track active AbortController so callers can cancel in-flight requests
+  let activeController: AbortController | null = null
+
+  /**
+   * Cancel all pending fetch operations.
+   * Call this on component unmount or before starting a new competing fetch.
+   */
+  function cancelPending(): void {
+    activeController?.abort()
+    activeController = null
+  }
+
   async function fetchReleases(params: FetchReleasesParams = {}): Promise<void> {
+    // Abort any previous in-flight request (prevents stale response overwriting fresh data)
+    cancelPending()
+
+    const controller = new AbortController()
+    activeController = controller
+
     isLoading.value = true
     error.value = null
 
@@ -39,16 +67,16 @@ export function useReleases() {
       if (params.page_size) queryParams.append('page_size', String(params.page_size))
 
       const url = `${API_BASE_URL}/api/releases?${queryParams.toString()}`
-      const response = await fetch(url)
+      const response = await fetch(url, { signal: controller.signal })
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        throw new Error(friendlyHttpError(response.status))
       }
 
       const result: ApiResponse<ReleaseListResponse> = await response.json()
 
       if (!result.success) {
-        throw new Error(result.error || '获取发布列表失败')
+        throw new Error(result.error || '加载版本列表失败。')
       }
 
       releases.value = result.data.releases
@@ -56,16 +84,26 @@ export function useReleases() {
       currentPage.value = result.data.page
       pageSize.value = result.data.page_size
     } catch (err) {
-      error.value = err instanceof Error ? err.message : '获取发布信息时发生未知错误'
+      // Silently ignore aborted requests — they are intentional cancellations
+      if (err instanceof DOMException && err.name === 'AbortError') return
+      if (err instanceof TypeError && err.message.includes('fetch')) {
+        error.value = '网络连接失败，请检查网络设置后重试。'
+      } else {
+        error.value = err instanceof Error ? err.message : '发生意外错误。'
+      }
       console.error('Failed to fetch releases:', err)
     } finally {
-      isLoading.value = false
+      // Only clear loading if this controller is still the active one
+      if (activeController === controller) {
+        isLoading.value = false
+      }
     }
   }
 
   async function fetchLatestRelease(
     productId: string,
-    currentVersion?: string
+    currentVersion?: string,
+    signal?: AbortSignal
   ): Promise<LatestReleaseResponse | null> {
     isLoading.value = true
     error.value = null
@@ -77,21 +115,22 @@ export function useReleases() {
       }
 
       const url = `${API_BASE_URL}/api/releases/latest/${productId}?${queryParams.toString()}`
-      const response = await fetch(url)
+      const response = await fetch(url, { signal })
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        throw new Error(friendlyHttpError(response.status))
       }
 
       const result: ApiResponse<LatestReleaseResponse> = await response.json()
 
       if (!result.success) {
-        throw new Error(result.error || '获取最新版本失败')
+        throw new Error(result.error || '获取最新版本失败。')
       }
 
       return result.data
     } catch (err) {
-      error.value = err instanceof Error ? err.message : '获取最新版本时发生未知错误'
+      if (err instanceof DOMException && err.name === 'AbortError') return null
+      error.value = err instanceof Error ? err.message : '发生意外错误。'
       console.error('Failed to fetch latest release:', err)
       return null
     } finally {
@@ -99,27 +138,31 @@ export function useReleases() {
     }
   }
 
-  async function fetchReleaseById(releaseId: number): Promise<Release | null> {
+  async function fetchReleaseById(
+    releaseId: number,
+    signal?: AbortSignal
+  ): Promise<Release | null> {
     isLoading.value = true
     error.value = null
 
     try {
       const url = `${API_BASE_URL}/api/releases/${releaseId}`
-      const response = await fetch(url)
+      const response = await fetch(url, { signal })
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+        throw new Error(friendlyHttpError(response.status))
       }
 
       const result: ApiResponse<Release> = await response.json()
 
       if (!result.success) {
-        throw new Error(result.error || '获取发布详情失败')
+        throw new Error(result.error || '加载版本详情失败。')
       }
 
       return result.data
     } catch (err) {
-      error.value = err instanceof Error ? err.message : '获取发布详情时发生未知错误'
+      if (err instanceof DOMException && err.name === 'AbortError') return null
+      error.value = err instanceof Error ? err.message : '发生意外错误。'
       console.error('Failed to fetch release:', err)
       return null
     } finally {
@@ -207,5 +250,6 @@ export function useReleases() {
     getPlatformName,
     getArchName,
     findRecommendedArtifact,
+    cancelPending,
   }
 }

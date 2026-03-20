@@ -80,6 +80,7 @@ vi.mock('../../../composables/useAIChat', () => ({
     retryMessage: vi.fn(),
     deleteMessage: vi.fn(),
     clearChat: vi.fn(),
+    cancelStreaming: vi.fn(),
   }),
 }))
 

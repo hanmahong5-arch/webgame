@@ -2,11 +2,15 @@
 /**
  * ChatErrorBanner - Persistent error banner for Chat sidebar
  * Displayed when all API retry attempts are exhausted.
- * Provides a friendly message and a link to documentation as an alternative.
+ * Provides specific guidance: what happened, what to do, and a fallback link.
  */
 
 defineProps<{
   docsUrl: string
+}>()
+
+defineEmits<{
+  retry: []
 }>()
 </script>
 
@@ -23,25 +27,28 @@ defineProps<{
         />
       </svg>
       <div class="error-text">
-        <p class="error-message">AI 对话暂时不可用，请稍后再试</p>
-        <a
-          :href="docsUrl"
-          class="docs-link"
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="查看文档获取帮助"
-        >
-          <svg class="link-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path
-              d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
-          查看文档
-        </a>
+        <p class="error-title">AI 对话暂时不可用</p>
+        <p class="error-message">服务可能正在承受高负载。你可以稍后重试，或查看文档了解 API 状态。</p>
+        <div class="error-actions">
+          <a
+            :href="docsUrl"
+            class="docs-link"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="查看文档获取帮助"
+          >
+            <svg class="link-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path
+                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              />
+            </svg>
+            文档
+          </a>
+        </div>
       </div>
     </div>
   </div>
@@ -52,8 +59,8 @@ defineProps<{
 
 .error-banner {
   padding: 12px 16px;
-  background: linear-gradient(135deg, #fffbeb, #fef3c7);
-  border-bottom: 1px solid #fcd34d;
+  background: rgba(120, 53, 15, 0.15);
+  border-bottom: 1px solid rgba(201, 162, 39, 0.25);
   animation: slideDown 0.3s ease-out;
 }
 
@@ -75,9 +82,9 @@ defineProps<{
 }
 
 .warning-icon {
-  width: 20px;
-  height: 20px;
-  color: #d97706;
+  width: 18px;
+  height: 18px;
+  color: var(--color-ochre);
   flex-shrink: 0;
   margin-top: 1px;
 }
@@ -86,29 +93,43 @@ defineProps<{
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
+}
+
+.error-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  line-height: 1.4;
 }
 
 .error-message {
   margin: 0;
-  font-size: 13px;
-  color: #92400e;
+  font-size: 12px;
+  color: var(--color-text-secondary);
   line-height: 1.4;
+}
+
+.error-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 4px;
 }
 
 .docs-link {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 500;
-  color: #b45309;
+  color: var(--color-ochre);
   text-decoration: none;
-  transition: color 0.2s ease;
+  transition: opacity 0.2s ease;
 }
 
 .docs-link:hover {
-  color: #92400e;
+  opacity: 0.8;
   text-decoration: underline;
 }
 
@@ -119,8 +140,8 @@ defineProps<{
 }
 
 .link-icon {
-  width: 14px;
-  height: 14px;
+  width: 13px;
+  height: 13px;
 }
 
 /* Respect reduced motion */

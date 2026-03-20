@@ -8,6 +8,7 @@ import type { ChatMessage } from '../types/chat'
 
 const STORAGE_KEY = 'lurus-ai-chat'
 const MAX_MESSAGES = 50
+const PERSIST_DEBOUNCE_MS = 1000
 
 interface PersistedState {
   messages: Array<{
@@ -94,16 +95,33 @@ export const useChatPersist = () => {
     restore()
   })
 
-  // Auto-save on changes (debounced via Vue's batching)
+  // Auto-save on changes — debounced to avoid hammering localStorage during streaming
+  // (streaming fires ~50-100 token updates/second; without debounce each triggers a persist)
+  let persistTimer: ReturnType<typeof setTimeout> | null = null
+
   watch(
     [messages, selectedModel],
     () => {
-      if (isRestored.value) {
+      if (!isRestored.value) return
+      if (persistTimer) clearTimeout(persistTimer)
+      persistTimer = setTimeout(() => {
         persist()
-      }
+        persistTimer = null
+      }, PERSIST_DEBOUNCE_MS)
     },
     { deep: true }
   )
+
+  // Flush pending persist immediately on page hide (user closing tab / switching away)
+  if (typeof document !== 'undefined') {
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden' && persistTimer) {
+        clearTimeout(persistTimer)
+        persistTimer = null
+        persist()
+      }
+    })
+  }
 
   return {
     messages,

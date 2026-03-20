@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onUnmounted } from 'vue'
 import { copyToClipboard } from '@/utils/clipboard'
 
 interface Token {
@@ -23,6 +23,14 @@ const DEBOUNCE_INTERVAL_MS = 300
 
 const copied = ref(false)
 const lastCopyTime = ref(0)
+let copyResetTimer: ReturnType<typeof setTimeout> | null = null
+
+onUnmounted(() => {
+  if (copyResetTimer) {
+    clearTimeout(copyResetTimer)
+    copyResetTimer = null
+  }
+})
 
 /**
  * Tokenize a bash/curl code string into typed tokens for CSS-only syntax highlighting.
@@ -139,8 +147,10 @@ async function handleCopy() {
   const success = await copyToClipboard(props.code)
   if (success) {
     copied.value = true
-    setTimeout(() => {
+    if (copyResetTimer) clearTimeout(copyResetTimer)
+    copyResetTimer = setTimeout(() => {
       copied.value = false
+      copyResetTimer = null
     }, COPY_FEEDBACK_DURATION_MS)
   }
 }

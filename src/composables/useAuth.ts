@@ -8,6 +8,7 @@ import { ref, computed } from 'vue'
 import type { OIDCTokens, OIDCUserInfo } from '../types/auth'
 import { oidcConfig, AUTHORIZE_URL, TOKEN_URL, USERINFO_URL, END_SESSION_URL } from '../config/oidc'
 import { generateCodeVerifier, generateCodeChallenge, generateState } from '../utils/pkce'
+import { useToast } from './useToast'
 
 // Module-level shared state (singleton across all components)
 const tokens = ref<OIDCTokens | null>(null)
@@ -90,6 +91,7 @@ async function refreshTokens(): Promise<void> {
 
     if (!response.ok) {
       clearSession()
+      notifySessionExpired()
       return
     }
 
@@ -108,7 +110,29 @@ async function refreshTokens(): Promise<void> {
     scheduleRefresh()
   } catch {
     clearSession()
+    notifySessionExpired()
   }
+}
+
+/**
+ * Notify user that their session has expired with a re-login action.
+ * Only fires when an active session is lost (not on first visit).
+ */
+function notifySessionExpired(): void {
+  const toast = useToast()
+  toast.addToast({
+    type: 'warning',
+    title: '登录已过期',
+    message: '请重新登录以继续使用。',
+    action: {
+      label: '重新登录',
+      handler: () => {
+        const { login } = useAuth()
+        login({ returnUrl: window.location.pathname })
+      },
+    },
+    duration: 0, // persistent until dismissed
+  })
 }
 
 async function fetchUserInfo(): Promise<void> {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue'
+import { ref, watch, nextTick, onUnmounted } from 'vue'
 import type { ChatMessage } from '../../types/chat'
 import ChatMessageBubble from './ChatMessageBubble.vue'
 import TypingIndicator from './TypingIndicator.vue'
@@ -41,12 +41,22 @@ watch(
 
 // Track streaming completion for screen reader announcement
 const streamingJustCompleted = ref(false)
+let streamCompleteTimer: ReturnType<typeof setTimeout> | null = null
 watch(() => props.isStreamingComplete, (complete) => {
   if (complete) {
     streamingJustCompleted.value = true
-    setTimeout(() => {
+    if (streamCompleteTimer) clearTimeout(streamCompleteTimer)
+    streamCompleteTimer = setTimeout(() => {
       streamingJustCompleted.value = false
+      streamCompleteTimer = null
     }, 1000)
+  }
+})
+
+onUnmounted(() => {
+  if (streamCompleteTimer) {
+    clearTimeout(streamCompleteTimer)
+    streamCompleteTimer = null
   }
 })
 

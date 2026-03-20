@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { useReleases } from '../composables/useReleases'
 import { downloadableProducts } from '../data/downloadableProducts'
 import PlatformIcon from '../components/Download/PlatformIcon.vue'
@@ -64,19 +64,27 @@ function downloadByProduct(releaseProductId: string) {
 const latestReleases = ref<Map<string, LatestReleaseResponse>>(new Map())
 const loadingProducts = ref(true)
 
+// AbortController for cancelling all in-flight fetches on unmount
+let fetchController: AbortController | null = null
+
 onMounted(async () => {
   loadingProducts.value = true
-  // Fetch latest release for each product in parallel
+  fetchController = new AbortController()
+  const signal = fetchController.signal
+
+  // Fetch latest release for each product in parallel (pass abort signal)
   const promises = downloadableProducts
     .filter(p => p.isReleased || p.installMethod === 'binary')
     .map(async (product) => {
-      const result = await fetchLatestRelease(product.releaseProductId)
+      const result = await fetchLatestRelease(product.releaseProductId, undefined, signal)
       if (result) {
         latestReleases.value.set(product.releaseProductId, result)
       }
     })
   await Promise.allSettled(promises)
-  loadingProducts.value = false
+  if (!signal.aborted) {
+    loadingProducts.value = false
+  }
 })
 
 // Helper: get version/size/sha256 for a product (API first, then static fallback)
@@ -207,12 +215,24 @@ const skillDomains = [
 
 // MemX pip install copy state
 const memxCopied = ref(false)
+let copyResetTimer: ReturnType<typeof setTimeout> | null = null
 function copyPipInstall() {
   navigator.clipboard.writeText('pip install memx').then(() => {
     memxCopied.value = true
-    setTimeout(() => { memxCopied.value = false }, 2000)
+    if (copyResetTimer) clearTimeout(copyResetTimer)
+    copyResetTimer = setTimeout(() => { memxCopied.value = false }, 2000)
   })
 }
+
+// Cancel all in-flight fetches and timers on unmount (rapid navigation away)
+onUnmounted(() => {
+  fetchController?.abort()
+  fetchController = null
+  if (copyResetTimer) {
+    clearTimeout(copyResetTimer)
+    copyResetTimer = null
+  }
+})
 </script>
 
 <template>
