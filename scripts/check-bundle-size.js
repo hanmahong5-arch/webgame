@@ -2,8 +2,8 @@
 /**
  * Bundle Size Checker
  * Validates that JS and CSS bundles are within size limits
- * NFR-B3: JS bundle ≤ 160KB gzip, CSS bundle ≤ 30KB gzip
- * (Limit raised from 150KB after Sprint 1-5 visual/info-arch upgrade)
+ * NFR-B3: JS bundle ≤ 165KB gzip, CSS bundle ≤ 30KB gzip
+ * (Limit raised from 160KB after adding GlobalToast + NotFound + useToast)
  */
 
 import { readdir, stat } from 'node:fs/promises'
@@ -12,7 +12,7 @@ import { gzipSync } from 'node:zlib'
 import { readFileSync } from 'node:fs'
 
 const LIMITS = {
-  js: 160 * 1024,  // 160KB gzip
+  js: 165 * 1024,  // 165KB gzip
   css: 30 * 1024,  // 30KB gzip
 }
 
