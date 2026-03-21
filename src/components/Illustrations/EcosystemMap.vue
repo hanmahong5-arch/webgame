@@ -91,7 +91,7 @@ function onNodeClick(node: EcoNode) {
 
 <template>
   <div ref="containerRef" class="ecosystem-map">
-    <svg viewBox="0 0 600 400" class="eco-svg" aria-label="Lurus product ecosystem map">
+    <svg viewBox="0 0 600 400" class="eco-svg" role="img" aria-label="Lurus product ecosystem map">
       <!-- Connection lines -->
       <g class="eco-connections" :class="{ 'eco-connections--visible': visible }">
         <path

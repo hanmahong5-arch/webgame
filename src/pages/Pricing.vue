@@ -7,12 +7,30 @@ import {
   COMPARISON_FEATURES,
   PRICING_FAQ,
 } from '../config/pricing'
+import { useAccountOverview } from '../composables/useAccountOverview'
+import { useAuth } from '../composables/useAuth'
+
+const { overview } = useAccountOverview()
+const { isLoggedIn, login } = useAuth()
 
 const billingCycle = ref<BillingCycle>('monthly')
 const selectedAudience = ref<AudienceTierCode>('personal')
 const openFaqIndex = ref<number | null>(null)
 
 const currentProducts = computed(() => AUDIENCE_PRODUCTS[selectedAudience.value])
+
+function isCurrentPlan(product: ProductPricing): boolean {
+  if (!overview.value?.subscription) return false
+  return overview.value.subscription.plan_code === product.id
+}
+
+function handleCta(product: ProductPricing) {
+  if (!isLoggedIn.value) {
+    login({ returnUrl: '/pricing' })
+    return
+  }
+  window.open('https://identity.lurus.cn/wallet/topup', '_blank', 'noopener,noreferrer')
+}
 
 function displayPrice(product: ProductPricing): string {
   const price = billingCycle.value === 'yearly' ? product.yearlyPrice : product.monthlyPrice
@@ -96,6 +114,10 @@ function toggleFaq(index: number) {
     <!-- S3: Product Pricing Cards -->
     <section id="pricing-cards" class="section-dark py-16">
       <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Balance display for logged-in users -->
+        <div v-if="overview" class="text-center text-sm text-text-muted mb-4">
+          当前余额: <span class="font-mono tabular-nums">{{ (overview.wallet?.balance ?? 0).toFixed(2) }} LB</span>
+        </div>
         <div class="pricing-grid">
           <div
             v-for="product in currentProducts"
@@ -104,6 +126,7 @@ function toggleFaq(index: number) {
             :class="{
               'pricing-card--popular': product.popular,
               'pricing-card--soon': product.status === 'coming_soon',
+              'pricing-card--current': isLoggedIn && isCurrentPlan(product),
             }"
           >
             <div v-if="product.popular" class="pricing-popular-badge">推荐</div>
@@ -156,26 +179,47 @@ function toggleFaq(index: number) {
                 联系销售
               </a>
             </template>
+            <template v-else-if="isLoggedIn && isCurrentPlan(product)">
+              <button
+                disabled
+                class="w-full py-2.5 px-4 rounded-lg border border-ochre/50 bg-ochre/10 text-ochre text-sm font-medium cursor-default"
+              >
+                当前方案
+              </button>
+            </template>
             <template v-else-if="displayPrice(product) === '免费'">
-              <a
-                href="https://api.lurus.cn/register"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="block w-full py-2.5 px-4 rounded-lg bg-surface-overlay border border-surface-border text-text-secondary text-sm font-medium text-center hover:border-ochre/40 hover:text-text-primary transition-colors"
+              <button
+                v-if="!isLoggedIn"
+                class="w-full py-2.5 px-4 rounded-lg bg-surface-overlay border border-surface-border text-text-secondary text-sm font-medium hover:border-ochre/40 hover:text-text-primary transition-colors"
+                @click="login({ returnUrl: '/pricing' })"
               >
                 免费开始
-              </a>
+              </button>
+              <button
+                v-else
+                disabled
+                class="w-full py-2.5 px-4 rounded-lg bg-surface-overlay border border-surface-border text-text-muted text-sm font-medium cursor-default"
+              >
+                已登录
+              </button>
             </template>
             <template v-else>
-              <a
-                href="https://api.lurus.cn/subscribe"
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                v-if="!isLoggedIn"
                 :class="product.popular ? 'btn-primary' : 'btn-outline'"
-                class="block w-full text-center text-sm"
+                class="w-full text-center text-sm"
+                @click="login({ returnUrl: '/pricing' })"
               >
                 立即订阅
-              </a>
+              </button>
+              <button
+                v-else
+                :class="product.popular ? 'btn-primary' : 'btn-outline'"
+                class="w-full text-center text-sm"
+                @click="handleCta(product)"
+              >
+                立即订阅
+              </button>
             </template>
           </div>
         </div>
@@ -194,7 +238,7 @@ function toggleFaq(index: number) {
           <h3 class="text-xl font-semibold text-text-primary mb-2">需要更多 Token？随时充值</h3>
           <p class="text-text-muted text-sm mb-6">套餐配额不够用？可以在控制台直接充值，按需补充额度，即充即用。</p>
           <a
-            href="https://api.lurus.cn/console/topup"
+            href="https://identity.lurus.cn/wallet/topup"
             target="_blank"
             rel="noopener noreferrer"
             class="btn-primary inline-flex items-center gap-2"
@@ -394,6 +438,10 @@ function toggleFaq(index: number) {
 }
 .pricing-card--soon {
   opacity: 0.7;
+}
+.pricing-card--current {
+  border-color: rgba(212, 168, 39, 0.6);
+  box-shadow: 0 0 0 1px rgba(212, 168, 39, 0.2);
 }
 
 .pricing-popular-badge {

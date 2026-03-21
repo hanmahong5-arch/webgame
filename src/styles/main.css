@@ -236,8 +236,14 @@ a, button {
 
 .btn-primary:hover {
   background-color: color-mix(in srgb, var(--color-ochre), #fff 12%);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(212, 168, 39, 0.35);
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 6px 20px rgba(212, 168, 39, 0.4);
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+  box-shadow: 0 2px 8px rgba(212, 168, 39, 0.25);
+  transition-duration: 0.1s;
 }
 
 /* Outline button */

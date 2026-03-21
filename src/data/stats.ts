@@ -10,7 +10,7 @@ export const stats = [
   { value: '99.9%', label: '服务可用性', color: 'text-ochre' },
   { value: '50+', label: '支持模型', color: 'text-product-api' },
   { value: '<100ms', label: '平均延迟', color: 'text-product-lucrum' },
-  { value: '1M+', label: 'API 调用/天', color: 'text-product-switch' },
+  { value: '7', label: '产品无缝协作', color: 'text-product-switch' },
 ] satisfies Stat[]
 
 export const trustBadges = [
