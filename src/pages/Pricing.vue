@@ -24,7 +24,7 @@ function isCurrentPlan(product: ProductPricing): boolean {
   return overview.value.subscription.plan_code === product.id
 }
 
-function handleCta(product: ProductPricing) {
+function handleCta(_product: ProductPricing) {
   if (!isLoggedIn.value) {
     login({ returnUrl: '/pricing' })
     return
