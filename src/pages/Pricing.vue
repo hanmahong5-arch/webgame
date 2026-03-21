@@ -74,10 +74,13 @@ function toggleFaq(index: number) {
     <!-- S2: Audience Selector -->
     <section id="audience-selector" class="section-dark-raised py-6 border-b border-surface-border sticky top-16 z-10">
       <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex items-center justify-center gap-3 flex-wrap">
+        <div class="flex items-center justify-center gap-3 flex-wrap" role="tablist" aria-label="受众类型">
           <button
             v-for="tier in AUDIENCE_TIERS"
             :key="tier.code"
+            role="tab"
+            :aria-selected="selectedAudience === tier.code"
+            :aria-label="`${tier.name} — ${tier.tagline}`"
             class="audience-tab"
             :class="{ 'audience-tab--active': selectedAudience === tier.code }"
             @click="selectedAudience = tier.code"
@@ -458,6 +461,19 @@ function toggleFaq(index: number) {
 .comparison-tier-col {
   font-size: 13px;
   text-align: center;
+}
+
+@media (max-width: 640px) {
+  .comparison-header,
+  .comparison-row {
+    grid-template-columns: 1.5fr 1fr 1fr 1fr;
+    padding: 10px 10px;
+    gap: 4px;
+  }
+  .comparison-feature-col,
+  .comparison-tier-col {
+    font-size: 12px;
+  }
 }
 
 /* Payment methods */

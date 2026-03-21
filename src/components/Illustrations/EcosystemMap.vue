@@ -18,7 +18,7 @@ const nodes: EcoNode[] = [
   { id: 'kova', name: 'Kova', tagline: 'Agent 引擎', color: '#B08EFF', ring: 'inner', href: '/for-builders', angle: 120 },
   { id: 'switch', name: 'Switch', tagline: '工具管理器', color: '#FF8C69', ring: 'inner', href: '/download', angle: 240 },
   // Outer ring (applications)
-  { id: 'lucrum', name: 'Lucrum', tagline: 'AI 量化', color: '#7AFF89', ring: 'outer', href: 'https://gushen.lurus.cn', angle: 40 },
+  { id: 'lucrum', name: 'Lucrum', tagline: 'AI 量化', color: '#7AFF89', ring: 'outer', href: 'https://lucrum.lurus.cn', angle: 40 },
   { id: 'creator', name: 'Creator', tagline: '内容工厂', color: '#FFB86C', ring: 'outer', href: '/download', angle: 110 },
   { id: 'memx', name: 'MemX', tagline: 'AI 记忆', color: '#4AFFCB', ring: 'outer', href: '/download#memx', angle: 200 },
   { id: 'lumen', name: 'Lumen', tagline: '调试器', color: '#FFE566', ring: 'outer', href: '/for-builders', angle: 290 },

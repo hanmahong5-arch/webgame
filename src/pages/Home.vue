@@ -11,7 +11,7 @@ import { partners } from '../data/partners'
 import { products as allProducts, curlExample } from '../data/products'
 import ParticleField from '../components/Effects/ParticleField.vue'
 import SectionDividerDark from '../components/Layout/SectionDividerDark.vue'
-import TestimonialsSection from '../components/Features/TestimonialsSection.vue'
+
 
 const ApiFlowDiagram    = defineAsyncComponent(() => import('../components/Illustrations/ApiFlowDiagram.vue'))
 const KovaDiagram       = defineAsyncComponent(() => import('../components/Illustrations/KovaDiagram.vue'))
@@ -352,7 +352,7 @@ const lumenFeatures  = ['实时 Agent 追踪', '断点调试注入', '状态树�
               </li>
             </ul>
             <a
-              href="https://gushen.lurus.cn"
+              href="https://lucrum.lurus.cn"
               target="_blank"
               rel="noopener noreferrer"
               class="btn-primary product-cta-start"
@@ -546,10 +546,7 @@ const lumenFeatures  = ['实时 Agent 追踪', '断点调试注入', '状态树�
       </div>
     </section>
 
-    <!-- S10: Testimonials -->
-    <TestimonialsSection />
-
-    <!-- S11: Final CTA -->
+    <!-- S10: Final CTA -->
     <section class="section-dark py-36 text-center has-light-sweep" aria-label="立即开始">
       <div class="max-w-3xl mx-auto px-6 reveal-fade-up" style="position:relative;z-index:1">
         <h2 class="home-section-title" style="font-size:clamp(2.25rem,5vw,3.25rem)">

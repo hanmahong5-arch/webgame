@@ -23,7 +23,7 @@ export const pageSidebarConfigs: Record<string, PageSidebarConfig> = {
       items: [
         { productId: 'api', label: 'Lurus API', color: '#4A9EFF', href: 'https://api.lurus.cn', external: true },
         { productId: 'switch', label: 'Lurus Switch', color: '#FF8C69', href: '/download' },
-        { productId: 'lucrum', label: 'Lucrum', color: '#7AFF89', href: 'https://gushen.lurus.cn', external: true },
+        { productId: 'lucrum', label: 'Lucrum', color: '#7AFF89', href: 'https://lucrum.lurus.cn', external: true },
       ],
     },
     cta: [
@@ -75,7 +75,7 @@ export const pageSidebarConfigs: Record<string, PageSidebarConfig> = {
       items: [
         { productId: 'api', label: 'Lurus API', color: '#4A9EFF', href: 'https://api.lurus.cn', external: true },
         { productId: 'switch', label: 'Lurus Switch', color: '#FF8C69', href: '/download' },
-        { productId: 'lucrum', label: 'Lucrum', color: '#7AFF89', href: 'https://gushen.lurus.cn', external: true },
+        { productId: 'lucrum', label: 'Lucrum', color: '#7AFF89', href: 'https://lucrum.lurus.cn', external: true },
       ],
     },
     cta: [
@@ -160,7 +160,7 @@ export const pageSidebarConfigs: Record<string, PageSidebarConfig> = {
       items: [
         { productId: 'api', label: 'Lurus API', color: '#4A9EFF', href: 'https://api.lurus.cn', external: true },
         { productId: 'memx', label: 'MemX', color: '#4AFFCB', href: '/download#memx' },
-        { productId: 'lucrum', label: 'Lucrum', color: '#7AFF89', href: 'https://gushen.lurus.cn', external: true },
+        { productId: 'lucrum', label: 'Lucrum', color: '#7AFF89', href: 'https://lucrum.lurus.cn', external: true },
       ],
     },
     cta: [

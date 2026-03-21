@@ -19,11 +19,10 @@ describe('products', () => {
 
   it('should have valid URLs for each product', () => {
     products.forEach((product) => {
-      // URLs can be external (https://), internal paths (/...), or placeholder (#)
+      // URLs must be external (https://) or internal paths (/...)
       const isExternal = /^https?:\/\//.test(product.url)
       const isInternalPath = product.url.startsWith('/')
-      const isPlaceholder = product.url === '#'
-      expect(isExternal || isInternalPath || isPlaceholder).toBe(true)
+      expect(isExternal || isInternalPath).toBe(true)
     })
   })
 

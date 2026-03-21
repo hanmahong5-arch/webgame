@@ -18,7 +18,6 @@ Edit these files to update website content without modifying component code.
 | `about.ts` | About page data (values, advantages, timeline) | `About.vue` subcomponents |
 | `team.ts` | Team member data | `TeamSection.vue` |
 | `partners.ts` | Partner logos and links | `Home.vue` |
-| `testimonials.ts` | User testimonial quotes | `TestimonialsSection.vue` |
 
 ## Architecture Decision
 

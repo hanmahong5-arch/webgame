@@ -166,9 +166,15 @@ export const useAIChat = () => {
         const finalContent = finalMsg?.content || ''
 
         if (!finalContent) {
-          updateMessage(assistantMsgId, {
-            content: '抱歉，未收到有效回复',
-            status: 'sent'
+          // Empty response — remove placeholder, mark user msg failed
+          const emptyIdx = messages.value.findIndex(m => m.id === assistantMsgId)
+          if (emptyIdx !== -1) {
+            messages.value.splice(emptyIdx, 1)
+          }
+          updateMessage(userMsgId, {
+            status: 'failed',
+            errorCode: 'EMPTY_RESPONSE',
+            retryCount: (messages.value.find(m => m.id === userMsgId)?.retryCount || 0) + 1
           })
         } else {
           updateMessage(assistantMsgId, { status: 'sent' })

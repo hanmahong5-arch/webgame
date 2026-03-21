@@ -20,7 +20,8 @@ const suggestedPages = [
 ]
 
 function goBack() {
-  if (window.history.length > 1) {
+  // history.state.back is set by vue-router when there's a previous route
+  if (router.options.history.state?.back) {
     router.back()
   } else {
     router.push('/')

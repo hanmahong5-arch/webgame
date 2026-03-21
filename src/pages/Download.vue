@@ -213,15 +213,25 @@ const skillDomains = [
   { name: 'Content', count: 5, color: 'bg-cyan-100 text-cyan-700 border-cyan-200' },
 ]
 
-// MemX pip install copy state
+// Clipboard copy with auto-reset
 const memxCopied = ref(false)
+const sha256Copied = ref(false)
 let copyResetTimer: ReturnType<typeof setTimeout> | null = null
-function copyPipInstall() {
-  navigator.clipboard.writeText('pip install memx').then(() => {
-    memxCopied.value = true
+
+function copyToClipboard(text: string, flagRef: typeof memxCopied) {
+  navigator.clipboard.writeText(text).then(() => {
+    flagRef.value = true
     if (copyResetTimer) clearTimeout(copyResetTimer)
-    copyResetTimer = setTimeout(() => { memxCopied.value = false }, 2000)
+    copyResetTimer = setTimeout(() => { flagRef.value = false }, 2000)
   })
+}
+
+function copyPipInstall() {
+  copyToClipboard('pip install memx', memxCopied)
+}
+
+function copySha256() {
+  copyToClipboard(acestSha256.value, sha256Copied)
 }
 
 // Cancel all in-flight fetches and timers on unmount (rapid navigation away)
@@ -504,9 +514,20 @@ onUnmounted(() => {
             <summary class="text-sm text-[var(--color-text-muted)] cursor-pointer hover:text-[var(--color-text-secondary)] transition-colors">
               SHA256 Checksum
             </summary>
-            <code class="block mt-2 p-3 bg-[var(--color-surface-overlay)] border border-[var(--color-surface-border)] rounded text-xs font-mono text-[var(--color-text-secondary)] break-all max-w-lg">
-              {{ acestSha256 }}
-            </code>
+            <div class="mt-2 flex items-start gap-2">
+              <code class="block p-3 bg-[var(--color-surface-overlay)] border border-[var(--color-surface-border)] rounded text-xs font-mono text-[var(--color-text-secondary)] break-all max-w-lg flex-1">
+                {{ acestSha256 }}
+              </code>
+              <button
+                @click="copySha256"
+                class="shrink-0 px-3 py-3 text-xs font-medium rounded border transition-colors"
+                :class="sha256Copied
+                  ? 'text-green-400 bg-green-900/20 border-green-700/40'
+                  : 'text-[var(--color-text-muted)] bg-[var(--color-surface-overlay)] border-[var(--color-surface-border)] hover:text-[var(--color-text-secondary)]'"
+              >
+                {{ sha256Copied ? '✓ Copied' : 'Copy' }}
+              </button>
+            </div>
           </details>
         </div>
       </div>

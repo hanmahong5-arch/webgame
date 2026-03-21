@@ -47,6 +47,8 @@ const statusText = computed(() => {
     case 'HTTP_502':
     case 'HTTP_503':
       return '服务繁忙 — 请稍后重试'
+    case 'EMPTY_RESPONSE':
+      return '未收到有效回复 — 请重试'
     default:
       return '发送失败 — 点击重试'
   }

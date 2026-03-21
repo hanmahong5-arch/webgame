@@ -13,7 +13,7 @@ export const navItems: NavDropdownItem[] = [
       {
         name: 'Lucrum',
         desc: '自然语言驱动的 AI 量化交易',
-        path: 'https://gushen.lurus.cn',
+        path: 'https://lucrum.lurus.cn',
         external: true,
         icon: 'chart',
       },
@@ -58,7 +58,7 @@ export const navItems: NavDropdownItem[] = [
       {
         name: 'Lucrum Pro',
         desc: '机构级量化交易服务',
-        path: 'https://gushen.lurus.cn',
+        path: 'https://lucrum.lurus.cn',
         external: true,
         icon: 'chart',
       },

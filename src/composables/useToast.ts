@@ -24,6 +24,7 @@ export interface Toast {
 
 let nextId = 1
 const toasts = ref<Toast[]>([])
+const toastTimers = new Map<number, ReturnType<typeof setTimeout>>()
 const MAX_TOASTS = 5
 
 function addToast(options: Omit<Toast, 'id'>): number {
@@ -31,19 +32,29 @@ function addToast(options: Omit<Toast, 'id'>): number {
 
   // Enforce max visible toasts — remove oldest
   if (toasts.value.length >= MAX_TOASTS) {
-    toasts.value.shift()
+    const removed = toasts.value.shift()
+    if (removed) clearToastTimer(removed.id)
   }
 
   toasts.value.push({ ...options, id })
 
   if (options.duration > 0) {
-    setTimeout(() => dismiss(id), options.duration)
+    toastTimers.set(id, setTimeout(() => dismiss(id), options.duration))
   }
 
   return id
 }
 
+function clearToastTimer(id: number): void {
+  const timer = toastTimers.get(id)
+  if (timer) {
+    clearTimeout(timer)
+    toastTimers.delete(id)
+  }
+}
+
 function dismiss(id: number): void {
+  clearToastTimer(id)
   const idx = toasts.value.findIndex(t => t.id === id)
   if (idx !== -1) {
     toasts.value.splice(idx, 1)
@@ -51,6 +62,9 @@ function dismiss(id: number): void {
 }
 
 function dismissAll(): void {
+  for (const [id] of toastTimers) {
+    clearToastTimer(id)
+  }
   toasts.value.splice(0)
 }
 
