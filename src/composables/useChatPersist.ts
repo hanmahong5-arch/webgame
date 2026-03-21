@@ -3,7 +3,7 @@
  * Handles localStorage save/restore for chat history
  */
 
-import { ref, watch, onMounted } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import type { ChatMessage } from '../types/chat'
 
 const STORAGE_KEY = 'lurus-ai-chat'
@@ -113,15 +113,27 @@ export const useChatPersist = () => {
   )
 
   // Flush pending persist immediately on page hide (user closing tab / switching away)
-  if (typeof document !== 'undefined') {
-    document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'hidden' && persistTimer) {
-        clearTimeout(persistTimer)
-        persistTimer = null
-        persist()
-      }
-    })
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === 'hidden' && persistTimer) {
+      clearTimeout(persistTimer)
+      persistTimer = null
+      persist()
+    }
   }
+
+  onMounted(() => {
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+  })
+
+  onUnmounted(() => {
+    document.removeEventListener('visibilitychange', handleVisibilityChange)
+    // Flush any pending persist on unmount
+    if (persistTimer) {
+      clearTimeout(persistTimer)
+      persistTimer = null
+      persist()
+    }
+  })
 
   return {
     messages,

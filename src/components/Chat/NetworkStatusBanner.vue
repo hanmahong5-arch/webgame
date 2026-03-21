@@ -3,7 +3,7 @@
  * Network status banner for Chat sidebar.
  * Shows offline warning + auto-dismiss "back online" notification.
  */
-import { ref, watch } from 'vue'
+import { ref, watch, onUnmounted } from 'vue'
 
 const props = defineProps<{
   isOnline: boolean
@@ -21,6 +21,13 @@ watch(() => props.isOnline, (online, wasOnline) => {
       showReconnected.value = false
       reconnectedTimer = null
     }, 3000)
+  }
+})
+
+onUnmounted(() => {
+  if (reconnectedTimer) {
+    clearTimeout(reconnectedTimer)
+    reconnectedTimer = null
   }
 })
 </script>

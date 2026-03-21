@@ -9,10 +9,15 @@ import type { ToastType } from '../../composables/useToast'
 const { toasts, dismiss } = useToast()
 
 function handleAction(toast: { id: number; action?: { handler: () => void } }) {
+  dismiss(toast.id)
   try {
-    toast.action?.handler()
-  } finally {
-    dismiss(toast.id)
+    const result = toast.action?.handler()
+    // Catch async handler rejections to prevent unhandled promise errors
+    if (result && typeof (result as Promise<unknown>).catch === 'function') {
+      (result as Promise<unknown>).catch(() => {})
+    }
+  } catch {
+    // Sync handler errors — toast already dismissed
   }
 }
 

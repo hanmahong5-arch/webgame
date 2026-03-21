@@ -190,8 +190,20 @@ router.onError((error, to) => {
     msg.includes('Importing a module script failed') ||
     msg.includes('error loading dynamically imported module')
   ) {
-    // Force full page reload to get updated chunk manifest
-    window.location.href = to.fullPath
+    // Show toast with reload action instead of forcing reload (user may have unsaved state)
+    import('../composables/useToast').then(({ useToast }) => {
+      const toast = useToast()
+      toast.addToast({
+        type: 'warning',
+        title: '页面版本已更新',
+        message: '检测到新版本，请刷新页面以加载最新内容。',
+        action: {
+          label: '立即刷新',
+          handler: () => { window.location.href = to.fullPath },
+        },
+        duration: 0,
+      })
+    })
   }
 })
 
