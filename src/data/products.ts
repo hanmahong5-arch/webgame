@@ -357,9 +357,9 @@ export const productIconPaths: ProductIconPaths = {
 /**
  * curl example for API showcase (API quick start example)
  */
-export const curlExample = `curl https://api.lurus.cn/v1/chat/completions \
-  -H "Authorization: Bearer $LURUS_API_KEY" \
-  -H "Content-Type: application/json" \
+export const curlExample = `curl https://api.lurus.cn/v1/chat/completions \\
+  -H "Authorization: Bearer $LURUS_API_KEY" \\
+  -H "Content-Type: application/json" \\
   -d '{"model":"deepseek-chat","messages":[{"role":"user","content":"Hello"}]}'`
 
 // ── Helper functions ────────────────────────────────────────────────

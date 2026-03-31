@@ -1173,6 +1173,7 @@ const paths = [
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
 }
 
 /* ── Product Tabs (pill style) ────────────────── */
@@ -1249,6 +1250,7 @@ const paths = [
   border: 1px solid var(--color-surface-border);
   border-radius: 10px;
   overflow: hidden;
+  min-width: 0;
 }
 
 .api-code-bar {

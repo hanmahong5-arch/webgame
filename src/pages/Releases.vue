@@ -10,6 +10,7 @@ import { productIconPaths } from '../data/products'
 import type { ReleaseType, Release } from '../types/release'
 import PlatformIcon from '../components/Download/PlatformIcon.vue'
 import { Marked } from 'marked'
+import DOMPurify from 'dompurify'
 
 const route = useRoute()
 const router = useRouter()
@@ -89,7 +90,7 @@ function toggleChangelog(releaseId: number) {
 
 function renderChangelog(md: string): string {
   if (!md) return ''
-  return marked.parse(md) as string
+  return DOMPurify.sanitize(marked.parse(md) as string)
 }
 
 function getProductDisplayName(productId: string): string {
