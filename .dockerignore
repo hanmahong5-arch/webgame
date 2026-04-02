@@ -1,0 +1,33 @@
+# Vue legacy (remove after migration confirmed)
+node_modules/
+dist/
+src/
+e2e/
+coverage/
+test-results/
+playwright-report/
+.env.local
+.env.*.local
+
+# Elixir build artifacts
+_build/
+deps/
+
+# Git and IDE
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# BMAD and docs (not needed in image)
+_bmad-output/
+doc/
+plans/
+scripts/
+*.md
+!README.md
+
+# Test artifacts
+playwright.config.ts
+vitest.config.ts
+lighthouserc.js

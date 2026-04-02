@@ -1,0 +1,10 @@
+<div class="app-shell" style="display:grid; grid-template-rows:64px 1fr auto; min-height:100vh;">
+  <LurusWwwWeb.NavComponents.topbar current_path={assigns[:current_path]} current_user={assigns[:current_user]} />
+
+  <main id="main-content" class="app-main" role="main" style="overflow-y:auto;">
+    <.flash_group flash={@flash} />
+    {@inner_content}
+  </main>
+
+  <LurusWwwWeb.FooterComponents.footer />
+</div>

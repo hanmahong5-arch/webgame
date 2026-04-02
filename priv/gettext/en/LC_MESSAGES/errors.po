@@ -1,0 +1,4 @@
+## "en" translations for errors.
+msgid ""
+msgstr ""
+"Language: en\n"

@@ -8,7 +8,9 @@ metadata:
     app.kubernetes.io/name: lurus-www
     app.kubernetes.io/part-of: lurus
 spec:
-  minAvailable: 1
+  # With replicas=1, minAvailable must be 0 to allow voluntary evictions
+  # (node drain, cluster upgrades). Change to 1 when scaling to 2+ replicas.
+  minAvailable: 0
   selector:
     matchLabels:
       app: lurus-www

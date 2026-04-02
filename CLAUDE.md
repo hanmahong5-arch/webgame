@@ -1,95 +1,86 @@
 # lurus-www
 
-公司官网 + 营销落地页。Vue 3.5 SPA，静态构建后由 nginx 服务，通过 nginx 反代 `/api/*` 到 `api.lurus.cn`。
+Public website and marketing landing pages. Elixir/Phoenix with LiveView for SSR + interactive components. No database -- stateless, all data fetched from platform APIs at runtime.
 
-| 项 | 值 |
+| Item | Value |
 |---|---|
-| URL | `https://www.lurus.cn`（`lurus.cn` 301 重定向至此） |
+| URL | `https://www.lurus.cn` (`lurus.cn` 301 redirects here) |
 | Namespace | `lurus-www` |
-| Image | `ghcr.io/hanmahong5-arch/lurus-www:main` |
-| Dev port | `3001` |
-| E2E base URL | `http://localhost:4173`（`bun run preview`） |
+| Image | `ghcr.io/hanmahong5-arch/lurus-www:main-<sha7>` |
+| Dev port | `4000` |
 
 ## Tech Stack
 
-- Vue 3.5 + TypeScript + vue-router 4
-- Vite 6 (build) / Vitest 4 (unit) / Playwright 1.58 (e2e)
-- Tailwind CSS 4 (PostCSS plugin，注意：需要 `style-src 'unsafe-inline'` — 已在 CSP 中接受此风险)
-- Bun（包管理 + 脚本运行器）
-- nginx:alpine（生产服务器，多阶段 Docker 构建）
+- Elixir 1.17 + OTP 27
+- Phoenix 1.7 + LiveView 1.0 (dead-render for SEO, LiveView for interactivity)
+- Bandit (HTTP server, replaces Cowboy)
+- Tailwind CSS 4 (integrated via `mix assets.deploy`)
+- Finch (HTTP client for API proxy and server-side fetches)
+- No database, no Ecto
 
 ## Directory Structure
 
 ```
 lurus-www/
-├── src/
-│   ├── pages/          # 页面组件 (Home, About, Pricing, Download, Solutions, Privacy, Terms, AuthCallback)
-│   ├── components/     # 功能组件（按页面分子目录：Hero, Chat, Features, Portal, Products, CTAs…）
-│   ├── composables/    # Vue composables (useAuth, useAIChat, useChatApi, useTracking, useReleases…)
-│   ├── config/         # oidc.ts, pricing.ts（读取 env vars）
-│   ├── constants/      # downloads.ts, ui.ts（无魔法数字）
-│   ├── data/           # 静态数据文件（navItems, products, portalLinks, platformCapabilities…）
-│   ├── services/       # api.ts（subscription plans, downloads API client）
-│   ├── types/          # TypeScript 类型定义
-│   └── utils/          # pkce.ts, clipboard.ts, portalDrag.ts
-├── e2e/                # Playwright e2e 测试 (home.spec.ts, download.spec.ts)
+├── lib/
+│   ├── lurus_www/            # Application logic (OIDC, API client, release helpers)
+│   └── lurus_www_web/        # Phoenix web layer
+│       ├── controllers/      # Auth callback, health check
+│       ├── live/             # LiveView pages (Home, Pricing, Solutions, Download...)
+│       ├── components/       # Function components (Hero, Chat, Features, Portal...)
+│       ├── layouts/          # Root and app layouts
+│       └── router.ex         # Route definitions
+├── assets/                   # JS, CSS (Tailwind), static assets
+├── priv/static/              # Compiled assets (after mix assets.deploy)
+├── config/                   # Config files (config.exs, runtime.exs, prod.exs)
+├── test/                     # ExUnit tests
 ├── deploy/
-│   ├── nginx.conf      # 生产 nginx 配置（安全头、缓存策略、/api/ 反代）
-│   └── k8s/            # K8s manifests (deployment, service, ingress, pdb, kustomization)
-├── scripts/            # check-links.ts（链接健康检查）
-├── Dockerfile          # node:20-alpine build → nginx:alpine serve
-└── _bmad-output/       # BMAD 产物
+│   ├── Dockerfile            # Multi-stage Elixir release build
+│   └── k8s/                  # K8s manifests (deployment, service, ingress, pdb, kustomization)
+└── _bmad-output/             # BMAD artifacts
 ```
 
 ## Commands
 
 ```bash
-# 开发
-bun install
-bun run dev            # http://localhost:3001，/api/* 自动代理到 api.lurus.cn
+# Development
+mix deps.get
+mix phx.server           # http://localhost:4000
 
-# 构建
-bun run build          # 输出到 dist/
+# Build
+mix assets.deploy         # Compile + digest static assets
+MIX_ENV=prod mix release  # Production release
 
-# 单元测试
-bun run test:unit      # vitest run（一次性）
-bun run test:unit:watch  # vitest watch 模式
+# Test
+mix test                  # ExUnit tests
+mix test --cover          # With coverage
 
-# E2E 测试（需先 build）
-bun run test:e2e       # playwright test（自动启动 preview server）
-bun run test:e2e:ui    # playwright UI 模式
-
-# 其他
-bun run lint           # eslint src/
-bun run check-links    # 检查外链健康状态（tsx scripts/check-links.ts）
-bun run preview        # vite preview，http://localhost:4173
+# Quality
+mix credo --strict        # Static analysis
+mix format --check-formatted  # Formatting check
 ```
 
 ## Environment Variables
 
-构建时注入（`VITE_` 前缀，打包进静态资源，不含敏感值）：
+Runtime configuration (via `config/runtime.exs`, read at boot):
 
-| Variable | Default | 说明 |
+| Variable | Default | Description |
 |---|---|---|
-| `VITE_API_URL` | `https://api.lurus.cn` | API base URL（含 tracking endpoint） |
-| `VITE_ZITADEL_ISSUER` | `https://auth.lurus.cn` | Zitadel OIDC issuer |
-| `VITE_ZITADEL_CLIENT_ID` | `""` | OIDC public client ID |
-| `VITE_ZITADEL_REDIRECT_URI` | `{origin}/auth/callback` | OIDC callback URL |
-| `VITE_ZITADEL_POST_LOGOUT_URI` | `{origin}` | 登出后跳转 |
-| `VITE_CHAT_ENABLED` | — | `"true"` 启用 AI Chat（条件加载，独立 chunk） |
-| `VITE_DEMO_API_KEY` | — | Chat demo 模式 API key |
-| `VITE_ANALYTICS_ENABLED` | — | `"true"` 启用事件追踪（sendBeacon 批量上报） |
-| `VITE_ICP_NUMBER` | — | 页脚 ICP 备案号 |
-
-> 本地开发可创建 `.env.local` 覆盖（已 gitignore）。
+| `PHX_HOST` | `localhost` | Hostname for URL generation and CORS |
+| `PORT` | `4000` | HTTP listen port |
+| `SECRET_KEY_BASE` | (required) | Phoenix session/cookie signing key (64+ hex chars) |
+| `ZITADEL_ISSUER` | `https://auth.lurus.cn` | OIDC issuer URL |
+| `ZITADEL_CLIENT_ID` | (required) | OIDC public client ID |
+| `API_URL` | `https://api.lurus.cn` | Backend API base URL (proxied via Finch) |
+| `CHAT_ENABLED` | `"false"` | Enable AI chat widget |
 
 ## Key Patterns
 
-- **Auth**: OIDC Authorization Code + PKCE，纯前端实现（`useAuth` composable），token 存 sessionStorage，自动 60s 提前刷新。
-- **Chat chunk**: `Chat/` 组件 + 相关 composables 单独打包为 `chat` chunk（ADR-013），`VITE_CHAT_ENABLED` 控制是否加载。
-- **静态数据集中管理**: `src/data/` 是单一数据源，禁止在组件内硬编码内容。
-- **路径别名**: `@` → `src/`（vite + vitest 均配置）。
-- **下载文件**: 生产环境挂载 hostPath `/opt/releases` → 容器 `/opt/releases`，nginx 通过 `/releases/` location 服务。
+- **Dead-render SSR**: All pages render full HTML on first request (SEO-friendly). LiveView upgrades to WebSocket for interactivity.
+- **OIDC auth**: Authorization Code + PKCE flow, session stored in encrypted cookie (no client-side token storage).
+- **API proxy**: Server-side requests to `api.lurus.cn` via Finch connection pool. No direct browser-to-API calls for authenticated endpoints.
+- **Static data**: Marketing content lives in module attributes / config, not hardcoded in templates.
+- **Health endpoint**: `GET /health` returns 200 for K8s probes.
 
 ## BMAD
 

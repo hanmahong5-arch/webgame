@@ -7,9 +7,16 @@ metadata:
     app: lurus-www
 spec:
   replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
   selector:
     matchLabels:
       app: lurus-www
+      app.kubernetes.io/name: lurus-www
+      app.kubernetes.io/part-of: lurus
   template:
     metadata:
       labels:
@@ -17,48 +24,74 @@ spec:
         app.kubernetes.io/name: lurus-www
         app.kubernetes.io/part-of: lurus
     spec:
-      # Deploy to Alibaba Cloud gateway node (ICP备案入口)
+      # Schedule on master node (100.98.57.55) — more resources, 50Mbps bandwidth.
+      # ICP traffic enters via cloud-ali nginx stream proxy → K3s Service → this pod.
       nodeSelector:
-        lurus.cn/role: www-gateway
-      tolerations:
-        - key: lurus.cn/www-only
-          operator: Equal
-          value: "true"
-          effect: NoSchedule
+        node-role.kubernetes.io/control-plane: "true"
       securityContext:
         runAsNonRoot: true
         runAsUser: 65534
         fsGroup: 65534
       containers:
         - name: www
-          image: ghcr.io/hanmahong5-arch/lurus-www:main
+          image: ghcr.io/hanmahong5-arch/lurus-www:phoenix-v1
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities:
               drop: [ALL]
-          imagePullPolicy: Always
+          imagePullPolicy: IfNotPresent
           ports:
-            - containerPort: 80
+            - containerPort: 4000
               name: http
+          env:
+            - name: PHX_SERVER
+              value: "true"
+            - name: PHX_HOST
+              value: "www.lurus.cn"
+            - name: PORT
+              value: "4000"
+            - name: SECRET_KEY_BASE
+              valueFrom:
+                secretKeyRef:
+                  name: lurus-www-secret
+                  key: secret-key-base
+            - name: ZITADEL_ISSUER
+              value: "https://auth.lurus.cn"
+            - name: ZITADEL_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: lurus-www-secret
+                  key: zitadel-client-id
+            - name: API_URL
+              value: "https://api.lurus.cn"
+            - name: CHAT_ENABLED
+              value: "false"
+            - name: RELEASE_TMP
+              value: "/tmp"
           resources:
             requests:
-              memory: "64Mi"
-              cpu: "50m"
+              memory: "192Mi"
+              cpu: "100m"
             limits:
-              memory: "128Mi"
-              cpu: "200m"
+              memory: "384Mi"
+              cpu: "500m"
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 10
           livenessProbe:
             httpGet:
-              path: /
+              path: /health
               port: http
-            initialDelaySeconds: 10
             periodSeconds: 30
           readinessProbe:
             httpGet:
-              path: /
+              path: /health
               port: http
-            initialDelaySeconds: 5
             periodSeconds: 10
           volumeMounts:
             - name: releases
@@ -66,18 +99,10 @@ spec:
               readOnly: true
             - name: tmp
               mountPath: /tmp
-            - name: nginx-cache
-              mountPath: /var/cache/nginx
-            - name: nginx-run
-              mountPath: /var/run
       volumes:
         - name: releases
           hostPath:
             path: /opt/releases
             type: DirectoryOrCreate
         - name: tmp
-          emptyDir: {}
-        - name: nginx-cache
-          emptyDir: {}
-        - name: nginx-run
           emptyDir: {}

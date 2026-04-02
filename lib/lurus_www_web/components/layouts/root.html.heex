@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="csrf-token" content={get_csrf_token()} />
+  <meta name="description" content={@page_description} />
+  <meta name="keywords" content="AI, LLM, API Gateway, Agent SDK, Kova, 量化交易, 内容创作, 持久记忆, MemX, AI 基础设施" />
+  <meta name="author" content="Lurus Technology" />
+
+  <link rel="canonical" href={"https://www.lurus.cn#{@current_path}"} />
+
+  <%!-- Open Graph --%>
+  <meta property="og:title" content={@page_title} />
+  <meta property="og:description" content={@page_description} />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content={"https://www.lurus.cn#{@current_path}"} />
+  <meta property="og:image" content="https://lurus.cn/og-image.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+
+  <%!-- Twitter Card --%>
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content={@page_title} />
+  <meta name="twitter:description" content={@page_description} />
+  <meta name="twitter:image" content="https://lurus.cn/og-image.png" />
+
+  <%!-- JSON-LD --%>
+  <script type="application/ld+json">
+  <%= raw(LurusWwwWeb.JsonLd.organization()) %>
+  </script>
+
+  <.live_title default="Lurus — 构建下一代 AI 基础设施" suffix="">
+    {@page_title}
+  </.live_title>
+
+  <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+
+  <%!-- Preload critical fonts --%>
+  <link rel="preload" href="/fonts/noto-sans-sc-v37-chinese-simplified-400.woff2" as="font" type="font/woff2" crossorigin />
+
+  <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />
+  <script defer phx-track-static type="text/javascript" src={~p"/assets/js/app.js"}></script>
+
+  <%!-- SVG Filters for sketchy effects --%>
+  <svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <filter id="roughPaper" x="0%" y="0%" width="100%" height="100%">
+        <feTurbulence type="fractalNoise" baseFrequency="0.04" numOctaves="5" result="noise"/>
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="2" xChannelSelector="R" yChannelSelector="G"/>
+      </filter>
+      <filter id="pencilStroke" x="-10%" y="-10%" width="120%" height="120%">
+        <feTurbulence type="turbulence" baseFrequency="0.05" numOctaves="2" result="noise"/>
+        <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.5"/>
+      </filter>
+    </defs>
+  </svg>
+</head>
+<body>
+  <a href="#main-content" class="skip-link">跳至主要内容</a>
+  {@inner_content}
+</body>
+</html>

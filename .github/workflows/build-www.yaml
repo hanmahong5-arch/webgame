@@ -4,123 +4,59 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "2c-bs-www/**"
   pull_request:
     branches:
       - main
+    paths:
+      - "2c-bs-www/**"
   workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: hanmahong5-arch/lurus-www
 
+defaults:
+  run:
+    working-directory: 2c-bs-www
+
 jobs:
-  # Stage 1: Type Check
-  typecheck:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-      - name: Install dependencies
-        run: bun install
-      - name: TypeScript check
-        run: bunx tsc --noEmit
-
-  # Stage 2: Lint
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-      - name: Install dependencies
-        run: bun install
-      - name: ESLint
-        run: bun run lint --max-warnings=0
-
-  # Stage 3: Unit Tests
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-      - name: Install dependencies
-        run: bun install
-      - name: Run tests
-        run: bun run test:unit --coverage
 
-  # Stage 4: Build & Bundle Size Check
+      - name: Set up Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: "1.17"
+          otp-version: "27"
+
+      - name: Restore dependencies cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            2c-bs-www/deps
+            2c-bs-www/_build
+          key: ${{ runner.os }}-mix-${{ hashFiles('2c-bs-www/mix.lock') }}
+          restore-keys: ${{ runner.os }}-mix-
+
+      - name: Install dependencies
+        run: mix deps.get
+
+      - name: Compile (warnings as errors)
+        run: mix compile --warnings-as-errors
+
+      - name: Credo (strict)
+        run: mix credo --strict
+
+      - name: Run tests
+        run: mix test
+
   build:
     runs-on: ubuntu-latest
-    needs: [typecheck, lint, test]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-      - name: Install dependencies
-        run: bun install
-      - name: Build
-        run: bun run build
-        env:
-          # VITE_IDENTITY_URL defaults to https://identity.lurus.cn — override only if needed
-          VITE_IDENTITY_URL: ${{ vars.VITE_IDENTITY_URL || 'https://identity.lurus.cn' }}
-          # Demo API key for unauthenticated chat widget on www.lurus.cn
-          VITE_DEMO_API_KEY: ${{ secrets.VITE_DEMO_API_KEY }}
-          # Chat feature flag
-          VITE_CHAT_ENABLED: ${{ vars.VITE_CHAT_ENABLED }}
-      - name: Check bundle size
-        run: node scripts/check-bundle-size.js
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: dist
-
-  # Stage 5: E2E Tests (optional quality check)
-  e2e:
-    runs-on: ubuntu-latest
-    needs: build
-    if: success() || failure()
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-      - name: Install dependencies
-        run: bun install
-      - name: Install Playwright browsers
-        run: bunx playwright install --with-deps chromium
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist
-      - name: Run E2E tests
-        run: bun run test:e2e --project=chromium
-
-  # Stage 6: Lighthouse CI (optional quality check)
-  lighthouse:
-    runs-on: ubuntu-latest
-    needs: build
-    if: success() || failure()
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v2
-      - name: Install dependencies
-        run: bun install
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: dist
-          path: dist
-      - name: Run Lighthouse CI
-        run: |
-          bun install -g @lhci/cli
-          lhci autorun
-        env:
-          LHCI_GITHUB_APP_TOKEN: ${{ secrets.LHCI_GITHUB_APP_TOKEN }}
-
-  # Stage 7: Docker Build & Push
-  docker:
-    runs-on: ubuntu-latest
-    needs: build
+    needs: [test]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: read
@@ -140,23 +76,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=sha,prefix=,format=short
-            type=raw,value=latest,enable={{is_default_branch}}
+      - name: Compute short SHA
+        id: sha
+        run: echo "short=$(echo ${{ github.sha }} | cut -c1-7)" >> "$GITHUB_OUTPUT"
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
-          context: .
-          file: ./Dockerfile
+          context: ./2c-bs-www
+          file: ./2c-bs-www/deploy/Dockerfile
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          no-cache: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main-${{ steps.sha.outputs.short }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
           platforms: linux/amd64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

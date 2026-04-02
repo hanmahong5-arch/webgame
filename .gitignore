@@ -1,8 +1,11 @@
 # Dependencies
 node_modules/
+/deps/
 
 # Build output
 dist/
+/_build/
+/priv/static/assets/
 
 # IDE
 .vscode/

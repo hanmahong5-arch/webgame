@@ -1,0 +1,78 @@
+/* Self-hosted Font Declarations
+   font-display: swap ensures text is visible while fonts load */
+
+/* Inter - English body text */
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Inter Regular'),
+       url('/fonts/inter-v18-latin-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: local('Inter Medium'),
+       url('/fonts/inter-v18-latin-500.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Inter SemiBold'),
+       url('/fonts/inter-v18-latin-600.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Inter Bold'),
+       url('/fonts/inter-v18-latin-700.woff2') format('woff2');
+}
+
+/* Noto Sans SC - Chinese body text */
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: local('Noto Sans SC Regular'),
+       url('/fonts/noto-sans-sc-v37-chinese-simplified-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: local('Noto Sans SC Medium'),
+       url('/fonts/noto-sans-sc-v37-chinese-simplified-500.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: local('Noto Sans SC SemiBold'),
+       url('/fonts/noto-sans-sc-v37-chinese-simplified-600.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Noto Sans SC';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: local('Noto Sans SC Bold'),
+       url('/fonts/noto-sans-sc-v37-chinese-simplified-700.woff2') format('woff2');
+}
+
+/* Caveat font removed — file not available in self-hosted fonts */

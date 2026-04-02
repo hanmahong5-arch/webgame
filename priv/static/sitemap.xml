@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url><loc>https://www.lurus.cn/</loc><changefreq>weekly</changefreq><priority>1.0</priority></url>
+  <url><loc>https://www.lurus.cn/pricing</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.lurus.cn/download</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://www.lurus.cn/about</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://www.lurus.cn/solutions</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://www.lurus.cn/for-explorers</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://www.lurus.cn/for-entrepreneurs</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://www.lurus.cn/for-builders</loc><changefreq>monthly</changefreq><priority>0.7</priority></url>
+  <url><loc>https://www.lurus.cn/releases</loc><changefreq>weekly</changefreq><priority>0.6</priority></url>
+  <url><loc>https://www.lurus.cn/terms</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+  <url><loc>https://www.lurus.cn/privacy</loc><changefreq>yearly</changefreq><priority>0.3</priority></url>
+</urlset>
