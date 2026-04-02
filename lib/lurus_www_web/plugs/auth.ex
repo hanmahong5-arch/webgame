@@ -1,19 +1,8 @@
 defmodule LurusWwwWeb.Plugs.Auth do
   @moduledoc """
-  OIDC session management plug.
-  Loads current user from encrypted session cookie.
+  OIDC session management plug — delegates to LurusPhoenix.Plugs.Auth.
   """
 
-  import Plug.Conn
-
-  @behaviour Plug
-
-  @impl true
-  def init(opts), do: opts
-
-  @impl true
-  def call(conn, _opts) do
-    user = get_session(conn, :current_user)
-    assign(conn, :current_user, user)
-  end
+  defdelegate init(opts), to: LurusPhoenix.Plugs.Auth
+  defdelegate call(conn, opts), to: LurusPhoenix.Plugs.Auth
 end
