@@ -24,10 +24,17 @@ spec:
         app.kubernetes.io/name: lurus-www
         app.kubernetes.io/part-of: lurus
     spec:
-      # Schedule on master node (100.98.57.55) — more resources, 50Mbps bandwidth.
-      # ICP traffic enters via cloud-ali nginx stream proxy → K3s Service → this pod.
+      # Schedule on cloud-ali-4 (www-gateway) — local Traefik handles TLS,
+      # eliminating double-hop through master. ICP traffic stays on-node.
       nodeSelector:
-        node-role.kubernetes.io/control-plane: "true"
+        lurus.cn/role: www-gateway
+      tolerations:
+        - key: lurus.cn/www-only
+          value: "true"
+          effect: NoSchedule
+        - key: svclb-exclude
+          value: "true"
+          effect: NoSchedule
       securityContext:
         runAsNonRoot: true
         runAsUser: 65534
