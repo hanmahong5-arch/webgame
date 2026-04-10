@@ -147,6 +147,18 @@ defmodule LurusWwwWeb.Live.SnakeLive do
           <div class="game-hud">
             <div class="hud-left">
               <span class="room-badge">{@room_id}</span>
+              <%= if @game_state do %>
+                <% me = @game_state.players[@player_id] %>
+                <%= if me && me.alive do %>
+                  <span class="hud-score">{me.score}</span>
+                  <%= for eff <- (me[:effects] || []) do %>
+                    <span class={"hud-effect hud-effect--#{eff}"}>{effect_icon(eff)}</span>
+                  <% end %>
+                  <%= if me[:has_shield] do %>
+                    <span class="hud-effect hud-effect--shield">&#x1F6E1;</span>
+                  <% end %>
+                <% end %>
+              <% end %>
             </div>
             <div class="hud-right">
               <button phx-click="leave" class="hud-btn">Leave</button>
@@ -196,4 +208,10 @@ defmodule LurusWwwWeb.Live.SnakeLive do
   defp generate_id do
     Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
   end
+
+  defp effect_icon("speed"), do: "\u26A1"
+  defp effect_icon("blade"), do: "\u2694"
+  defp effect_icon("magnet"), do: "\uD83E\uDDF2"
+  defp effect_icon("star"), do: "\u2B50"
+  defp effect_icon(_), do: ""
 end

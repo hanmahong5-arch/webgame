@@ -1147,6 +1147,32 @@ body {
   border: 1px solid rgba(0, 240, 255, 0.15);
 }
 
+.hud-score {
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(10, 10, 15, 0.7);
+  backdrop-filter: blur(8px);
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--color-accent-amber);
+  font-variant-numeric: tabular-nums;
+  border: 1px solid rgba(255, 184, 0, 0.15);
+}
+
+.hud-effect {
+  padding: 3px 6px;
+  border-radius: 6px;
+  background: rgba(10, 10, 15, 0.7);
+  font-size: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.hud-effect--speed { border-color: rgba(0, 240, 255, 0.3); }
+.hud-effect--blade { border-color: rgba(255, 68, 102, 0.3); }
+.hud-effect--shield { border-color: rgba(0, 255, 135, 0.3); }
+.hud-effect--magnet { border-color: rgba(255, 184, 0, 0.3); }
+.hud-effect--star { border-color: rgba(230, 219, 116, 0.3); }
+
 .hud-btn {
   padding: 5px 12px;
   border-radius: 6px;
