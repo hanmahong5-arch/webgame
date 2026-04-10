@@ -63,4 +63,4 @@ EXPOSE 4000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=15s --retries=3 \
     CMD curl -f http://localhost:4000/health || exit 1
 
-CMD /app/bin/lurus_www eval "LurusWww.Release.migrate()" && /app/bin/lurus_www start
+CMD /app/bin/lurus_www eval "LurusWww.Release.migrate()" 2>/dev/null; /app/bin/lurus_www start
