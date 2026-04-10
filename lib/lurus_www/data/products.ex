@@ -301,7 +301,7 @@ defmodule LurusWww.Data.Products do
 
     to_nav = fn list ->
       Enum.map(list || [], fn p ->
-        %{name: p.name, desc: p.nav_desc || p.tagline, icon: p.icon, href: p.url, external: p[:external] || false}
+        %{name: p.name, desc: p.nav_desc || p.tagline, icon: p.icon, href: p.url, external: p[:external] || false, color: p.neon_color}
       end)
     end
 

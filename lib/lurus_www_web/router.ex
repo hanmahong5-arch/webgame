@@ -8,7 +8,6 @@ defmodule LurusWwwWeb.Router do
     plug :put_root_layout, html: {LurusWwwWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
-    plug LurusWwwWeb.Plugs.SeoMeta
     plug LurusWwwWeb.Plugs.SecurityHeaders
   end
 
@@ -19,17 +18,17 @@ defmodule LurusWwwWeb.Router do
   scope "/", LurusWwwWeb do
     pipe_through :browser
 
-    live "/", Live.HomeLive, :index
-    live "/pricing", Live.PricingLive, :index
-    live "/download", Live.DownloadLive, :index
-    live "/about", Live.AboutLive, :index
-    live "/solutions", Live.SolutionsLive, :index
-    live "/for-explorers", Live.ForExplorersLive, :index
-    live "/for-entrepreneurs", Live.ForEntrepreneursLive, :index
-    live "/for-builders", Live.ForBuildersLive, :index
-    live "/releases", Live.ReleasesLive, :index
-    live "/terms", Live.TermsLive, :index
-    live "/privacy", Live.PrivacyLive, :index
+    live_session :default do
+      live "/", Live.HomeLive, :index
+      live "/play", Live.LobbyLive, :index
+      live "/create", Live.CreatorLive, :index
+      live "/terms", Live.TermsLive, :index
+      live "/privacy", Live.PrivacyLive, :index
+    end
+
+    live_session :game, layout: {LurusWwwWeb.Layouts, :game} do
+      live "/play/snake/:room_id", Live.SnakeLive, :play
+    end
   end
 
   scope "/auth", LurusWwwWeb do

@@ -1,6 +1,7 @@
 # Dependencies
 node_modules/
 /deps/
+# Keep deps_local/ tracked (vendored shared libs)
 
 # Build output
 dist/

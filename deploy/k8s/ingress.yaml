@@ -1,52 +1,18 @@
 apiVersion: traefik.io/v1alpha1
-kind: Middleware
-metadata:
-  name: redirect-bare-to-www
-  namespace: lurus-www
-  labels:
-    app: lurus-www
-spec:
-  redirectRegex:
-    regex: "^https://lurus\\.cn/(.*)"
-    replacement: "https://www.lurus.cn/${1}"
-    permanent: true
----
-apiVersion: traefik.io/v1alpha1
 kind: IngressRoute
 metadata:
-  name: lurus-www-bare-redirect
-  namespace: lurus-www
+  name: webgame
+  namespace: lurus-webgame
   labels:
-    app: lurus-www
+    app: webgame
 spec:
   entryPoints:
     - websecure
   routes:
-    - match: Host(`lurus.cn`)
-      kind: Rule
-      middlewares:
-        - name: redirect-bare-to-www
-      services:
-        - name: lurus-www
-          port: 80
-  tls:
-    secretName: lurus-cn-wildcard-tls
----
-apiVersion: traefik.io/v1alpha1
-kind: IngressRoute
-metadata:
-  name: lurus-www
-  namespace: lurus-www
-  labels:
-    app: lurus-www
-spec:
-  entryPoints:
-    - websecure
-  routes:
-    - match: Host(`www.lurus.cn`)
+    - match: Host(`webgame.lurus.cn`)
       kind: Rule
       services:
-        - name: lurus-www
+        - name: webgame
           port: 80
   tls:
     secretName: lurus-cn-wildcard-tls

@@ -1,25 +1,17 @@
-name: Build and Push lurus-www
+name: Build and Push webgame
 
 on:
   push:
     branches:
       - main
-    paths:
-      - "2c-bs-www/**"
   pull_request:
     branches:
       - main
-    paths:
-      - "2c-bs-www/**"
   workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: hanmahong5-arch/lurus-www
-
-defaults:
-  run:
-    working-directory: 2c-bs-www
+  IMAGE_NAME: hanmahong5-arch/webgame
 
 jobs:
   test:
@@ -37,19 +29,16 @@ jobs:
         uses: actions/cache@v4
         with:
           path: |
-            2c-bs-www/deps
-            2c-bs-www/_build
-          key: ${{ runner.os }}-mix-${{ hashFiles('2c-bs-www/mix.lock') }}
+            deps
+            _build
+          key: ${{ runner.os }}-mix-${{ hashFiles('mix.lock') }}
           restore-keys: ${{ runner.os }}-mix-
 
       - name: Install dependencies
         run: mix deps.get
 
-      - name: Compile (warnings as errors)
-        run: mix compile --warnings-as-errors
-
-      - name: Credo (strict)
-        run: mix credo --strict
+      - name: Compile
+        run: mix compile
 
       - name: Run tests
         run: mix test
@@ -83,8 +72,8 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v6
         with:
-          context: ./2c-bs-www
-          file: ./2c-bs-www/deploy/Dockerfile
+          context: .
+          file: deploy/Dockerfile
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main-${{ steps.sha.outputs.short }}

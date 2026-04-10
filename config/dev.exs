@@ -20,7 +20,7 @@ config :lurus_www, LurusWwwWeb.Endpoint,
   ]
 
 config :lurus_www,
-  chat_enabled: true,
+  chat_enabled: false,
   api_url: "https://api.lurus.cn",
   zitadel_issuer: "https://auth.lurus.cn",
   zitadel_client_id: ""

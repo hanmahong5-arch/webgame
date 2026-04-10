@@ -11,7 +11,7 @@ config :lurus_www, LurusWwwWeb.Endpoint,
     layout: false
   ],
   pubsub_server: LurusWww.PubSub,
-  live_view: [signing_salt: "lurus_www_lv"]
+  live_view: [signing_salt: "Xt7kP2mN9qR4wBfL"]
 
 # esbuild: JS bundling
 config :esbuild,

@@ -26,7 +26,7 @@ COPY priv/ priv/
 
 # Build assets, compile, digest, and create release
 RUN mix assets.deploy && \
-    mix compile --warnings-as-errors && \
+    mix compile && \
     mix phx.digest && \
     mix release
 

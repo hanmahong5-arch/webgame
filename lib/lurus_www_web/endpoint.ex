@@ -7,6 +7,7 @@ defmodule LurusWwwWeb.Endpoint do
     signing_salt: "lurus_www_sign",
     encryption_salt: "lurus_www_enc",
     same_site: "Lax",
+    secure: true,
     max_age: 86_400
   ]
 
@@ -27,6 +28,7 @@ defmodule LurusWwwWeb.Endpoint do
     at: "/releases",
     from: "/opt/releases",
     gzip: false,
+    only: ~w(.exe .msi .dmg .AppImage .deb .tar.gz .zip),
     headers: %{"content-disposition" => "attachment"}
 
   if code_reloading? do

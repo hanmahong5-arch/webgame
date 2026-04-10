@@ -1,16 +1,14 @@
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
-  name: lurus-www-pdb
-  namespace: lurus-www
+  name: webgame-pdb
+  namespace: lurus-webgame
   labels:
-    app: lurus-www
-    app.kubernetes.io/name: lurus-www
+    app: webgame
+    app.kubernetes.io/name: webgame
     app.kubernetes.io/part-of: lurus
 spec:
-  # With replicas=1, minAvailable must be 0 to allow voluntary evictions
-  # (node drain, cluster upgrades). Change to 1 when scaling to 2+ replicas.
   minAvailable: 0
   selector:
     matchLabels:
-      app: lurus-www
+      app: webgame

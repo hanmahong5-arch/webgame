@@ -1,10 +1,10 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: lurus-www
-  namespace: lurus-www
+  name: webgame
+  namespace: lurus-webgame
   labels:
-    app: lurus-www
+    app: webgame
 spec:
   replicas: 1
   strategy:
@@ -14,18 +14,17 @@ spec:
       maxSurge: 1
   selector:
     matchLabels:
-      app: lurus-www
-      app.kubernetes.io/name: lurus-www
+      app: webgame
+      app.kubernetes.io/name: webgame
       app.kubernetes.io/part-of: lurus
   template:
     metadata:
       labels:
-        app: lurus-www
-        app.kubernetes.io/name: lurus-www
+        app: webgame
+        app.kubernetes.io/name: webgame
         app.kubernetes.io/part-of: lurus
     spec:
-      # Schedule on cloud-ali-4 (www-gateway) — local Traefik handles TLS,
-      # eliminating double-hop through master. ICP traffic stays on-node.
+      # Schedule on cloud-ali-4 (www-gateway) — local Traefik handles TLS.
       nodeSelector:
         lurus.cn/role: www-gateway
       tolerations:
@@ -40,8 +39,8 @@ spec:
         runAsUser: 65534
         fsGroup: 65534
       containers:
-        - name: www
-          image: ghcr.io/hanmahong5-arch/lurus-www:phoenix-v1
+        - name: webgame
+          image: ghcr.io/hanmahong5-arch/webgame:latest
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
@@ -55,20 +54,20 @@ spec:
             - name: PHX_SERVER
               value: "true"
             - name: PHX_HOST
-              value: "www.lurus.cn"
+              value: "webgame.lurus.cn"
             - name: PORT
               value: "4000"
             - name: SECRET_KEY_BASE
               valueFrom:
                 secretKeyRef:
-                  name: lurus-www-secret
+                  name: webgame-secret
                   key: secret-key-base
             - name: ZITADEL_ISSUER
               value: "https://auth.lurus.cn"
             - name: ZITADEL_CLIENT_ID
               valueFrom:
                 secretKeyRef:
-                  name: lurus-www-secret
+                  name: webgame-secret
                   key: zitadel-client-id
             - name: API_URL
               value: "https://api.lurus.cn"
@@ -78,10 +77,10 @@ spec:
               value: "/tmp"
           resources:
             requests:
-              memory: "192Mi"
+              memory: "256Mi"
               cpu: "100m"
             limits:
-              memory: "384Mi"
+              memory: "512Mi"
               cpu: "500m"
           startupProbe:
             httpGet:
@@ -101,15 +100,8 @@ spec:
               port: http
             periodSeconds: 10
           volumeMounts:
-            - name: releases
-              mountPath: /opt/releases
-              readOnly: true
             - name: tmp
               mountPath: /tmp
       volumes:
-        - name: releases
-          hostPath:
-            path: /opt/releases
-            type: DirectoryOrCreate
         - name: tmp
           emptyDir: {}

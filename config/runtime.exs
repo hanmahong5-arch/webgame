@@ -17,7 +17,7 @@ if config_env() == :prod do
       You can generate one by calling: mix phx.gen.secret
       """
 
-  host = System.get_env("PHX_HOST") || "www.lurus.cn"
+  host = System.get_env("PHX_HOST") || "webgame.lurus.cn"
 
   config :lurus_www, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 
@@ -33,7 +33,17 @@ if config_env() == :prod do
     api_url: System.get_env("API_URL", "https://api.lurus.cn"),
     demo_api_key: System.get_env("DEMO_API_KEY"),
     zitadel_issuer: System.get_env("ZITADEL_ISSUER", "https://auth.lurus.cn"),
-    zitadel_client_id: System.get_env("ZITADEL_CLIENT_ID", ""),
+    zitadel_client_id:
+      (case System.get_env("ZITADEL_CLIENT_ID", "") do
+         "" ->
+           raise """
+           environment variable ZITADEL_CLIENT_ID is missing or empty.
+           Set it to the Zitadel OIDC public client ID (numeric, e.g. "364461324094146384").
+           """
+
+         id ->
+           id
+       end),
     identity_url: System.get_env("IDENTITY_URL", "https://identity.lurus.cn"),
     icp_number: System.get_env("ICP_NUMBER", "鲁ICP备2026000242号"),
     analytics_enabled: System.get_env("ANALYTICS_ENABLED", "false") == "true"

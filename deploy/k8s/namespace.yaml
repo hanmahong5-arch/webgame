@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: lurus-www
+  name: lurus-webgame
   labels:
-    name: lurus-www
+    name: lurus-webgame
     app.kubernetes.io/part-of: lurus

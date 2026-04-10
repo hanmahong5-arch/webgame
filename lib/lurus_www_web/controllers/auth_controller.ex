@@ -12,18 +12,23 @@ defmodule LurusWwwWeb.AuthController do
     redirect_uri = callback_url(conn)
     prompt = params["prompt"]
 
-    auth_url =
-      OIDC.authorize_url(
-        redirect_uri: redirect_uri,
-        code_challenge: challenge,
-        state: state,
-        prompt: prompt
-      )
+    case OIDC.authorize_url(
+           redirect_uri: redirect_uri,
+           code_challenge: challenge,
+           state: state,
+           prompt: prompt
+         ) do
+      {:ok, auth_url} ->
+        conn
+        |> put_session(:oidc_verifier, verifier)
+        |> put_session(:oidc_state, state)
+        |> redirect(external: auth_url)
 
-    conn
-    |> put_session(:oidc_verifier, verifier)
-    |> put_session(:oidc_state, state)
-    |> redirect(external: auth_url)
+      {:error, :missing_client_id} ->
+        conn
+        |> put_flash(:error, "登录配置错误：OIDC Client ID 未设置，请联系管理员")
+        |> redirect(to: "/")
+    end
   end
 
   def callback(conn, %{"code" => code, "state" => state}) do

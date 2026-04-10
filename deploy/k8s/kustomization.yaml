@@ -1,7 +1,7 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: lurus-www
+namespace: lurus-webgame
 
 resources:
   - namespace.yaml
@@ -11,9 +11,9 @@ resources:
   - pdb.yaml
 
 commonLabels:
-  app.kubernetes.io/name: lurus-www
+  app.kubernetes.io/name: webgame
   app.kubernetes.io/part-of: lurus
 
 images:
-  - name: ghcr.io/hanmahong5-arch/lurus-www
+  - name: ghcr.io/hanmahong5-arch/webgame
     newTag: latest

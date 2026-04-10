@@ -31,7 +31,7 @@ defmodule LurusWww.MixProject do
 
   defp deps do
     [
-      {:lurus_phoenix, path: "../shared/lurus_phoenix"},
+      {:lurus_phoenix, path: "deps_local/lurus_phoenix"},
       {:phoenix, "~> 1.7"},
       {:phoenix_html, "~> 4.1"},
       {:phoenix_live_view, "~> 1.0"},
