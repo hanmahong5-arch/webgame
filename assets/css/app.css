@@ -1498,6 +1498,45 @@ body {
   font-size: 13px;
 }
 
+/* ── Respawn Overlay ─────────────────── */
+.respawn-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(6, 6, 16, 0.55);
+  backdrop-filter: blur(2px);
+  z-index: 10;
+  pointer-events: auto;
+}
+
+.respawn-card {
+  padding: 28px 32px;
+  background: rgba(18, 18, 26, 0.95);
+  border: 1px solid var(--color-surface-border);
+  border-radius: 14px;
+  text-align: center;
+  backdrop-filter: blur(10px);
+}
+
+.respawn-title {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: var(--color-accent-pink);
+  margin-bottom: 8px;
+}
+
+.respawn-stats {
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 16px;
+}
+
+.respawn-stats strong {
+  color: var(--color-text-primary);
+}
+
 /* ── Spinners ────────────────────────── */
 .spinner {
   display: inline-block;

@@ -1,35 +1,33 @@
 defmodule LurusWww.Games.Snake.Engine do
-  @moduledoc "Pure functional multiplayer snake game engine. No side effects."
+  @moduledoc """
+  Pure functional multiplayer snake game engine.
+  Open arena design: join anytime, respawn instantly, no waiting.
+  """
 
   @cols 60
   @rows 40
   @initial_length 4
   @food_count 5
   @golden_chance 0.15
-  @max_players 8
-  @colors ~w(#FF6B6B #4ECDC4 #45B7D1 #96CEB4 #FFEAA7 #DDA0DD #98D8C8 #F7DC6F)
+  @max_players 20
+  @colors ~w(#FF6B6B #4ECDC4 #45B7D1 #96CEB4 #FFEAA7 #DDA0DD #98D8C8 #F7DC6F #FF8C69 #B08EFF #7AFF89 #FFB800 #FF6BCC #00F0FF #66D9EF #F92672 #A6E22E #FD971F #AE81FF #E6DB74)
 
   @spawn_positions [
-    {15, 20, :right},
-    {45, 20, :left},
-    {30, 8, :down},
-    {30, 32, :up},
-    {10, 8, :right},
-    {50, 8, :left},
-    {10, 32, :right},
-    {50, 32, :left}
+    {10, 10, :right}, {50, 10, :left}, {10, 30, :right}, {50, 30, :left},
+    {30, 5, :down}, {30, 35, :up}, {5, 20, :right}, {55, 20, :left},
+    {20, 15, :down}, {40, 25, :up}, {15, 35, :right}, {45, 5, :left},
+    {25, 20, :right}, {35, 20, :left}, {20, 8, :down}, {40, 32, :up},
+    {8, 28, :right}, {52, 12, :left}, {30, 20, :right}, {28, 20, :left}
   ]
 
   defstruct [
     :id,
-    :winner,
     cols: @cols,
     rows: @rows,
     players: %{},
     food: [],
     tick: 0,
     status: :waiting,
-    countdown: 3,
     events: [],
     player_order: []
   ]
@@ -38,10 +36,7 @@ defmodule LurusWww.Games.Snake.Engine do
 
   def new(room_id), do: %__MODULE__{id: room_id}
 
-  def add_player(%{status: status}, _id, _name)
-      when status not in [:waiting, :finished],
-      do: {:error, :game_in_progress}
-
+  @doc "Add player. Always allowed unless room full or duplicate ID."
   def add_player(state, id, name) do
     cond do
       map_size(state.players) >= @max_players ->
@@ -55,32 +50,46 @@ defmodule LurusWww.Games.Snake.Engine do
         color = Enum.at(@colors, rem(idx, length(@colors)))
 
         player = %{
-          id: id,
-          name: name,
-          color: color,
-          segments: [],
-          direction: :right,
-          next_direction: :right,
-          score: 0,
-          alive: true,
-          kills: 0
+          id: id, name: name, color: color,
+          segments: [], direction: :right, next_direction: :right,
+          score: 0, alive: false, kills: 0
         }
 
-        {:ok,
-         %{
-           state
-           | players: Map.put(state.players, id, player),
-             player_order: state.player_order ++ [id]
-         }}
+        state = %{state |
+          players: Map.put(state.players, id, player),
+          player_order: state.player_order ++ [id]
+        }
+
+        # Auto-start the arena if not already playing
+        state = if state.status == :waiting do
+          state
+          |> ensure_food()
+          |> Map.put(:status, :playing)
+          |> Map.put(:tick, 0)
+          |> Map.put(:events, [{:game_started}])
+        else
+          state
+        end
+
+        # Spawn this player immediately
+        state = spawn_single_player(state, id)
+
+        {:ok, state}
     end
   end
 
   def remove_player(state, id) do
-    %{
-      state
-      | players: Map.delete(state.players, id),
-        player_order: List.delete(state.player_order, id)
+    state = %{state |
+      players: Map.delete(state.players, id),
+      player_order: List.delete(state.player_order, id)
     }
+
+    # If no players left, go back to waiting
+    if map_size(state.players) == 0 do
+      %{state | status: :waiting, food: [], tick: 0}
+    else
+      state
+    end
   end
 
   def set_direction(state, id, direction)
@@ -88,7 +97,6 @@ defmodule LurusWww.Games.Snake.Engine do
     case Map.fetch(state.players, id) do
       {:ok, player} ->
         %{state | players: Map.put(state.players, id, %{player | next_direction: direction})}
-
       :error ->
         state
     end
@@ -96,72 +104,41 @@ defmodule LurusWww.Games.Snake.Engine do
 
   def set_direction(state, _id, _dir), do: state
 
-  def start_countdown(%{status: :waiting} = state) do
-    if map_size(state.players) >= 1 do
-      %{state | status: :countdown, countdown: 3, events: [{:countdown, 3}]}
-    else
-      state
+  @doc "Respawn a dead player instantly."
+  def respawn(state, player_id) do
+    case Map.fetch(state.players, player_id) do
+      {:ok, %{alive: false}} ->
+        state
+        |> Map.update!(:players, fn ps ->
+          Map.update!(ps, player_id, &%{&1 | alive: true, score: 0, kills: 0})
+        end)
+        |> spawn_single_player(player_id)
+        |> Map.update!(:events, &[{:player_respawned, player_id} | &1])
+
+      _ ->
+        state
     end
   end
-
-  def start_countdown(state), do: state
-
-  def countdown_tick(%{status: :countdown} = state) do
-    next = state.countdown - 1
-
-    if next <= 0 do
-      state
-      |> place_players()
-      |> place_food(@food_count)
-      |> Map.merge(%{status: :playing, countdown: 0, tick: 0, events: [{:game_started}]})
-    else
-      %{state | countdown: next, events: [{:countdown, next}]}
-    end
-  end
-
-  def countdown_tick(state), do: state
 
   def tick(%{status: :playing} = state) do
-    state
-    |> Map.put(:events, [])
-    |> Map.update!(:tick, &(&1 + 1))
-    |> apply_directions()
-    |> move_snakes()
-    |> detect_collisions()
-    |> consume_food()
-    |> trim_tails()
-    |> replenish_food()
-    |> check_winner()
+    # Skip tick if no alive players
+    alive_count = Enum.count(state.players, fn {_, p} -> p.alive end)
+    if alive_count == 0 do
+      state
+    else
+      state
+      |> Map.put(:events, [])
+      |> Map.update!(:tick, &(&1 + 1))
+      |> apply_directions()
+      |> move_snakes()
+      |> detect_collisions()
+      |> consume_food()
+      |> trim_tails()
+      |> replenish_food()
+    end
   end
 
   def tick(state), do: state
-
-  def reset(state) do
-    players =
-      Map.new(state.players, fn {id, p} ->
-        {id,
-         %{
-           p
-           | segments: [],
-             direction: :right,
-             next_direction: :right,
-             score: 0,
-             alive: true,
-             kills: 0
-         }}
-      end)
-
-    %{
-      state
-      | players: players,
-        food: [],
-        tick: 0,
-        status: :waiting,
-        countdown: 3,
-        winner: nil,
-        events: []
-    }
-  end
 
   def to_client(state) do
     %{
@@ -169,24 +146,91 @@ defmodule LurusWww.Games.Snake.Engine do
       grid: [state.cols, state.rows],
       tick: state.tick,
       status: state.status,
-      countdown: state.countdown,
-      winner: state.winner,
       events: Enum.map(state.events, &encode_event/1),
       players:
         Map.new(state.players, fn {id, p} ->
-          {id,
-           %{
-             name: p.name,
-             color: p.color,
-             segments: Enum.map(p.segments, &Tuple.to_list/1),
-             direction: p.direction,
-             score: p.score,
-             alive: p.alive,
-             kills: p.kills
-           }}
+          {id, %{
+            name: p.name, color: p.color,
+            segments: Enum.map(p.segments, &Tuple.to_list/1),
+            direction: p.direction,
+            score: p.score, alive: p.alive, kills: p.kills
+          }}
         end),
       food: Enum.map(state.food, fn {x, y, t} -> [x, y, Atom.to_string(t)] end)
     }
+  end
+
+  # ── Internal: spawning ──────────────────────────────────
+
+  defp spawn_single_player(state, id) do
+    alive_segments =
+      state.players
+      |> Enum.filter(fn {pid, p} -> p.alive and pid != id end)
+      |> Enum.flat_map(fn {_, p} -> p.segments end)
+
+    occupied = MapSet.new(alive_segments)
+
+    # Pick spawn position with most clearance from other snakes
+    {sx, sy, dir} =
+      @spawn_positions
+      |> Enum.shuffle()
+      |> Enum.max_by(fn {px, py, _} ->
+        if alive_segments == [] do
+          :rand.uniform(100)
+        else
+          alive_segments
+          |> Enum.map(fn {ax, ay} -> abs(px - ax) + abs(py - ay) end)
+          |> Enum.min()
+        end
+      end)
+
+    segments =
+      for i <- 0..(@initial_length - 1) do
+        case dir do
+          :right -> {sx - i, sy}
+          :left -> {sx + i, sy}
+          :down -> {sx, sy - i}
+          :up -> {sx, sy + i}
+        end
+      end
+
+    # Verify segments are in bounds and not occupied; fall back to simple position
+    segments =
+      if Enum.all?(segments, fn {x, y} ->
+           x >= 0 and x < @cols and y >= 0 and y < @rows and
+             not MapSet.member?(occupied, {x, y})
+         end) do
+        segments
+      else
+        [{sx, sy}]
+      end
+
+    %{state |
+      players: Map.update!(state.players, id, fn p ->
+        %{p | segments: segments, direction: dir, next_direction: dir, alive: true}
+      end)
+    }
+  end
+
+  defp ensure_food(state) do
+    needed = @food_count - length(state.food)
+    if needed > 0, do: place_food(state, needed), else: state
+  end
+
+  defp place_food(state, count) do
+    occupied = occupied_set(state)
+
+    {food, _} =
+      Enum.reduce(1..count, {[], occupied}, fn _i, {foods, occ} ->
+        case find_empty_cell(state.cols, state.rows, occ) do
+          nil -> {foods, occ}
+          {x, y} ->
+            type = if :rand.uniform() < @golden_chance, do: :golden, else: :normal
+            {[{x, y, type} | foods], MapSet.put(occ, {x, y})}
+        end
+      end)
+
+    %{state | food: state.food ++ food}
   end
 
   # ── Internal: tick pipeline ─────────────────────────────
@@ -222,11 +266,8 @@ defmodule LurusWww.Games.Snake.Engine do
 
   defp detect_collisions(state) do
     alive = state.players |> Enum.filter(fn {_id, p} -> p.alive end) |> Map.new()
+    segment_sets = Map.new(alive, fn {id, p} -> {id, MapSet.new(p.segments)} end)
 
-    segment_sets =
-      Map.new(alive, fn {id, p} -> {id, MapSet.new(p.segments)} end)
-
-    # Compute all deaths independently (no order dependency)
     deaths =
       Enum.reduce(alive, %{}, fn {id, player}, acc ->
         [head | body] = player.segments
@@ -247,7 +288,6 @@ defmodule LurusWww.Games.Snake.Engine do
         end
       end)
 
-    # Apply deaths and credit kills
     {players, events} =
       Enum.reduce(deaths, {state.players, state.events}, fn {id, killer}, {ps, evts} ->
         ps = Map.update!(ps, id, &%{&1 | alive: false})
@@ -269,8 +309,7 @@ defmodule LurusWww.Games.Snake.Engine do
     alive_players = Enum.filter(state.players, fn {_id, p} -> p.alive end)
 
     {updated_players, remaining_food, new_events} =
-      Enum.reduce(alive_players, {state.players, state.food, []}, fn {id, player},
-                                                                     {ps, food, evts} ->
+      Enum.reduce(alive_players, {state.players, state.food, []}, fn {id, player}, {ps, food, evts} ->
         {hx, hy} = hd(player.segments)
 
         case Enum.find_index(food, fn {fx, fy, _} -> fx == hx and fy == hy end) do
@@ -314,77 +353,6 @@ defmodule LurusWww.Games.Snake.Engine do
     if needed > 0, do: place_food(state, needed), else: state
   end
 
-  defp check_winner(state) do
-    alive = Enum.count(state.players, fn {_id, p} -> p.alive end)
-    total = map_size(state.players)
-
-    cond do
-      total <= 1 and alive == 0 ->
-        %{state | status: :finished, events: state.events ++ [{:game_over, nil}]}
-
-      total > 1 and alive <= 1 ->
-        winner = Enum.find(state.players, fn {_, p} -> p.alive end)
-        winner_id = if winner, do: elem(winner, 0)
-
-        %{
-          state
-          | status: :finished,
-            winner: winner_id,
-            events: state.events ++ [{:game_over, winner_id}]
-        }
-
-      true ->
-        state
-    end
-  end
-
-  # ── Internal: setup ─────────────────────────────────────
-
-  defp place_players(state) do
-    ids = state.player_order |> Enum.filter(&Map.has_key?(state.players, &1))
-
-    players =
-      ids
-      |> Enum.with_index()
-      |> Enum.reduce(state.players, fn {id, idx}, acc ->
-        {sx, sy, dir} = Enum.at(@spawn_positions, rem(idx, length(@spawn_positions)))
-
-        segments =
-          for i <- 0..(@initial_length - 1) do
-            case dir do
-              :right -> {sx - i, sy}
-              :left -> {sx + i, sy}
-              :down -> {sx, sy - i}
-              :up -> {sx, sy + i}
-            end
-          end
-
-        Map.update!(acc, id, fn p ->
-          %{p | segments: segments, direction: dir, next_direction: dir, alive: true, score: 0, kills: 0}
-        end)
-      end)
-
-    %{state | players: players}
-  end
-
-  defp place_food(state, count) do
-    occupied = occupied_set(state)
-
-    {food, _} =
-      Enum.reduce(1..count, {[], occupied}, fn _i, {foods, occ} ->
-        case find_empty_cell(state.cols, state.rows, occ) do
-          nil ->
-            {foods, occ}
-
-          {x, y} ->
-            type = if :rand.uniform() < @golden_chance, do: :golden, else: :normal
-            {[{x, y, type} | foods], MapSet.put(occ, {x, y})}
-        end
-      end)
-
-    %{state | food: state.food ++ food}
-  end
-
   # ── Helpers ─────────────────────────────────────────────
 
   defp advance(x, y, :up), do: {x, y - 1}
@@ -413,7 +381,6 @@ defmodule LurusWww.Games.Snake.Engine do
 
   defp encode_event({:food_eaten, id, type}), do: ["food_eaten", id, Atom.to_string(type)]
   defp encode_event({:player_died, id, killer}), do: ["player_died", id, killer]
+  defp encode_event({:player_respawned, id}), do: ["player_respawned", id]
   defp encode_event({:game_started}), do: ["game_started"]
-  defp encode_event({:game_over, winner}), do: ["game_over", winner]
-  defp encode_event({:countdown, n}), do: ["countdown", n]
 end

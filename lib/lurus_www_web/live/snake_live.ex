@@ -15,7 +15,7 @@ defmodule LurusWwwWeb.Live.SnakeLive do
         player_name: "",
         joined: false,
         game_state: nil,
-        game_status: nil
+        my_alive: true
       )
 
     if connected?(socket) do
@@ -23,7 +23,7 @@ defmodule LurusWwwWeb.Live.SnakeLive do
 
       case GameServer.get_state(room_id) do
         {:ok, state} ->
-          {:ok, assign(socket, game_state: state, game_status: state.status)}
+          {:ok, assign(socket, game_state: state)}
 
         {:error, :not_found} ->
           {:ok, push_navigate(socket, to: ~p"/play")}
@@ -49,7 +49,7 @@ defmodule LurusWwwWeb.Live.SnakeLive do
            joined: true,
            player_name: name,
            game_state: state,
-           game_status: state.status
+           my_alive: true
          )}
 
       {:error, reason} ->
@@ -57,14 +57,9 @@ defmodule LurusWwwWeb.Live.SnakeLive do
     end
   end
 
-  def handle_event("start_game", _params, socket) do
-    GameServer.start_game(socket.assigns.room_id)
-    {:noreply, socket}
-  end
-
-  def handle_event("rematch", _params, socket) do
-    GameServer.rematch(socket.assigns.room_id)
-    {:noreply, socket}
+  def handle_event("respawn", _params, socket) do
+    GameServer.respawn(socket.assigns.room_id, socket.assigns.player_id)
+    {:noreply, assign(socket, my_alive: true)}
   end
 
   def handle_event("input", %{"direction" => dir}, socket)
@@ -82,10 +77,17 @@ defmodule LurusWwwWeb.Live.SnakeLive do
 
   @impl true
   def handle_info({:game_state, state}, socket) do
+    # Track if MY player is alive
+    my_alive =
+      case Map.get(state.players, socket.assigns.player_id) do
+        %{alive: alive} -> alive
+        nil -> false
+      end
+
     socket =
       socket
       |> push_event("game_state", state)
-      |> assign(game_state: state, game_status: state.status)
+      |> assign(game_state: state, my_alive: my_alive)
 
     {:noreply, socket}
   end
@@ -98,9 +100,6 @@ defmodule LurusWwwWeb.Live.SnakeLive do
         <%!-- Join Screen --%>
         <div class="join-overlay">
           <div class="join-card">
-            <div class="join-card-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#00F0FF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
-            </div>
             <h2 class="join-title">Join Game</h2>
             <p class="room-label">Room <span class="room-code-big">{@room_id}</span></p>
 
@@ -108,7 +107,7 @@ defmodule LurusWwwWeb.Live.SnakeLive do
               <div class="player-preview">
                 <%= for {_id, p} <- @game_state.players do %>
                   <div class="player-tag">
-                    <span class="player-dot-sm" style={"background:#{p.color}"}></span>
+                    <span class="player-dot-sm" style={"background:#{p.color}; opacity:#{if p.alive, do: 1, else: 0.4}"}></span>
                     {p.name}
                   </div>
                 <% end %>
@@ -120,17 +119,12 @@ defmodule LurusWwwWeb.Live.SnakeLive do
 
             <form phx-submit="join" class="join-game-form">
               <input
-                type="text"
-                name="name"
-                value={@player_name}
-                placeholder="Your name"
-                maxlength="16"
-                autocomplete="off"
-                class="name-input"
-                autofocus
+                type="text" name="name" value={@player_name}
+                placeholder="Your name" maxlength="16"
+                autocomplete="off" class="name-input" autofocus
                 phx-change="set_name"
               />
-              <button type="submit" class="btn-accent btn-accent--lg w-full">Join Game</button>
+              <button type="submit" class="btn-accent btn-accent--lg w-full">Play Now</button>
             </form>
 
             <.link navigate={~p"/play"} class="back-link">Back to Lobby</.link>
@@ -175,66 +169,21 @@ defmodule LurusWwwWeb.Live.SnakeLive do
             <% end %>
           </div>
 
-          <%!-- Waiting Overlay --%>
-          <%= if @game_status == :waiting do %>
-            <div class="game-overlay">
-              <div class="overlay-card">
-                <h3 class="overlay-title">Waiting for Players</h3>
-                <p class="player-count-big">
-                  {(@game_state && map_size(@game_state.players)) || 0} / 8
-                </p>
-                <p class="share-hint">Share code: <strong class="text-accent">{@room_id}</strong></p>
-                <div class="overlay-players">
-                  <%= if @game_state do %>
-                    <%= for {_id, p} <- @game_state.players do %>
-                      <span class="player-chip" style={"border-color:#{p.color}; color:#{p.color}"}>
-                        <span class="player-dot-sm" style={"background:#{p.color}"}></span>
-                        {p.name}
-                      </span>
-                    <% end %>
-                  <% end %>
-                </div>
-                <button phx-click="start_game" class="btn-accent btn-accent--lg">
-                  Start Game
-                </button>
-                <p class="controls-hint">Controls: WASD or Arrow Keys</p>
-              </div>
-            </div>
-          <% end %>
-
-          <%!-- Game Over Overlay --%>
-          <%= if @game_status == :finished do %>
-            <div class="game-overlay">
-              <div class="overlay-card gameover">
-                <h2 class="overlay-title">Game Over</h2>
-                <%= if @game_state && @game_state.winner do %>
-                  <% winner = @game_state.players[@game_state.winner] %>
-                  <%= if winner do %>
-                    <p class="winner-name" style={"color:#{winner.color}"}>
-                      {winner.name} Wins!
+          <%!-- Death / Respawn Overlay --%>
+          <%= if not @my_alive do %>
+            <div class="respawn-overlay">
+              <div class="respawn-card">
+                <h3 class="respawn-title">You Died!</h3>
+                <%= if @game_state do %>
+                  <% me = @game_state.players[@player_id] %>
+                  <%= if me do %>
+                    <p class="respawn-stats">
+                      Score: <strong>{me.score}</strong> &middot; Kills: <strong>{me.kills}</strong>
                     </p>
                   <% end %>
-                <% else %>
-                  <p class="winner-name">Draw!</p>
                 <% end %>
-
-                <div class="final-scores">
-                  <%= if @game_state do %>
-                    <%= for {_id, p} <- Enum.sort_by(@game_state.players, fn {_, p} -> -p.score end) do %>
-                      <div class="final-row">
-                        <span class="score-color" style={"background:#{p.color}"}></span>
-                        <span class="final-name">{p.name}</span>
-                        <span class="final-pts">{p.score} pts</span>
-                        <span class="final-kills">{p.kills} kills</span>
-                      </div>
-                    <% end %>
-                  <% end %>
-                </div>
-
-                <div class="gameover-actions">
-                  <button phx-click="rematch" class="btn-accent">Rematch</button>
-                  <.link navigate={~p"/play"} class="btn-outline-game">Lobby</.link>
-                </div>
+                <button phx-click="respawn" class="btn-accent btn-accent--lg">Respawn</button>
+                <p class="controls-hint">or press any arrow key</p>
               </div>
             </div>
           <% end %>

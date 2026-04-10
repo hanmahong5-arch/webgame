@@ -64,6 +64,11 @@ const SnakeCanvas = {
     const dir = map[e.key]
     if (dir) {
       e.preventDefault()
+      // Auto-respawn on arrow key if dead
+      const me = this.state && this.state.players && this.state.players[this.playerId]
+      if (me && !me.alive) {
+        this.pushEvent("respawn", {})
+      }
       this.pushEvent("input", { direction: dir })
     }
   },

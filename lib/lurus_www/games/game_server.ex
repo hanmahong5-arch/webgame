@@ -1,5 +1,5 @@
 defmodule LurusWww.Games.GameServer do
-  @moduledoc "GenServer managing a single game room. One process per room."
+  @moduledoc "GenServer managing a single game room. Open arena — join anytime, respawn instantly."
 
   use GenServer
 
@@ -24,11 +24,8 @@ defmodule LurusWww.Games.GameServer do
   def input(room_id, player_id, direction),
     do: safe_cast(room_id, {:input, player_id, direction})
 
-  def start_game(room_id),
-    do: safe_cast(room_id, :start_game)
-
-  def rematch(room_id),
-    do: safe_cast(room_id, :rematch)
+  def respawn(room_id, player_id),
+    do: safe_cast(room_id, {:respawn, player_id})
 
   def get_state(room_id),
     do: safe_call(room_id, :get_state)
@@ -90,7 +87,8 @@ defmodule LurusWww.Games.GameServer do
   def handle_call({:join, player_id, player_name}, _from, state) do
     case Engine.add_player(state.engine, player_id, player_name) do
       {:ok, engine} ->
-        state = reset_idle(%{state | engine: engine})
+        state = ensure_ticking(%{state | engine: engine})
+        state = reset_idle(state)
         broadcast_game(engine)
         broadcast_lobby(engine)
         {:reply, {:ok, Engine.to_client(engine)}, state}
@@ -105,20 +103,30 @@ defmodule LurusWww.Games.GameServer do
   end
 
   def handle_call(:get_summary, _from, state) do
-    summary = build_summary(state.engine)
-    {:reply, {:ok, summary}, state}
+    {:reply, {:ok, build_summary(state.engine)}, state}
   end
 
   @impl true
   def handle_cast({:leave, player_id}, state) do
     engine = Engine.remove_player(state.engine, player_id)
+    state = %{state | engine: engine}
+
+    # Stop ticking if no players
+    state =
+      if engine.status == :waiting and state.tick_ref do
+        Process.cancel_timer(state.tick_ref)
+        %{state | tick_ref: nil}
+      else
+        state
+      end
+
     broadcast_game(engine)
     broadcast_lobby(engine)
 
     if map_size(engine.players) == 0 do
-      {:stop, :normal, %{state | engine: engine}}
+      {:stop, :normal, state}
     else
-      {:noreply, %{state | engine: engine}}
+      {:noreply, state}
     end
   end
 
@@ -127,38 +135,22 @@ defmodule LurusWww.Games.GameServer do
     {:noreply, reset_idle(%{state | engine: engine})}
   end
 
-  def handle_cast(:start_game, state) do
-    engine = Engine.start_countdown(state.engine)
+  def handle_cast({:respawn, player_id}, state) do
+    engine = Engine.respawn(state.engine, player_id)
     broadcast_game(engine)
-    broadcast_lobby(engine)
-    tick_ref = Process.send_after(self(), :tick, 1000)
-    {:noreply, reset_idle(%{state | engine: engine, tick_ref: tick_ref})}
-  end
-
-  def handle_cast(:rematch, state) do
-    engine = Engine.reset(state.engine)
-    broadcast_game(engine)
-    broadcast_lobby(engine)
-    {:noreply, reset_idle(%{state | engine: engine, tick_ref: nil})}
+    {:noreply, reset_idle(%{state | engine: engine})}
   end
 
   @impl true
   def handle_info(:tick, state) do
-    engine =
-      case state.engine.status do
-        :countdown -> Engine.countdown_tick(state.engine)
-        :playing -> Engine.tick(state.engine)
-        _ -> state.engine
-      end
-
+    engine = Engine.tick(state.engine)
     broadcast_game(engine)
 
     tick_ref =
-      case engine.status do
-        :countdown -> Process.send_after(self(), :tick, 1000)
-        :playing -> Process.send_after(self(), :tick, @tick_interval)
-        :finished -> broadcast_lobby(engine); nil
-        _ -> nil
+      if engine.status == :playing do
+        Process.send_after(self(), :tick, @tick_interval)
+      else
+        nil
       end
 
     {:noreply, %{state | engine: engine, tick_ref: tick_ref}}
@@ -173,7 +165,13 @@ defmodule LurusWww.Games.GameServer do
     end
   end
 
-  # ── Broadcasting ────────────────────────────────────────
+  # ── Internal ────────────────────────────────────────────
+
+  defp ensure_ticking(%{tick_ref: nil, engine: %{status: :playing}} = state) do
+    %{state | tick_ref: Process.send_after(self(), :tick, @tick_interval)}
+  end
+
+  defp ensure_ticking(state), do: state
 
   defp broadcast_game(engine) do
     Phoenix.PubSub.broadcast(
@@ -195,11 +193,11 @@ defmodule LurusWww.Games.GameServer do
     %{
       room_id: engine.id,
       player_count: map_size(engine.players),
-      max_players: 8,
+      max_players: 20,
       status: engine.status,
       players:
         Enum.map(engine.players, fn {_id, p} ->
-          %{name: p.name, color: p.color}
+          %{name: p.name, color: p.color, alive: p.alive}
         end)
     }
   end
