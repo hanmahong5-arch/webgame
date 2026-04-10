@@ -24,16 +24,9 @@ spec:
         app.kubernetes.io/name: webgame
         app.kubernetes.io/part-of: lurus
     spec:
-      # Schedule on cloud-ali-4 (www-gateway) — local Traefik handles TLS.
+      # Schedule on master node (co-located with Traefik for direct pod routing)
       nodeSelector:
-        lurus.cn/role: www-gateway
-      tolerations:
-        - key: lurus.cn/www-only
-          value: "true"
-          effect: NoSchedule
-        - key: svclb-exclude
-          value: "true"
-          effect: NoSchedule
+        kubernetes.io/hostname: cloud-ubuntu-1-16c32g
       securityContext:
         runAsNonRoot: true
         runAsUser: 65534
