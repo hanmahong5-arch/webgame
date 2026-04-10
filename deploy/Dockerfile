@@ -14,6 +14,7 @@ RUN mix local.hex --force && mix local.rebar --force
 
 # Install dependencies first (cache layer)
 COPY mix.exs mix.lock ./
+COPY deps_local/ deps_local/
 RUN mix deps.get --only prod && mix deps.compile
 
 # Copy config (needed before compile for config-time values)
