@@ -211,7 +211,7 @@ defmodule LurusWwwWeb.Live.SnakeLive do
 
   defp effect_icon("speed"), do: "\u26A1"
   defp effect_icon("blade"), do: "\u2694"
-  defp effect_icon("magnet"), do: "\uD83E\uDDF2"
+  defp effect_icon("magnet"), do: "\U0001F9F2"
   defp effect_icon("star"), do: "\u2B50"
   defp effect_icon(_), do: ""
 end
