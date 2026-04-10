@@ -19,6 +19,15 @@ config :lurus_www, LurusWwwWeb.Endpoint,
     ]
   ]
 
+config :lurus_www, LurusWww.Repo,
+  username: "postgres",
+  password: "postgres",
+  hostname: "localhost",
+  database: "webgame_dev",
+  stacktrace: true,
+  show_sensitive_data_on_connection_error: true,
+  pool_size: 5
+
 config :lurus_www,
   chat_enabled: false,
   api_url: "https://api.lurus.cn",

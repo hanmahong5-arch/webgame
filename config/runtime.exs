@@ -9,6 +9,10 @@ end
 config :lurus_www, LurusWwwWeb.Endpoint,
   http: [port: String.to_integer(System.get_env("PORT", "4000"))]
 
+config :lurus_www, LurusWww.Repo,
+  url: System.get_env("DATABASE_URL", "ecto://webgame:webgame_2026@lurus-pg-rw.database.svc:5432/webgame"),
+  pool_size: String.to_integer(System.get_env("POOL_SIZE", "5"))
+
 if config_env() == :prod do
   secret_key_base =
     System.get_env("SECRET_KEY_BASE") ||

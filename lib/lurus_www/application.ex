@@ -9,6 +9,7 @@ defmodule LurusWww.Application do
       LurusWwwWeb.Telemetry,
       {DNSCluster, query: Application.get_env(:lurus_www, :dns_cluster_query) || :ignore},
       {Finch, name: LurusWww.Finch, pools: finch_pools()},
+      LurusWww.Repo,
       {Phoenix.PubSub, name: LurusWww.PubSub},
       {Registry, keys: :unique, name: LurusWww.Games.Registry},
       LurusWww.Games.GameSupervisor,

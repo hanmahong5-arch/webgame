@@ -5,7 +5,7 @@ defmodule LurusWww.Games.GameServer do
 
   alias LurusWww.Games.Snake.Engine
 
-  @tick_interval 120
+  @tick_interval 80
   @idle_timeout 300_000
 
   # ── Client API ──────────────────────────────────────────
@@ -174,11 +174,22 @@ defmodule LurusWww.Games.GameServer do
   defp ensure_ticking(state), do: state
 
   defp broadcast_game(engine) do
-    Phoenix.PubSub.broadcast(
-      LurusWww.PubSub,
-      "game:#{engine.id}",
-      {:game_state, Engine.to_client(engine)}
-    )
+    client_state = Engine.to_client(engine)
+
+    # Persist scores for players who just died
+    for event <- engine.events do
+      case event do
+        {:player_died, player_id, _killer} ->
+          case Map.get(engine.players, player_id) do
+            %{name: name, score: score, kills: kills} when score > 0 ->
+              Task.start(fn -> LurusWww.Scores.record_score(name, score, kills) end)
+            _ -> :ok
+          end
+        _ -> :ok
+      end
+    end
+
+    Phoenix.PubSub.broadcast(LurusWww.PubSub, "game:#{engine.id}", {:game_state, client_state})
   end
 
   defp broadcast_lobby(engine) do

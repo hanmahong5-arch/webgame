@@ -24,6 +24,9 @@ const SnakeCanvas = {
     this.playerId = this.el.dataset.playerId
     this.raf = null
     this.audio = new GameAudio()
+    this.particles = []
+    this.shakeAmount = 0
+    this.shakeDecay = 0.92
 
     this._onResize = () => this.resize()
     window.addEventListener("resize", this._onResize)
@@ -85,11 +88,38 @@ const SnakeCanvas = {
     if (state.events) {
       for (const ev of state.events) {
         switch (ev[0]) {
-          case "food_eaten": this.audio.play("eat", ev[2] === "golden"); break
-          case "player_died": this.audio.play("die", ev[1] === this.playerId); break
+          case "food_eaten":
+            this.audio.play("eat", ev[2] === "golden")
+            break
+          case "player_died": {
+            const isSelf = ev[1] === this.playerId
+            this.audio.play("die", isSelf)
+            if (isSelf) this.shakeAmount = 12
+            // Spawn death particles
+            const deadP = this.state?.players?.[ev[1]]
+            if (deadP?.segments?.length) {
+              const [dx, dy] = deadP.segments[0]
+              for (let i = 0; i < 20; i++) {
+                this.particles.push({
+                  x: dx, y: dy,
+                  vx: (Math.random() - 0.5) * 3,
+                  vy: (Math.random() - 0.5) * 3,
+                  life: 30 + Math.random() * 20,
+                  color: deadP.color,
+                  size: 0.3 + Math.random() * 0.4
+                })
+              }
+            }
+            break
+          }
           case "game_started": this.audio.play("start"); break
-          case "powerup": this.audio.play("start"); break
-          case "blade_cut": this.audio.play("eat", true); break
+          case "powerup":
+            this.audio.play("powerup")
+            break
+          case "blade_cut":
+            this.audio.play("blade")
+            this.shakeAmount = 6
+            break
         }
       }
     }
@@ -117,8 +147,17 @@ const SnakeCanvas = {
       Math.floor((canvas.width - 20) / cols),
       Math.floor((canvas.height - 20) / rows)
     )
-    const ox = Math.floor((canvas.width - cols * cs) / 2)
-    const oy = Math.floor((canvas.height - rows * cs) / 2)
+    let ox = Math.floor((canvas.width - cols * cs) / 2)
+    let oy = Math.floor((canvas.height - rows * cs) / 2)
+
+    // Screen shake
+    if (this.shakeAmount > 0.5) {
+      ox += (Math.random() - 0.5) * this.shakeAmount
+      oy += (Math.random() - 0.5) * this.shakeAmount
+      this.shakeAmount *= this.shakeDecay
+    } else {
+      this.shakeAmount = 0
+    }
 
     // Background
     ctx.fillStyle = "#060610"
@@ -276,6 +315,29 @@ const SnakeCanvas = {
       ctx.fillText(label, headX + cs / 2, headY - cs * 0.25)
       ctx.globalAlpha = 1
     }
+
+    // Particles
+    this.particles = this.particles.filter(p => {
+      p.x += p.vx
+      p.y += p.vy
+      p.vy += 0.03
+      p.life--
+      if (p.life <= 0) return false
+
+      const px = ox + p.x * cs + cs / 2
+      const py = oy + p.y * cs + cs / 2
+      const alpha = Math.min(1, p.life / 15)
+      ctx.globalAlpha = alpha
+      ctx.fillStyle = p.color
+      ctx.shadowColor = p.color
+      ctx.shadowBlur = cs * 0.4
+      ctx.beginPath()
+      ctx.arc(px, py, cs * p.size, 0, Math.PI * 2)
+      ctx.fill()
+      ctx.shadowBlur = 0
+      ctx.globalAlpha = 1
+      return true
+    })
 
     // Leaderboard (top-left, inside grid)
     if (state.leaderboard && state.leaderboard.length > 0) {

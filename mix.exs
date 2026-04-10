@@ -33,6 +33,8 @@ defmodule LurusWww.MixProject do
     [
       {:lurus_phoenix, path: "deps_local/lurus_phoenix"},
       {:phoenix, "~> 1.7"},
+      {:ecto_sql, "~> 3.11"},
+      {:postgrex, "~> 0.18"},
       {:phoenix_html, "~> 4.1"},
       {:phoenix_live_view, "~> 1.0"},
       {:phoenix_live_reload, "~> 1.5", only: :dev},

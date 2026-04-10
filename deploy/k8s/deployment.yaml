@@ -64,6 +64,8 @@ spec:
                   key: zitadel-client-id
             - name: API_URL
               value: "https://api.lurus.cn"
+            - name: DATABASE_URL
+              value: "ecto://webgame:webgame_2026@lurus-pg-rw.database.svc:5432/webgame"
             - name: CHAT_ENABLED
               value: "false"
             - name: RELEASE_TMP

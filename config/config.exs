@@ -1,7 +1,11 @@
 import Config
 
 config :lurus_www,
+  ecto_repos: [LurusWww.Repo],
   generators: [timestamp_type: :utc_datetime]
+
+config :lurus_www, LurusWww.Repo,
+  migration_primary_key: [type: :bigserial]
 
 config :lurus_www, LurusWwwWeb.Endpoint,
   url: [host: "localhost"],
