@@ -71,6 +71,23 @@ const SnakeCanvas = {
     window.addEventListener("keydown", this._onKey)
     window.addEventListener("keyup", this._onKey)
 
+    // Push localStorage identity to server
+    this.initIdentity()
+
+    // Save name when server confirms
+    this.handleEvent("save_name", ({ name }) => {
+      localStorage.setItem("wg_player_name", name)
+      // Track stats
+      const stats = JSON.parse(localStorage.getItem("wg_stats") || '{"games":0,"best":0,"totalScore":0,"totalKills":0,"streak":0,"lastDay":""}')
+      stats.games++
+      const today = new Date().toISOString().slice(0, 10)
+      if (stats.lastDay !== today) {
+        stats.streak = stats.lastDay === new Date(Date.now() - 86400000).toISOString().slice(0, 10) ? stats.streak + 1 : 1
+        stats.lastDay = today
+      }
+      localStorage.setItem("wg_stats", JSON.stringify(stats))
+    })
+
     this.handleEvent("game_state", (s) => this.onState(s))
     this.loop()
   },
@@ -80,6 +97,25 @@ const SnakeCanvas = {
     window.removeEventListener("keydown", this._onKey)
     window.removeEventListener("keyup", this._onKey)
     if (this.raf) cancelAnimationFrame(this.raf)
+  },
+
+  initIdentity() {
+    // Persistent player identity across visits
+    let id = localStorage.getItem("wg_player_id")
+    if (!id) {
+      id = "p_" + Math.random().toString(36).slice(2, 14)
+      localStorage.setItem("wg_player_id", id)
+    }
+    const name = localStorage.getItem("wg_player_name") || ""
+    this.pushEvent("init_player", { id, name })
+
+    // Pre-fill name input if exists
+    const input = document.getElementById("player-name-input")
+    if (input && name) input.value = name
+
+    // Listen for join to save name
+    this.handleEvent("game_state", () => {})  // ensure connected
+    window._wgSaveName = (n) => { localStorage.setItem("wg_player_name", n) }
   },
 
   resize() {

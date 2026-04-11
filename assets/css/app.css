@@ -1524,6 +1524,141 @@ body {
   font-size: 13px;
 }
 
+/* ── Game Brand ──────────────────────── */
+.game-brand {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--color-accent);
+  letter-spacing: -0.02em;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(10, 10, 15, 0.7);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(0, 240, 255, 0.15);
+}
+
+/* ── Floating Join Panel ─────────────── */
+.join-floating {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.join-panel {
+  text-align: center;
+  padding: 40px 48px;
+  background: rgba(10, 10, 15, 0.85);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--color-surface-border);
+  border-radius: 20px;
+  pointer-events: auto;
+}
+
+.join-brand {
+  font-size: 3rem;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  background: linear-gradient(135deg, var(--color-accent), var(--color-accent-purple));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 4px;
+}
+
+.join-sub {
+  font-size: 1rem;
+  color: var(--color-text-muted);
+  margin-bottom: 28px;
+}
+
+.join-form-inline {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.name-input-big {
+  flex: 1;
+  min-width: 180px;
+  padding: 12px 16px;
+  font-size: 16px;
+  background: var(--color-surface-overlay);
+  border: 2px solid var(--color-surface-border);
+  border-radius: 10px;
+  color: var(--color-text-primary);
+  outline: none;
+  transition: border-color 0.15s;
+}
+
+.name-input-big:focus {
+  border-color: var(--color-accent);
+}
+
+.name-input-big::placeholder {
+  color: var(--color-text-muted);
+}
+
+.btn-play {
+  padding: 12px 32px;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  background: var(--color-accent);
+  color: #0A0A0F;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+  white-space: nowrap;
+}
+
+.btn-play:hover {
+  background: color-mix(in srgb, var(--color-accent), #fff 15%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 20px rgba(0, 240, 255, 0.4);
+}
+
+.btn-play:active {
+  transform: scale(0.97);
+}
+
+.join-controls {
+  font-size: 12px;
+  color: var(--color-text-muted);
+}
+
+/* ── Death Stats ─────────────────────── */
+.death-stats {
+  display: flex;
+  justify-content: center;
+  gap: 32px;
+  margin: 16px 0 20px;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.stat-value {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--color-accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-label {
+  font-size: 11px;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
 /* ── Respawn Overlay ─────────────────── */
 .respawn-overlay {
   position: absolute;

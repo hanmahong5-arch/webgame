@@ -15,7 +15,10 @@ defmodule LurusWww.Games.Snake.Engine do
   @boost_multiplier 1.8
   @turn_rate 0.14
   @initial_length 10
-  @food_count 150
+  @base_food 80
+  @food_per_player 15
+  @max_food 300
+  @food_accum_rate 2
   @golden_chance 0.08
   @max_players 20
   @powerup_types [:blade, :shield, :magnet, :star]
@@ -65,7 +68,7 @@ defmodule LurusWww.Games.Snake.Engine do
         }
 
         state = if state.status == :waiting do
-          state |> seed_food(@food_count) |> Map.merge(%{status: :playing, tick: 0, events: [{:game_started}]})
+          state |> seed_food(target_food(state)) |> Map.merge(%{status: :playing, tick: 0, events: [{:game_started}]})
         else
           state
         end
@@ -411,9 +414,18 @@ defmodule LurusWww.Games.Snake.Engine do
     %{state | players: players, food: state.food ++ trail}
   end
 
+  defp target_food(state) do
+    # More players = more food. Time accumulation when fewer players.
+    player_count = Enum.count(state.players, fn {_, p} -> p.alive end)
+    base = @base_food + player_count * @food_per_player
+    # Accumulate bonus food every 200 ticks (10 sec at 50ms)
+    time_bonus = min(div(state.tick, 200) * @food_accum_rate, 80)
+    min(base + time_bonus, @max_food)
+  end
+
   defp replenish_food(state) do
-    needed = @food_count - length(state.food)
-    if needed > 3, do: seed_food(state, min(needed, 10)), else: state
+    needed = target_food(state) - length(state.food)
+    if needed > 3, do: seed_food(state, min(needed, 8)), else: state
   end
 
   defp seed_food(state, count) do

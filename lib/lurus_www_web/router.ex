@@ -15,25 +15,25 @@ defmodule LurusWwwWeb.Router do
     plug :accepts, ["json"]
   end
 
+  # Main game — fullscreen, no nav/footer
   scope "/", LurusWwwWeb do
     pipe_through :browser
 
-    live_session :default do
-      live "/", Live.HomeLive, :index
-      live "/play", Live.LobbyLive, :index
+    live_session :game, layout: {LurusWwwWeb.Layouts, :game} do
+      live "/", Live.GameLive, :index
+      live "/play", Live.GameLive, :index
+      live "/play/snake/:room_id", Live.GameLive, :room
+    end
+
+    live_session :pages do
       live "/create", Live.CreatorLive, :index
       live "/terms", Live.TermsLive, :index
       live "/privacy", Live.PrivacyLive, :index
-    end
-
-    live_session :game, layout: {LurusWwwWeb.Layouts, :game} do
-      live "/play/snake/:room_id", Live.SnakeLive, :play
     end
   end
 
   scope "/auth", LurusWwwWeb do
     pipe_through :browser
-
     get "/login", AuthController, :login
     get "/callback", AuthController, :callback
     get "/logout", AuthController, :logout
@@ -45,14 +45,12 @@ defmodule LurusWwwWeb.Router do
 
   if Application.compile_env(:lurus_www, :dev_routes, false) do
     import Phoenix.LiveDashboard.Router
-
     scope "/dev" do
       pipe_through :browser
       live_dashboard "/dashboard", metrics: LurusWwwWeb.Telemetry
     end
   end
 
-  # Catch-all 404
   scope "/", LurusWwwWeb do
     pipe_through :browser
     live "/*path", Live.NotFoundLive, :index
