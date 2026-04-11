@@ -112,9 +112,16 @@ defmodule LurusWwwWeb.Live.GameLive do
       false
     end
 
+    # Always tell client who they are, every tick
+    payload = if socket.assigns.player_id do
+      Map.put(state, :my_id, socket.assigns.player_id)
+    else
+      state
+    end
+
     {:noreply,
       socket
-      |> push_event("game_state", state)
+      |> push_event("game_state", payload)
       |> assign(game_state: state, my_alive: my_alive)}
   end
 

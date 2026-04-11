@@ -57,23 +57,15 @@ const SnakeCanvas = {
     // Identity from localStorage
     this.initIdentity()
 
-    // Server events — multiple ways to get playerId for resilience
     this.handleEvent("joined", ({ player_id }) => {
       this.playerId = player_id
-      console.log("[WG] joined event, pid=", player_id)
     })
     this.handleEvent("save_name", ({ name }) => {
       localStorage.setItem("wg_player_name", name)
     })
     this.handleEvent("game_state", (s) => {
-      // Fallback: if playerId not set yet, try to find ourselves in the state
-      if (!this.playerId && s.players) {
-        const lsId = localStorage.getItem("wg_player_id")
-        if (lsId && s.players[lsId]) {
-          this.playerId = lsId
-          console.log("[WG] found self via localStorage id:", lsId)
-        }
-      }
+      // Server tells us who we are on every tick — bulletproof
+      if (s.my_id) this.playerId = s.my_id
       this.onState(s)
     })
 
@@ -130,16 +122,7 @@ const SnakeCanvas = {
 
   sendSteer() {
     const me = this.getMe()
-    if (!me?.alive || !me.segments.length) {
-      // Debug: why can't we steer?
-      if (!this._dbg) {
-        this._dbg = true
-        const keys = this.state?.players ? Object.keys(this.state.players) : []
-        console.log("[WG] sendSteer BLOCKED: playerId=", this.playerId, "playerKeys=", keys, "me=", me)
-        setTimeout(() => { this._dbg = false }, 2000)
-      }
-      return
-    }
+    if (!me?.alive || !me.segments.length) return
     const [hx, hy] = me.segments[0]
     const sx = (hx - this.cam.x) + this.canvas.width / 2
     const sy = (hy - this.cam.y) + this.canvas.height / 2
