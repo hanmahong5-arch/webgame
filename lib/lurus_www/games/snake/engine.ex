@@ -359,13 +359,18 @@ defmodule LurusWww.Games.Snake.Engine do
         {ps, [{:player_died, id, killer} | evts]}
       end)
 
-    # Add body food to the field
+    # Drop limited body food (max 15 items per death, spread evenly)
     body_food = Enum.flat_map(real_deaths, fn {id, _} ->
-      state.players[id].segments
-      |> Enum.take_every(2)
-      |> Enum.filter(fn {x, y} -> x >= 0 and x < @cols and y >= 0 and y < @rows end)
+      segs = state.players[id].segments
+        |> Enum.filter(fn {x, y} -> x >= 0 and x < @cols and y >= 0 and y < @rows end)
+
+      step = max(1, div(length(segs), 15))
+
+      segs
+      |> Enum.take_every(step)
+      |> Enum.take(15)
       |> Enum.map(fn {x, y} ->
-        type = if :rand.uniform() < 0.2, do: :golden, else: :normal
+        type = if :rand.uniform() < 0.25, do: :golden, else: :normal
         {x, y, type}
       end)
     end)
