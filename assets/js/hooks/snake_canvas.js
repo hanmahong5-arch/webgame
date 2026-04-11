@@ -157,7 +157,13 @@ const SnakeCanvas = {
     }
 
     const [W, H] = state.size
-    const me = state.players?.[this.playerId]
+    const meRaw = state.players?.[this.playerId]
+    const me = meRaw ? {
+      alive: meRaw.al !== undefined ? meRaw.al : meRaw.alive,
+      segments: meRaw.s || meRaw.segments,
+      score: meRaw.sc !== undefined ? meRaw.sc : meRaw.score,
+      boosting: meRaw.b !== undefined ? meRaw.b : meRaw.boosting,
+    } : null
 
     // Camera follow player
     if (me?.alive && me.segments?.length) {
@@ -200,12 +206,13 @@ const SnakeCanvas = {
     ctx.lineWidth = 3
     ctx.strokeRect(bx0, by0, bx1 - bx0, by1 - by0)
 
-    // Food
+    // Food (format: [x, y, type] where type is 0=normal, 1=golden or string)
     for (const [fx, fy, type] of state.food) {
       const [sx, sy] = toScreen(fx, fy)
       if (sx < -20 || sx > canvas.width + 20 || sy < -20 || sy > canvas.height + 20) continue
-      const r = (type === "golden" ? 4 : 3) * scale
-      const color = type === "golden" ? "#FFB800" : "#FF4466"
+      const golden = type === 1 || type === "golden"
+      const r = (golden ? 4 : 3) * scale
+      const color = golden ? "#FFB800" : "#FF4466"
       ctx.save()
       ctx.shadowColor = color
       ctx.shadowBlur = 8
@@ -215,12 +222,15 @@ const SnakeCanvas = {
       ctx.restore()
     }
 
-    // Powerups
-    if (state.powerups) {
+    // Powerups (format: [x, y, idx] where idx maps to type)
+    const PUP_NAMES = ["blade", "shield", "magnet", "star"]
+    const pups = state.pups || state.powerups || []
+    if (pups.length) {
       const t = Date.now() / 1000
-      for (const [px, py, type] of state.powerups) {
+      for (const [px, py, typeOrIdx] of pups) {
         const [sx, sy] = toScreen(px, py)
         if (sx < -30 || sx > canvas.width + 30 || sy < -30 || sy > canvas.height + 30) continue
+        const type = typeof typeOrIdx === "number" ? PUP_NAMES[typeOrIdx] : typeOrIdx
         const color = PUP_COLORS[type] || "#fff"
         const pulse = 0.8 + 0.2 * Math.sin(t * 4)
         ctx.save()
@@ -243,43 +253,53 @@ const SnakeCanvas = {
 
     // Snakes
     for (const [id, p] of Object.entries(state.players)) {
-      if (!p.segments?.length) continue
-      const alive = p.alive
+      // Support both full and compact payload keys
+      const segs = p.s || p.segments
+      const alive = p.al !== undefined ? p.al : p.alive
+      const color = p.c || p.color
+      const name = p.n || p.name
+      const angle = p.a !== undefined ? p.a : (p.angle || 0)
+      const score = p.sc !== undefined ? p.sc : (p.score || 0)
+      const boosting = p.b !== undefined ? p.b : p.boosting
+      const effects = p.ef || p.effects || []
+      const hasShield = p.sh !== undefined ? p.sh : p.has_shield
+
+      if (!segs?.length) continue
       const isMe = id === this.playerId
       const r = SEG_R * scale
 
       // Draw body as smooth path
       ctx.globalAlpha = alive ? 0.85 : 0.15
-      ctx.strokeStyle = p.color
+      ctx.strokeStyle = color
       ctx.lineWidth = r * 2
       ctx.lineCap = "round"
       ctx.lineJoin = "round"
       ctx.beginPath()
-      for (let i = 0; i < p.segments.length; i++) {
-        const [sx, sy] = toScreen(p.segments[i][0], p.segments[i][1])
+      for (let i = 0; i < segs.length; i++) {
+        const [sx, sy] = toScreen(segs[i][0], segs[i][1])
         if (i === 0) ctx.moveTo(sx, sy)
         else ctx.lineTo(sx, sy)
       }
       ctx.stroke()
 
       // Head glow
-      const [hx, hy] = toScreen(p.segments[0][0], p.segments[0][1])
+      const [hx, hy] = toScreen(segs[0][0], segs[0][1])
       if (alive) {
         ctx.globalAlpha = 1
         ctx.save()
-        let glowColor = p.color
-        if (p.effects?.includes("star")) glowColor = "#E6DB74"
-        if (p.effects?.includes("blade")) glowColor = "#FF4466"
-        if (p.boosting) glowColor = "#00F0FF"
+        let glowColor = color
+        if (effects.includes("star")) glowColor = "#E6DB74"
+        if (effects.includes("blade")) glowColor = "#FF4466"
+        if (boosting) glowColor = "#00F0FF"
         ctx.shadowColor = glowColor
         ctx.shadowBlur = isMe ? 18 : 10
-        ctx.fillStyle = p.color
+        ctx.fillStyle = color
         ctx.beginPath(); ctx.arc(hx, hy, r * 1.3, 0, Math.PI * 2); ctx.fill()
         ctx.restore()
 
         // Eyes
         ctx.fillStyle = "#fff"
-        const ea = p.angle || 0
+        const ea = angle
         const ed = r * 0.5
         ctx.beginPath()
         ctx.arc(hx + Math.cos(ea - 0.4) * ed, hy + Math.sin(ea - 0.4) * ed, r * 0.35, 0, Math.PI * 2)
@@ -292,7 +312,7 @@ const SnakeCanvas = {
         ctx.fill()
 
         // Shield ring
-        if (p.has_shield) {
+        if (hasShield) {
           ctx.strokeStyle = "#00FF87"
           ctx.lineWidth = 2
           ctx.globalAlpha = 0.5 + 0.3 * Math.sin(Date.now() / 200)
@@ -305,8 +325,8 @@ const SnakeCanvas = {
       ctx.fillStyle = "#fff"
       ctx.font = `bold ${Math.max(10, 11 * scale)}px sans-serif`
       ctx.textAlign = "center"
-      let label = p.name
-      if (p.boosting && alive) label += " \u{1F4A8}"
+      let label = name
+      if (boosting && alive) label += " \u{1F4A8}"
       ctx.fillText(label, hx, hy - r * 2.5)
       ctx.globalAlpha = 1
     }
@@ -344,14 +364,17 @@ const SnakeCanvas = {
       ctx.fillText("LEADERBOARD", lx + 8, ly + 14)
       state.leaderboard.slice(0, 5).forEach((e, i) => {
         const ey = ly + 26 + i * 18
-        ctx.fillStyle = e.color
+        const eColor = e.c || e.color
+        const eName = e.n || e.name
+        const eScore = e.ts || e.total_score || 0
+        ctx.fillStyle = eColor
         ctx.fillRect(lx + 8, ey - 4, 4, 4)
         ctx.fillStyle = e.id === this.playerId ? "#fff" : "#9090A8"
         ctx.font = `${e.id === this.playerId ? "bold " : ""}10px sans-serif`
-        ctx.fillText(e.name, lx + 18, ey)
+        ctx.fillText(eName, lx + 18, ey)
         ctx.fillStyle = "#00F0FF"
         ctx.textAlign = "right"
-        ctx.fillText(e.total_score, lx + 142, ey)
+        ctx.fillText(eScore, lx + 142, ey)
         ctx.textAlign = "left"
       })
     }
@@ -385,9 +408,12 @@ const SnakeCanvas = {
 
     // Players on minimap
     for (const [id, p] of Object.entries(state.players)) {
-      if (!p.alive || !p.segments?.length) continue
-      const [px, py] = p.segments[0]
-      ctx.fillStyle = p.color
+      const pAlive = p.al !== undefined ? p.al : p.alive
+      const pSegs = p.s || p.segments
+      const pColor = p.c || p.color
+      if (!pAlive || !pSegs?.length) continue
+      const [px, py] = pSegs[0]
+      ctx.fillStyle = pColor
       const r = id === this.playerId ? 3 : 2
       ctx.beginPath(); ctx.arc(mx + px * sx, my + py * sy, r, 0, Math.PI * 2); ctx.fill()
     }

@@ -1,23 +1,25 @@
 defmodule LurusWww.Games.Snake.Engine do
   @moduledoc """
   Slither.io-style multiplayer snake arena.
-  Continuous float coordinates, angular steering, circle collision.
+  Continuous movement, angular steering, progression system.
+  Optimized for minimal broadcast payload.
   """
 
-  @width 1800.0
-  @height 1200.0
+  @width 2000.0
+  @height 1400.0
   @seg_radius 6.0
-  @seg_spacing 10.0
-  @base_speed 3.0
-  @boost_speed 6.0
-  @boost_shrink_rate 0.4
-  @turn_rate 0.12
-  @initial_length 12
-  @food_count 120
+  @seg_spacing 9.0
+  @base_speed 5.0
+  @max_speed 9.0
+  @speed_per_10_food 0.3
+  @boost_multiplier 1.8
+  @turn_rate 0.14
+  @initial_length 10
+  @food_count 150
   @golden_chance 0.08
   @max_players 20
-  @powerup_types [:speed, :blade, :shield, :magnet, :star]
-  @powerup_chance 0.015
+  @powerup_types [:blade, :shield, :magnet, :star]
+  @powerup_chance 0.012
 
   @colors ~w(#FF6B6B #4ECDC4 #45B7D1 #96CEB4 #FFEAA7 #DDA0DD #98D8C8 #F7DC6F #FF8C69 #B08EFF #7AFF89 #FFB800 #FF6BCC #00F0FF #66D9EF #F92672 #A6E22E #FD971F #AE81FF #E6DB74)
 
@@ -51,8 +53,9 @@ defmodule LurusWww.Games.Snake.Engine do
         player = %{
           id: id, name: name, color: color,
           segments: [], angle: angle, target_angle: angle,
-          speed: @base_speed, boosting: false,
+          base_speed: @base_speed, boosting: false,
           score: 0, alive: false, kills: 0, total_score: 0,
+          food_eaten: 0,
           effects: %{}, has_shield: false
         }
 
@@ -62,11 +65,7 @@ defmodule LurusWww.Games.Snake.Engine do
         }
 
         state = if state.status == :waiting do
-          state
-          |> seed_food(@food_count)
-          |> Map.put(:status, :playing)
-          |> Map.put(:tick, 0)
-          |> Map.put(:events, [{:game_started}])
+          state |> seed_food(@food_count) |> Map.merge(%{status: :playing, tick: 0, events: [{:game_started}]})
         else
           state
         end
@@ -76,6 +75,14 @@ defmodule LurusWww.Games.Snake.Engine do
   end
 
   def remove_player(state, id) do
+    # Drop body as food when leaving
+    state = case Map.get(state.players, id) do
+      %{alive: true, segments: segs} when length(segs) > 3 ->
+        food = segs |> Enum.take_every(3) |> Enum.take(12) |> Enum.map(fn {x, y} -> {x, y, :normal} end)
+        %{state | food: state.food ++ food}
+      _ -> state
+    end
+
     state = %{state |
       players: Map.delete(state.players, id),
       player_order: List.delete(state.player_order, id)
@@ -87,33 +94,30 @@ defmodule LurusWww.Games.Snake.Engine do
     end
   end
 
-  def set_target(state, id, target_angle) when is_float(target_angle) do
-    case Map.fetch(state.players, id) do
-      {:ok, p} -> %{state | players: Map.put(state.players, id, %{p | target_angle: target_angle})}
-      :error -> state
+  def set_target(state, id, angle) when is_float(angle) do
+    case Map.get(state.players, id) do
+      nil -> state
+      p -> %{state | players: Map.put(state.players, id, %{p | target_angle: angle})}
     end
   end
-
-  def set_target(state, _id, _), do: state
+  def set_target(state, _, _), do: state
 
   def set_boost(state, id, boosting) when is_boolean(boosting) do
-    case Map.fetch(state.players, id) do
-      {:ok, p} -> %{state | players: Map.put(state.players, id, %{p | boosting: boosting})}
-      :error -> state
+    case Map.get(state.players, id) do
+      nil -> state
+      p -> %{state | players: Map.put(state.players, id, %{p | boosting: boosting})}
     end
   end
+  def set_boost(state, _, _), do: state
 
-  def set_boost(state, _id, _), do: state
-
-  def respawn(state, player_id) do
-    case Map.fetch(state.players, player_id) do
-      {:ok, %{alive: false} = p} ->
+  def respawn(state, pid) do
+    case Map.get(state.players, pid) do
+      %{alive: false} = p ->
         state
-        |> Map.update!(:players, fn ps ->
-          Map.put(ps, player_id, %{p | alive: true, score: 0, kills: 0, effects: %{}, has_shield: false, boosting: false})
-        end)
-        |> spawn_player(player_id)
-        |> Map.update!(:events, &[{:player_respawned, player_id} | &1])
+        |> put_in([:players, pid], %{p | alive: true, score: 0, kills: 0, food_eaten: 0,
+            effects: %{}, has_shield: false, boosting: false, base_speed: @base_speed})
+        |> spawn_player(pid)
+        |> Map.update!(:events, &[{:player_respawned, pid} | &1])
       _ -> state
     end
   end
@@ -137,8 +141,11 @@ defmodule LurusWww.Games.Snake.Engine do
       state
     end
   end
-
   def tick(state), do: state
+
+  def player_count(state), do: map_size(state.players)
+
+  # ── Serialization (optimized payload) ───────────────────
 
   def to_client(state) do
     %{
@@ -149,51 +156,63 @@ defmodule LurusWww.Games.Snake.Engine do
       events: Enum.map(state.events, &encode_event/1),
       leaderboard: Enum.take(state.leaderboard, 8),
       players: Map.new(state.players, fn {id, p} ->
+        # Only send every 2nd segment for long snakes (visual LOD)
+        segs = if length(p.segments) > 30 do
+          {head_area, tail_area} = Enum.split(p.segments, 8)
+          head_area ++ Enum.take_every(tail_area, 2)
+        else
+          p.segments
+        end
+
         {id, %{
-          name: p.name, color: p.color, angle: p.angle,
-          segments: Enum.map(p.segments, fn {x, y} -> [round2(x), round2(y)] end),
-          score: p.score, alive: p.alive, kills: p.kills,
-          total_score: p.total_score, boosting: p.boosting,
-          effects: Map.keys(p.effects), has_shield: p.has_shield
+          n: p.name, c: p.color, a: r2(p.angle),
+          s: Enum.map(segs, fn {x, y} -> [r2(x), r2(y)] end),
+          sc: p.score, al: p.alive, k: p.kills,
+          ts: p.total_score, b: p.boosting,
+          ef: Map.keys(p.effects), sh: p.has_shield,
+          spd: r2(current_speed(p))
         }}
       end),
-      food: Enum.map(state.food, fn {x, y, t} -> [round2(x), round2(y), Atom.to_string(t)] end),
-      powerups: Enum.map(state.powerups, fn {x, y, t} -> [round2(x), round2(y), Atom.to_string(t)] end)
+      food: Enum.map(state.food, fn {x, y, t} -> [r2(x), r2(y), if(t == :golden, do: 1, else: 0)] end),
+      pups: Enum.map(state.powerups, fn {x, y, t} -> [r2(x), r2(y), pup_idx(t)] end)
     }
   end
 
-  defp round2(f), do: Float.round(f * 1.0, 1)
+  defp r2(f), do: Float.round(f * 1.0, 1)
+  defp pup_idx(:blade), do: 0
+  defp pup_idx(:shield), do: 1
+  defp pup_idx(:magnet), do: 2
+  defp pup_idx(:star), do: 3
+  defp pup_idx(_), do: 0
 
-  # ── Spawning ────────────────────────────────────────────
+  # ── Internal ────────────────────────────────────────────
 
   defp spawn_player(state, id) do
-    margin = 150.0
+    margin = 200.0
     x = margin + :rand.uniform() * (state.width - margin * 2)
     y = margin + :rand.uniform() * (state.height - margin * 2)
     angle = :rand.uniform() * :math.pi() * 2
 
     segments = for i <- 0..(@initial_length - 1) do
-      {x - :math.cos(angle) * i * @seg_spacing,
-       y - :math.sin(angle) * i * @seg_spacing}
+      {x - :math.cos(angle) * i * @seg_spacing, y - :math.sin(angle) * i * @seg_spacing}
     end
 
-    %{state |
-      players: Map.update!(state.players, id, fn p ->
-        %{p | segments: segments, angle: angle, target_angle: angle, alive: true,
-              speed: @base_speed, boosting: false}
-      end)
-    }
+    %{state | players: Map.update!(state.players, id, fn p ->
+      %{p | segments: segments, angle: angle, target_angle: angle, alive: true}
+    end)}
   end
 
-  # ── Tick Pipeline ───────────────────────────────────────
+  defp current_speed(p) do
+    # Progression: faster as you eat more
+    progression = min(@max_speed, p.base_speed + div(p.food_eaten, 10) * @speed_per_10_food)
+    base = if Map.has_key?(p.effects, :speed), do: @max_speed, else: progression
+    if p.boosting and length(p.segments) > 5, do: base * @boost_multiplier, else: base
+  end
 
   defp tick_effects(state) do
     players = Map.new(state.players, fn {id, p} ->
       if p.alive do
-        effects = p.effects
-          |> Enum.map(fn {t, ttl} -> {t, ttl - 1} end)
-          |> Enum.filter(fn {_, ttl} -> ttl > 0 end)
-          |> Map.new()
+        effects = p.effects |> Enum.map(fn {t, ttl} -> {t, ttl - 1} end) |> Enum.filter(fn {_, t} -> t > 0 end) |> Map.new()
         {id, %{p | effects: effects}}
       else
         {id, p}
@@ -205,24 +224,12 @@ defmodule LurusWww.Games.Snake.Engine do
   defp steer_and_move(state) do
     players = Map.new(state.players, fn {id, p} ->
       if p.alive and p.segments != [] do
-        # Smooth steering toward target angle
-        angle = steer_toward(p.angle, p.target_angle, @turn_rate)
-
-        # Speed (base or boost)
-        speed = if p.boosting and length(p.segments) > 5 do
-          @boost_speed
-        else
-          if Map.has_key?(p.effects, :speed), do: @boost_speed, else: @base_speed
-        end
-
-        # Move head
+        angle = steer(p.angle, p.target_angle, @turn_rate)
+        speed = current_speed(p)
         {hx, hy} = hd(p.segments)
         new_head = {hx + :math.cos(angle) * speed, hy + :math.sin(angle) * speed}
-
-        # Build new segments list: add head, trim to maintain spacing
-        new_segments = rebuild_segments([new_head | p.segments], @seg_spacing, length(p.segments))
-
-        {id, %{p | segments: new_segments, angle: angle, speed: speed}}
+        new_segs = resample([new_head | p.segments], @seg_spacing, length(p.segments))
+        {id, %{p | segments: new_segs, angle: angle}}
       else
         {id, p}
       end
@@ -230,13 +237,12 @@ defmodule LurusWww.Games.Snake.Engine do
     %{state | players: players}
   end
 
-  defp steer_toward(current, target, rate) do
-    diff = normalize_angle(target - current)
-    clamped = max(-rate, min(rate, diff))
-    normalize_angle(current + clamped)
+  defp steer(cur, target, rate) do
+    diff = :math.fmod(target - cur + 3 * :math.pi(), 2 * :math.pi()) - :math.pi()
+    normalize(cur + max(-rate, min(rate, diff)))
   end
 
-  defp normalize_angle(a) do
+  defp normalize(a) do
     a = :math.fmod(a, 2 * :math.pi())
     cond do
       a > :math.pi() -> a - 2 * :math.pi()
@@ -245,189 +251,143 @@ defmodule LurusWww.Games.Snake.Engine do
     end
   end
 
-  defp rebuild_segments(segments, spacing, target_count) do
-    # Walk along the path, placing segments at even intervals
-    segments
-    |> Enum.take(target_count + 5)
-    |> resample(spacing, target_count)
-  end
-
-  defp resample([first | _] = points, spacing, count) do
-    do_resample(points, spacing, count - 1, [first])
+  defp resample(points, spacing, count) do
+    do_resample(points, spacing, count - 1, [hd(points)])
   end
 
   defp do_resample(_, _, 0, acc), do: Enum.reverse(acc)
-  defp do_resample([_single], _, _, acc), do: Enum.reverse(acc)
-
-  defp do_resample([{ax, ay} = _a, {bx, by} = b | rest], spacing, remaining, acc) do
+  defp do_resample([_], _, _, acc), do: Enum.reverse(acc)
+  defp do_resample([_a, b | rest], spacing, rem_count, acc) do
     {lx, ly} = hd(acc)
-    dist = distance(lx, ly, bx, by)
-
+    {bx, by} = b
+    dist = dist(lx, ly, bx, by)
     if dist >= spacing do
-      # Place next segment at spacing distance from last placed
-      ratio = spacing / max(dist, 0.01)
-      nx = lx + (bx - lx) * ratio
-      ny = ly + (by - ly) * ratio
-      do_resample([{nx, ny}, b | rest], spacing, remaining - 1, [{nx, ny} | acc])
+      ratio = spacing / max(dist, 0.001)
+      next = {lx + (bx - lx) * ratio, ly + (by - ly) * ratio}
+      do_resample([next, b | rest], spacing, rem_count - 1, [next | acc])
     else
-      do_resample([{ax, ay} | rest], spacing, remaining, acc)
+      do_resample([hd(acc) | rest], spacing, rem_count, acc)
     end
   end
 
   defp detect_collisions(state) do
     alive = state.players |> Enum.filter(fn {_, p} -> p.alive end) |> Map.new()
+    hit_r = @seg_radius * 2.2
 
-    deaths = Enum.reduce(alive, %{}, fn {id, player}, acc ->
-      {hx, hy} = hd(player.segments)
-
-      # Wall collision
+    deaths = Enum.reduce(alive, %{}, fn {id, p}, acc ->
+      {hx, hy} = hd(p.segments)
       wall = hx < 0 or hx > state.width or hy < 0 or hy > state.height
 
-      # Collision with other snakes' bodies (skip first 3 segments = head area)
       other_killer = Enum.find_value(alive, fn {oid, op} ->
         if oid != id do
-          hit = op.segments
-            |> Enum.drop(3)
-            |> Enum.any?(fn {sx, sy} -> distance(hx, hy, sx, sy) < @seg_radius * 2 end)
+          hit = op.segments |> Enum.drop(3) |> Enum.any?(fn {sx, sy} -> dist(hx, hy, sx, sy) < hit_r end)
           if hit, do: oid
         end
       end)
 
-      # Head-to-head
-      head_hit = Enum.any?(alive, fn {oid, op} ->
-        oid != id and distance(hx, hy, elem(hd(op.segments), 0), elem(hd(op.segments), 1)) < @seg_radius * 2
-      end)
-
-      hit = wall or other_killer != nil or head_hit
-
-      if hit do
-        if player.has_shield do
-          acc  # Shield absorbs hit
-        else
-          Map.put(acc, id, other_killer)
-        end
+      if (wall or other_killer) and not p.has_shield do
+        Map.put(acc, id, other_killer)
       else
-        acc
+        if (wall or other_killer) and p.has_shield do
+          acc  # shield consumed below
+        else
+          acc
+        end
       end
     end)
 
     # Consume shields
-    players = Enum.reduce(alive, state.players, fn {id, player}, ps ->
-      {hx, hy} = hd(player.segments)
+    players = Enum.reduce(alive, state.players, fn {id, p}, ps ->
+      {hx, hy} = hd(p.segments)
       wall = hx < 0 or hx > state.width or hy < 0 or hy > state.height
-      other_hit = Enum.any?(alive, fn {oid, op} ->
-        oid != id and (
-          Enum.any?(Enum.drop(op.segments, 3), fn {sx, sy} -> distance(hx, hy, sx, sy) < @seg_radius * 2 end) or
-          distance(hx, hy, elem(hd(op.segments), 0), elem(hd(op.segments), 1)) < @seg_radius * 2
-        )
+      other = Enum.any?(alive, fn {oid, op} ->
+        oid != id and Enum.any?(Enum.drop(op.segments, 3), fn {sx, sy} -> dist(hx, hy, sx, sy) < hit_r end)
       end)
-      if (wall or other_hit) and player.has_shield and not Map.has_key?(deaths, id) do
+      if (wall or other) and p.has_shield and not Map.has_key?(deaths, id) do
         Map.update!(ps, id, &%{&1 | has_shield: false})
       else
         ps
       end
     end)
 
-    # Apply deaths + drop food
-    {players, events, body_food} =
-      Enum.reduce(deaths, {players, state.events, []}, fn {id, killer}, {ps, evts, bf} ->
+    # Deaths: drop body food + credit kills
+    {players, events, food} =
+      Enum.reduce(deaths, {players, state.events, state.food}, fn {id, killer}, {ps, evts, fd} ->
         dead = ps[id]
-        food = dead.segments
-          |> Enum.take_every(3)
-          |> Enum.take(15)
-          |> Enum.map(fn {x, y} ->
-            t = if :rand.uniform() < 0.2, do: :golden, else: :normal
-            {x, y, t}
-          end)
-
+        body_food = dead.segments |> Enum.take_every(3) |> Enum.take(12) |> Enum.map(fn {x, y} ->
+          {x, y, if(:rand.uniform() < 0.2, do: :golden, else: :normal)}
+        end)
         ps = Map.update!(ps, id, &%{&1 | alive: false, total_score: &1.total_score + &1.score})
         ps = if killer && !Map.has_key?(deaths, killer) do
           Map.update!(ps, killer, &%{&1 | kills: &1.kills + 1, score: &1.score + 5})
-        else
-          ps
-        end
-
-        {ps, [{:player_died, id, killer} | evts], bf ++ food}
+        else ps end
+        {ps, [{:player_died, id, killer} | evts], fd ++ body_food}
       end)
 
-    %{state | players: players, events: events, food: state.food ++ body_food}
+    %{state | players: players, events: events, food: food}
   end
 
   defp collect_food(state) do
     alive = Enum.filter(state.players, fn {_, p} -> p.alive end)
-    eat_radius = @seg_radius * 2.5
+    eat_r = @seg_radius * 3
 
-    {players, remaining, events} =
-      Enum.reduce(alive, {state.players, state.food, []}, fn {id, player}, {ps, food, evts} ->
-        {hx, hy} = hd(player.segments)
-        mult = if Map.has_key?(player.effects, :star), do: 3, else: 1
+    {players, food, events} =
+      Enum.reduce(alive, {state.players, state.food, []}, fn {id, p}, {ps, fd, ev} ->
+        {hx, hy} = hd(p.segments)
+        mult = if Map.has_key?(p.effects, :star), do: 3, else: 1
 
-        {eaten, kept} = Enum.split_with(food, fn {fx, fy, _} ->
-          distance(hx, hy, fx, fy) < eat_radius
-        end)
-
+        {eaten, kept} = Enum.split_with(fd, fn {fx, fy, _} -> dist(hx, hy, fx, fy) < eat_r end)
         if eaten == [] do
-          {ps, food, evts}
+          {ps, fd, ev}
         else
-          pts = Enum.reduce(eaten, 0, fn {_, _, t}, acc ->
-            acc + (if t == :golden, do: 5, else: 1) * mult
+          pts = Enum.reduce(eaten, 0, fn {_, _, t}, a -> a + (if t == :golden, do: 5, else: 1) * mult end)
+          grow = min(length(eaten) * 2, 6)
+          ps = Map.update!(ps, id, fn pl ->
+            tail = List.last(pl.segments)
+            %{pl | score: pl.score + pts, food_eaten: pl.food_eaten + length(eaten),
+                   segments: pl.segments ++ List.duplicate(tail, grow)}
           end)
-
-          # Grow: add segments
-          grow = min(length(eaten), 3)
-          updated = Map.update!(ps, id, fn p ->
-            tail = List.last(p.segments)
-            extra = List.duplicate(tail, grow)
-            %{p | score: p.score + pts, segments: p.segments ++ extra}
-          end)
-
-          {updated, kept, [{:food_eaten, id, if(pts > 5, do: :golden, else: :normal)} | evts]}
+          {ps, kept, [{:food_eaten, id, if(pts > 5, do: :golden, else: :normal)} | ev]}
         end
       end)
 
-    %{state | players: players, food: remaining, events: state.events ++ events}
+    %{state | players: players, food: food, events: state.events ++ events}
   end
 
   defp collect_powerups(state) do
     alive = Enum.filter(state.players, fn {_, p} -> p.alive end)
-    pickup_r = @seg_radius * 3
+    r = @seg_radius * 4
 
-    {players, remaining, events} =
-      Enum.reduce(alive, {state.players, state.powerups, []}, fn {id, player}, {ps, pups, evts} ->
-        {hx, hy} = hd(player.segments)
-        case Enum.find_index(pups, fn {px, py, _} -> distance(hx, hy, px, py) < pickup_r end) do
-          nil -> {ps, pups, evts}
+    {players, pups, events} =
+      Enum.reduce(alive, {state.players, state.powerups, []}, fn {id, p}, {ps, pps, ev} ->
+        {hx, hy} = hd(p.segments)
+        case Enum.find_index(pps, fn {px, py, _} -> dist(hx, hy, px, py) < r end) do
+          nil -> {ps, pps, ev}
           idx ->
-            {_, _, type} = Enum.at(pups, idx)
-            {apply_powerup(ps, id, type), List.delete_at(pups, idx), [{:powerup_collected, id, type} | evts]}
+            {_, _, t} = Enum.at(pps, idx)
+            {apply_pup(ps, id, t), List.delete_at(pps, idx), [{:powerup_collected, id, t} | ev]}
         end
       end)
 
-    %{state | players: players, powerups: remaining, events: state.events ++ events}
+    %{state | players: players, powerups: pups, events: state.events ++ events}
   end
 
-  defp apply_powerup(ps, id, :speed), do: Map.update!(ps, id, &%{&1 | effects: Map.put(&1.effects, :speed, 200)})
-  defp apply_powerup(ps, id, :blade), do: Map.update!(ps, id, &%{&1 | effects: Map.put(&1.effects, :blade, 300)})
-  defp apply_powerup(ps, id, :shield), do: Map.update!(ps, id, &%{&1 | has_shield: true})
-  defp apply_powerup(ps, id, :magnet), do: Map.update!(ps, id, &%{&1 | effects: Map.put(&1.effects, :magnet, 250)})
-  defp apply_powerup(ps, id, :star), do: Map.update!(ps, id, &%{&1 | effects: Map.put(&1.effects, :star, 250)})
+  defp apply_pup(ps, id, :blade), do: Map.update!(ps, id, &%{&1 | effects: Map.put(&1.effects, :blade, 300)})
+  defp apply_pup(ps, id, :shield), do: Map.update!(ps, id, &%{&1 | has_shield: true})
+  defp apply_pup(ps, id, :magnet), do: Map.update!(ps, id, &%{&1 | effects: Map.put(&1.effects, :magnet, 250)})
+  defp apply_pup(ps, id, :star), do: Map.update!(ps, id, &%{&1 | effects: Map.put(&1.effects, :star, 250)})
 
   defp apply_magnet(state) do
     magnets = state.players |> Enum.filter(fn {_, p} -> p.alive and Map.has_key?(p.effects, :magnet) end)
-    if magnets == [] do
-      state
-    else
-      food = Enum.map(state.food, fn {fx, fy, type} = f ->
-        nearest = Enum.min_by(magnets, fn {_, p} -> {hx, hy} = hd(p.segments); distance(hx, hy, fx, fy) end)
-        {_, p} = nearest
-        {hx, hy} = hd(p.segments)
-        dist = distance(hx, hy, fx, fy)
-        if dist < 80 and dist > 1 do
-          dx = (hx - fx) / dist * 2.5
-          dy = (hy - fy) / dist * 2.5
-          {fx + dx, fy + dy, type}
-        else
-          f
+    if magnets == [] do state else
+      food = Enum.map(state.food, fn {fx, fy, t} = f ->
+        case Enum.min_by(magnets, fn {_, p} -> {hx, hy} = hd(p.segments); dist(hx, hy, fx, fy) end) do
+          {_, p} ->
+            {hx, hy} = hd(p.segments)
+            d = dist(hx, hy, fx, fy)
+            if d < 100 and d > 1 do
+              {fx + (hx - fx) / d * 3.0, fy + (hy - fy) / d * 3.0, t}
+            else f end
         end
       end)
       %{state | food: food}
@@ -435,92 +395,66 @@ defmodule LurusWww.Games.Snake.Engine do
   end
 
   defp apply_boost_shrink(state) do
-    players = Map.new(state.players, fn {id, p} ->
-      if p.alive and p.boosting and length(p.segments) > 5 and not Map.has_key?(p.effects, :speed) do
-        # Shed tail segments while boosting
-        drop = if rem(state.tick, 3) == 0, do: 1, else: 0
-        if drop > 0 do
+    {players, trail} = Enum.reduce(state.players, {state.players, []}, fn {id, p}, {ps, tr} ->
+      if p.alive and p.boosting and length(p.segments) > 8 and not Map.has_key?(p.effects, :speed) do
+        if rem(state.tick, 2) == 0 do
           tail = List.last(p.segments)
-          {tx, ty} = tail
-          # Drop as food
-          new_food_event = {:boost_trail, id}
-          segs = Enum.drop(p.segments, -drop)
-          {id, %{p | segments: segs}}
+          {Map.update!(ps, id, &%{&1 | segments: Enum.drop(&1.segments, -1)}),
+           [{elem(tail, 0), elem(tail, 1), :normal} | tr]}
         else
-          {id, p}
+          {ps, tr}
         end
       else
-        {id, p}
+        {ps, tr}
       end
     end)
-
-    # Collect boost trail food
-    boost_food = state.players
-      |> Enum.filter(fn {_, p} -> p.alive and p.boosting and length(p.segments) > 5 and not Map.has_key?(p.effects, :speed) end)
-      |> Enum.flat_map(fn {_, p} ->
-        if rem(state.tick, 3) == 0 do
-          tail = List.last(p.segments)
-          {tx, ty} = tail
-          [{tx, ty, :normal}]
-        else
-          []
-        end
-      end)
-
-    %{state | players: players, food: state.food ++ boost_food}
+    %{state | players: players, food: state.food ++ trail}
   end
 
   defp replenish_food(state) do
     needed = @food_count - length(state.food)
-    if needed > 0, do: seed_food(state, needed), else: state
+    if needed > 3, do: seed_food(state, min(needed, 10)), else: state
   end
 
   defp seed_food(state, count) do
-    new_food = for _ <- 1..count do
-      x = :rand.uniform() * state.width
-      y = :rand.uniform() * state.height
-      type = if :rand.uniform() < @golden_chance, do: :golden, else: :normal
-      {x, y, type}
+    new = for _ <- 1..count do
+      {_rand_pos(state.width), _rand_pos(state.height),
+       if(:rand.uniform() < @golden_chance, do: :golden, else: :normal)}
     end
-    %{state | food: state.food ++ new_food}
+    %{state | food: state.food ++ new}
   end
 
+  defp _rand_pos(max), do: 30.0 + :rand.uniform() * (max - 60.0)
+
   defp maybe_spawn_powerup(state) do
-    if :rand.uniform() < @powerup_chance and length(state.powerups) < 5 do
-      x = 50 + :rand.uniform() * (state.width - 100)
-      y = 50 + :rand.uniform() * (state.height - 100)
-      type = Enum.random(@powerup_types)
-      %{state | powerups: [{x, y, type} | state.powerups]}
-    else
-      state
-    end
+    if :rand.uniform() < @powerup_chance and length(state.powerups) < 4 do
+      x = 80 + :rand.uniform() * (state.width - 160)
+      y = 80 + :rand.uniform() * (state.height - 160)
+      %{state | powerups: [{x, y, Enum.random(@powerup_types)} | state.powerups]}
+    else state end
   end
 
   defp update_leaderboard(state) do
     board = state.players
       |> Enum.map(fn {id, p} ->
-        %{id: id, name: p.name, color: p.color,
-          score: p.score, kills: p.kills,
-          total_score: p.total_score + p.score, alive: p.alive,
-          length: length(p.segments)}
+        %{id: id, n: p.name, c: p.color, s: p.score, k: p.kills,
+          ts: p.total_score + p.score, al: p.alive, l: length(p.segments)}
       end)
-      |> Enum.sort_by(&(-&1.total_score))
+      |> Enum.sort_by(&(-&1.ts))
       |> Enum.take(10)
     %{state | leaderboard: board}
   end
 
-  # ── Helpers ─────────────────────────────────────────────
-
-  defp distance(x1, y1, x2, y2) do
+  defp dist(x1, y1, x2, y2) do
     dx = x1 - x2
     dy = y1 - y2
     :math.sqrt(dx * dx + dy * dy)
   end
 
-  defp encode_event({:food_eaten, id, type}), do: ["food_eaten", id, Atom.to_string(type)]
-  defp encode_event({:player_died, id, killer}), do: ["player_died", id, killer]
-  defp encode_event({:player_respawned, id}), do: ["player_respawned", id]
-  defp encode_event({:game_started}), do: ["game_started"]
-  defp encode_event({:powerup_collected, id, type}), do: ["powerup", id, Atom.to_string(type)]
-  defp encode_event({:boost_trail, id}), do: ["boost_trail", id]
+  defp encode_event({:food_eaten, id, type}), do: ["eat", id, if(type == :golden, do: 1, else: 0)]
+  defp encode_event({:player_died, id, killer}), do: ["die", id, killer]
+  defp encode_event({:player_respawned, id}), do: ["spawn", id]
+  defp encode_event({:game_started}), do: ["start"]
+  defp encode_event({:powerup_collected, id, type}), do: ["pup", id, pup_idx(type)]
+  defp encode_event(_), do: nil
 end

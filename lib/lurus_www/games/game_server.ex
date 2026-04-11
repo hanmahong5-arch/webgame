@@ -6,7 +6,7 @@ defmodule LurusWww.Games.GameServer do
   alias LurusWww.Games.Snake.Engine
 
   @tick_interval 50
-  @idle_timeout 300_000
+  @idle_timeout 60_000
 
   # ── Client API ──────────────────────────────────────────
 

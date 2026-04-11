@@ -1,7 +1,7 @@
 defmodule LurusWwwWeb.Live.LobbyLive do
   use LurusWwwWeb, :live_view
 
-  alias LurusWww.Games.{GameSupervisor, GameServer}
+  alias LurusWww.Games.{GameSupervisor, GameServer, AutoRoom}
 
   @impl true
   def mount(_params, _session, socket) do
@@ -22,6 +22,11 @@ defmodule LurusWwwWeb.Live.LobbyLive do
   end
 
   @impl true
+  def handle_event("quick_play", _params, socket) do
+    room_id = AutoRoom.find_or_create()
+    {:noreply, push_navigate(socket, to: ~p"/play/snake/#{room_id}")}
+  end
+
   def handle_event("create_room", _params, socket) do
     room_id = GameSupervisor.generate_room_id()
 
@@ -73,9 +78,12 @@ defmodule LurusWwwWeb.Live.LobbyLive do
 
         <%!-- Actions --%>
         <div class="lobby-actions">
-          <button phx-click="create_room" class="btn-accent btn-accent--lg">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-            Create Arena
+          <button phx-click="quick_play" class="btn-accent btn-accent--lg">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Quick Play
+          </button>
+          <button phx-click="create_room" class="btn-outline-game">
+            Private Room
           </button>
 
           <form phx-submit="join_room" class="join-form">
