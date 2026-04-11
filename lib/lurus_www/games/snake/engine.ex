@@ -97,10 +97,10 @@ defmodule LurusWww.Games.Snake.Engine do
     end
   end
 
-  def set_target(state, id, angle) when is_float(angle) do
+  def set_target(state, id, angle) when is_number(angle) do
     case Map.get(state.players, id) do
       nil -> state
-      p -> %{state | players: Map.put(state.players, id, %{p | target_angle: angle})}
+      p -> %{state | players: Map.put(state.players, id, %{p | target_angle: angle * 1.0})}
     end
   end
   def set_target(state, _, _), do: state
@@ -156,7 +156,7 @@ defmodule LurusWww.Games.Snake.Engine do
       size: [state.width, state.height],
       tick: state.tick,
       status: state.status,
-      events: Enum.map(state.events, &encode_event/1),
+      events: state.events |> Enum.map(&encode_event/1) |> Enum.reject(&is_nil/1),
       leaderboard: Enum.take(state.leaderboard, 8),
       players: Map.new(state.players, fn {id, p} ->
         # Only send every 2nd segment for long snakes (visual LOD)

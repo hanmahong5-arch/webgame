@@ -45,32 +45,27 @@ defmodule LurusWwwWeb.Live.GameLive do
   def handle_event("join", %{"name" => name}, socket) do
     name = String.trim(name)
     name = if name == "", do: "Snake#{:rand.uniform(999)}", else: String.slice(name, 0..15)
+
+    # Use localStorage id if available, otherwise generate
     player_id = socket.assigns.player_id || gen_id()
 
-    case GameServer.join(socket.assigns.room_id, player_id, name) do
-      {:ok, state} ->
+    case do_join(socket.assigns.room_id, player_id, name) do
+      {:ok, room_id, state} ->
+        # If room changed (overflow), resubscribe
+        socket = if room_id != socket.assigns.room_id do
+          Phoenix.PubSub.unsubscribe(LurusWww.PubSub, "game:#{socket.assigns.room_id}")
+          Phoenix.PubSub.subscribe(LurusWww.PubSub, "game:#{room_id}")
+          assign(socket, room_id: room_id)
+        else
+          socket
+        end
+
         {:noreply,
           socket
           |> push_event("joined", %{player_id: player_id})
           |> push_event("save_name", %{name: name})
           |> assign(joined: true, player_id: player_id, player_name: name,
                     game_state: state, my_alive: true)}
-
-      {:error, :room_full} ->
-        new_room = AutoRoom.find_or_create()
-        Phoenix.PubSub.unsubscribe(LurusWww.PubSub, "game:#{socket.assigns.room_id}")
-        Phoenix.PubSub.subscribe(LurusWww.PubSub, "game:#{new_room}")
-        case GameServer.join(new_room, player_id, name) do
-          {:ok, state} ->
-            {:noreply,
-              socket
-              |> push_event("joined", %{player_id: player_id})
-              |> push_event("save_name", %{name: name})
-              |> assign(room_id: new_room, joined: true, player_id: player_id,
-                        player_name: name, game_state: state, my_alive: true)}
-          _ ->
-            {:noreply, put_flash(socket, :error, "Server busy")}
-        end
 
       {:error, reason} ->
         {:noreply, put_flash(socket, :error, "#{reason}")}
@@ -85,14 +80,16 @@ defmodule LurusWwwWeb.Live.GameLive do
   end
 
   def handle_event("steer", %{"angle" => a}, socket) when is_number(a) do
-    if socket.assigns.joined,
-      do: GameServer.set_target(socket.assigns.room_id, socket.assigns.player_id, a / 1)
+    if socket.assigns.joined && socket.assigns.room_id do
+      GameServer.set_target(socket.assigns.room_id, socket.assigns.player_id, a * 1.0)
+    end
     {:noreply, socket}
   end
 
   def handle_event("boost", %{"active" => a}, socket) when is_boolean(a) do
-    if socket.assigns.joined,
-      do: GameServer.set_boost(socket.assigns.room_id, socket.assigns.player_id, a)
+    if socket.assigns.joined && socket.assigns.room_id do
+      GameServer.set_boost(socket.assigns.room_id, socket.assigns.player_id, a)
+    end
     {:noreply, socket}
   end
 
@@ -100,10 +97,14 @@ defmodule LurusWwwWeb.Live.GameLive do
 
   @impl true
   def handle_info({:game_state, state}, socket) do
-    my_alive = case socket.assigns.player_id && Map.get(state.players, socket.assigns.player_id) do
-      %{al: a} -> a
-      %{alive: a} -> a
-      _ -> false
+    my_alive = if pid = socket.assigns.player_id do
+      case Map.get(state.players || %{}, pid) do
+        %{al: a} -> a
+        %{alive: a} -> a
+        _ -> false
+      end
+    else
+      false
     end
 
     {:noreply,
@@ -121,20 +122,22 @@ defmodule LurusWwwWeb.Live.GameLive do
           <canvas id="game-canvas" phx-hook="SnakeCanvas" phx-update="ignore"></canvas>
         </div>
 
+        <%!-- Top HUD --%>
         <div class="game-hud">
           <div class="hud-left">
             <a href="/" class="game-brand">WebGame</a>
           </div>
           <div class="hud-right">
-            <%= if @joined do %>
-              <span class="hud-score">
-                <% me = (@game_state || %{players: %{}}).players[@player_id] %>
-                {(me && (me[:sc] || me[:score])) || 0}
-              </span>
+            <%= if @joined && @game_state do %>
+              <% me = (@game_state.players || %{})[@player_id] %>
+              <%= if me do %>
+                <span class="hud-score">{me[:sc] || me[:score] || 0}</span>
+              <% end %>
             <% end %>
           </div>
         </div>
 
+        <%!-- Scoreboard --%>
         <div class="scoreboard">
           <%= if @game_state do %>
             <%= for {_id, p} <- (@game_state.players || %{}) |> Enum.sort_by(fn {_, p} -> -(p[:sc] || p[:score] || 0) end) |> Enum.take(6) do %>
@@ -147,6 +150,7 @@ defmodule LurusWwwWeb.Live.GameLive do
           <% end %>
         </div>
 
+        <%!-- Join --%>
         <%= if not @joined do %>
           <div class="join-floating">
             <div class="join-panel">
@@ -159,27 +163,30 @@ defmodule LurusWwwWeb.Live.GameLive do
                   id="player-name-input" />
                 <button type="submit" class="btn-play">PLAY</button>
               </form>
-              <p class="join-controls">Mouse = steer &middot; Click = boost &middot; Space = sprint</p>
+              <p class="join-controls">Mouse = steer &middot; Click/Space = boost</p>
             </div>
           </div>
         <% end %>
 
+        <%!-- Death --%>
         <%= if @joined and not @my_alive do %>
           <div class="respawn-overlay" phx-click="respawn">
             <div class="respawn-card">
               <h3 class="respawn-title">Game Over</h3>
-              <% me = (@game_state || %{players: %{}}).players[@player_id] %>
-              <%= if me do %>
-                <div class="death-stats">
-                  <div class="stat-item">
-                    <span class="stat-value">{me[:sc] || me[:score] || 0}</span>
-                    <span class="stat-label">Score</span>
+              <%= if @game_state do %>
+                <% me = (@game_state.players || %{})[@player_id] %>
+                <%= if me do %>
+                  <div class="death-stats">
+                    <div class="stat-item">
+                      <span class="stat-value">{me[:sc] || me[:score] || 0}</span>
+                      <span class="stat-label">Score</span>
+                    </div>
+                    <div class="stat-item">
+                      <span class="stat-value">{me[:k] || me[:kills] || 0}</span>
+                      <span class="stat-label">Kills</span>
+                    </div>
                   </div>
-                  <div class="stat-item">
-                    <span class="stat-value">{me[:k] || me[:kills] || 0}</span>
-                    <span class="stat-label">Kills</span>
-                  </div>
-                </div>
+                <% end %>
               <% end %>
               <button phx-click="respawn" class="btn-play">PLAY AGAIN</button>
               <p class="controls-hint">Click anywhere or press any key</p>
@@ -189,6 +196,21 @@ defmodule LurusWwwWeb.Live.GameLive do
       </div>
     </div>
     """
+  end
+
+  # Join with auto-overflow
+  defp do_join(room_id, player_id, name) do
+    case GameServer.join(room_id, player_id, name) do
+      {:ok, state} ->
+        {:ok, room_id, state}
+      {:error, :room_full} ->
+        new_room = AutoRoom.find_or_create()
+        case GameServer.join(new_room, player_id, name) do
+          {:ok, state} -> {:ok, new_room, state}
+          error -> error
+        end
+      error -> error
+    end
   end
 
   defp gen_id, do: Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
