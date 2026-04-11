@@ -5,7 +5,7 @@ defmodule LurusWww.Games.GameServer do
 
   alias LurusWww.Games.Snake.Engine
 
-  @tick_interval 80
+  @tick_interval 50
   @idle_timeout 300_000
 
   # ── Client API ──────────────────────────────────────────
@@ -21,8 +21,11 @@ defmodule LurusWww.Games.GameServer do
   def leave(room_id, player_id),
     do: safe_cast(room_id, {:leave, player_id})
 
-  def input(room_id, player_id, direction),
-    do: safe_cast(room_id, {:input, player_id, direction})
+  def set_target(room_id, player_id, angle),
+    do: safe_cast(room_id, {:set_target, player_id, angle})
+
+  def set_boost(room_id, player_id, boosting),
+    do: safe_cast(room_id, {:set_boost, player_id, boosting})
 
   def respawn(room_id, player_id),
     do: safe_cast(room_id, {:respawn, player_id})
@@ -130,9 +133,14 @@ defmodule LurusWww.Games.GameServer do
     end
   end
 
-  def handle_cast({:input, player_id, direction}, state) do
-    engine = Engine.set_direction(state.engine, player_id, direction)
+  def handle_cast({:set_target, player_id, angle}, state) do
+    engine = Engine.set_target(state.engine, player_id, angle)
     {:noreply, reset_idle(%{state | engine: engine})}
+  end
+
+  def handle_cast({:set_boost, player_id, boosting}, state) do
+    engine = Engine.set_boost(state.engine, player_id, boosting)
+    {:noreply, %{state | engine: engine}}
   end
 
   def handle_cast({:respawn, player_id}, state) do

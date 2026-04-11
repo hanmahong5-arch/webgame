@@ -1,20 +1,8 @@
 import { GameAudio } from "./game_audio"
 
-const POWERUP_COLORS = {
-  speed: "#00F0FF",
-  blade: "#FF4466",
-  shield: "#00FF87",
-  magnet: "#FFB800",
-  star: "#E6DB74"
-}
-
-const POWERUP_ICONS = {
-  speed: "\u26A1",   // lightning
-  blade: "\u2694",   // swords
-  shield: "\uD83D\uDEE1", // shield
-  magnet: "\uD83E\uDDF2", // magnet
-  star: "\u2B50"     // star
-}
+const PUP_COLORS = { speed: "#00F0FF", blade: "#FF4466", shield: "#00FF87", magnet: "#FFB800", star: "#E6DB74" }
+const PUP_ICONS = { speed: "\u26A1", blade: "\u2694", shield: "\uD83D\uDEE1", magnet: "\uD83E\uDDF2", star: "\u2B50" }
+const SEG_R = 6
 
 const SnakeCanvas = {
   mounted() {
@@ -25,31 +13,63 @@ const SnakeCanvas = {
     this.raf = null
     this.audio = new GameAudio()
     this.particles = []
-    this.shakeAmount = 0
-    this.shakeDecay = 0.92
+    this.cam = { x: 900, y: 600, scale: 1 }
+    this.mouse = { x: 0, y: 0 }
+    this.boosting = false
 
     this._onResize = () => this.resize()
     window.addEventListener("resize", this._onResize)
     this.resize()
 
-    this._onKey = (e) => this.onKey(e)
-    window.addEventListener("keydown", this._onKey)
+    // Mouse steering (desktop)
+    this.canvas.addEventListener("mousemove", (e) => {
+      this.mouse.x = e.clientX
+      this.mouse.y = e.clientY
+      this.sendSteer()
+    })
+    this.canvas.addEventListener("mousedown", () => { this.setBoosting(true) })
+    this.canvas.addEventListener("mouseup", () => { this.setBoosting(false) })
 
-    let tx = 0, ty = 0
+    // Touch steering (mobile)
+    this.canvas.addEventListener("touchmove", (e) => {
+      e.preventDefault()
+      this.mouse.x = e.touches[0].clientX
+      this.mouse.y = e.touches[0].clientY
+      this.sendSteer()
+    }, { passive: false })
     this.canvas.addEventListener("touchstart", (e) => {
-      tx = e.touches[0].clientX; ty = e.touches[0].clientY
-    }, { passive: true })
-    this.canvas.addEventListener("touchend", (e) => {
-      const dx = e.changedTouches[0].clientX - tx
-      const dy = e.changedTouches[0].clientY - ty
-      if (Math.abs(dx) < 30 && Math.abs(dy) < 30) return
+      if (e.touches.length >= 2) this.setBoosting(true)
+      this.mouse.x = e.touches[0].clientX
+      this.mouse.y = e.touches[0].clientY
+      this.sendSteer()
+      // Respawn on touch if dead
       const me = this.state?.players?.[this.playerId]
       if (me && !me.alive) this.pushEvent("respawn", {})
-      if (Math.abs(dx) > Math.abs(dy))
-        this.pushEvent("input", { direction: dx > 0 ? "right" : "left" })
-      else
-        this.pushEvent("input", { direction: dy > 0 ? "down" : "up" })
     }, { passive: true })
+    this.canvas.addEventListener("touchend", (e) => {
+      if (e.touches.length < 2) this.setBoosting(false)
+    }, { passive: true })
+
+    // Click to respawn when dead
+    this.canvas.addEventListener("click", () => {
+      const me = this.state?.players?.[this.playerId]
+      if (me && !me.alive) this.pushEvent("respawn", {})
+    })
+
+    // Keyboard boost (space)
+    this._onKey = (e) => {
+      if (e.code === "Space") {
+        e.preventDefault()
+        this.setBoosting(e.type === "keydown")
+      }
+      // Respawn on any key
+      if (e.type === "keydown") {
+        const me = this.state?.players?.[this.playerId]
+        if (me && !me.alive) this.pushEvent("respawn", {})
+      }
+    }
+    window.addEventListener("keydown", this._onKey)
+    window.addEventListener("keyup", this._onKey)
 
     this.handleEvent("game_state", (s) => this.onState(s))
     this.loop()
@@ -58,6 +78,7 @@ const SnakeCanvas = {
   destroyed() {
     window.removeEventListener("resize", this._onResize)
     window.removeEventListener("keydown", this._onKey)
+    window.removeEventListener("keyup", this._onKey)
     if (this.raf) cancelAnimationFrame(this.raf)
   },
 
@@ -68,18 +89,22 @@ const SnakeCanvas = {
     this.canvas.height = p.clientHeight
   },
 
-  onKey(e) {
-    const map = {
-      ArrowUp: "up", ArrowDown: "down", ArrowLeft: "left", ArrowRight: "right",
-      w: "up", s: "down", a: "left", d: "right",
-      W: "up", S: "down", A: "left", D: "right"
-    }
-    const dir = map[e.key]
-    if (dir) {
-      e.preventDefault()
-      const me = this.state?.players?.[this.playerId]
-      if (me && !me.alive) this.pushEvent("respawn", {})
-      this.pushEvent("input", { direction: dir })
+  sendSteer() {
+    const me = this.state?.players?.[this.playerId]
+    if (!me?.alive || !me.segments?.length) return
+
+    // Convert mouse position to world angle
+    const [hx, hy] = me.segments[0]
+    const screenX = (hx - this.cam.x) * this.cam.scale + this.canvas.width / 2
+    const screenY = (hy - this.cam.y) * this.cam.scale + this.canvas.height / 2
+    const angle = Math.atan2(this.mouse.y - screenY, this.mouse.x - screenX)
+    this.pushEvent("steer", { angle })
+  },
+
+  setBoosting(active) {
+    if (this.boosting !== active) {
+      this.boosting = active
+      this.pushEvent("boost", { active })
     }
   },
 
@@ -88,38 +113,27 @@ const SnakeCanvas = {
     if (state.events) {
       for (const ev of state.events) {
         switch (ev[0]) {
-          case "food_eaten":
-            this.audio.play("eat", ev[2] === "golden")
-            break
+          case "food_eaten": this.audio.play("eat", ev[2] === "golden"); break
           case "player_died": {
             const isSelf = ev[1] === this.playerId
             this.audio.play("die", isSelf)
-            if (isSelf) this.shakeAmount = 12
-            // Spawn death particles
-            const deadP = this.state?.players?.[ev[1]]
-            if (deadP?.segments?.length) {
-              const [dx, dy] = deadP.segments[0]
-              for (let i = 0; i < 20; i++) {
+            const dp = state.players?.[ev[1]]
+            if (dp?.segments?.length) {
+              const [dx, dy] = dp.segments[0]
+              for (let i = 0; i < 25; i++) {
                 this.particles.push({
                   x: dx, y: dy,
-                  vx: (Math.random() - 0.5) * 3,
-                  vy: (Math.random() - 0.5) * 3,
-                  life: 30 + Math.random() * 20,
-                  color: deadP.color,
-                  size: 0.3 + Math.random() * 0.4
+                  vx: (Math.random() - 0.5) * 4,
+                  vy: (Math.random() - 0.5) * 4,
+                  life: 35 + Math.random() * 25,
+                  color: dp.color, size: 3 + Math.random() * 4
                 })
               }
             }
             break
           }
+          case "powerup": this.audio.play("powerup"); break
           case "game_started": this.audio.play("start"); break
-          case "powerup":
-            this.audio.play("powerup")
-            break
-          case "blade_cut":
-            this.audio.play("blade")
-            this.shakeAmount = 6
-            break
         }
       }
     }
@@ -142,52 +156,62 @@ const SnakeCanvas = {
       return
     }
 
-    const [cols, rows] = state.grid
-    const cs = Math.min(
-      Math.floor((canvas.width - 20) / cols),
-      Math.floor((canvas.height - 20) / rows)
-    )
-    let ox = Math.floor((canvas.width - cols * cs) / 2)
-    let oy = Math.floor((canvas.height - rows * cs) / 2)
+    const [W, H] = state.size
+    const me = state.players?.[this.playerId]
 
-    // Screen shake
-    if (this.shakeAmount > 0.5) {
-      ox += (Math.random() - 0.5) * this.shakeAmount
-      oy += (Math.random() - 0.5) * this.shakeAmount
-      this.shakeAmount *= this.shakeDecay
-    } else {
-      this.shakeAmount = 0
+    // Camera follow player
+    if (me?.alive && me.segments?.length) {
+      const [tx, ty] = me.segments[0]
+      this.cam.x += (tx - this.cam.x) * 0.1
+      this.cam.y += (ty - this.cam.y) * 0.1
     }
+
+    const scale = this.cam.scale
+    const cx = canvas.width / 2
+    const cy = canvas.height / 2
+    const camX = this.cam.x
+    const camY = this.cam.y
+
+    const toScreen = (wx, wy) => [(wx - camX) * scale + cx, (wy - camY) * scale + cy]
 
     // Background
     ctx.fillStyle = "#060610"
     ctx.fillRect(0, 0, canvas.width, canvas.height)
-    ctx.fillStyle = "#0A0A18"
-    ctx.fillRect(ox, oy, cols * cs, rows * cs)
 
-    // Grid lines
+    // Grid
     ctx.strokeStyle = "rgba(255,255,255,0.02)"
     ctx.lineWidth = 1
-    for (let x = 0; x <= cols; x++) {
-      ctx.beginPath(); ctx.moveTo(ox + x * cs, oy); ctx.lineTo(ox + x * cs, oy + rows * cs); ctx.stroke()
+    const gs = 40
+    const startX = Math.floor((camX - cx / scale) / gs) * gs
+    const startY = Math.floor((camY - cy / scale) / gs) * gs
+    for (let gx = startX; gx < camX + cx / scale; gx += gs) {
+      const [sx] = toScreen(gx, 0)
+      ctx.beginPath(); ctx.moveTo(sx, 0); ctx.lineTo(sx, canvas.height); ctx.stroke()
     }
-    for (let y = 0; y <= rows; y++) {
-      ctx.beginPath(); ctx.moveTo(ox, oy + y * cs); ctx.lineTo(ox + cols * cs, oy + y * cs); ctx.stroke()
+    for (let gy = startY; gy < camY + cy / scale; gy += gs) {
+      const [, sy] = toScreen(0, gy)
+      ctx.beginPath(); ctx.moveTo(0, sy); ctx.lineTo(canvas.width, sy); ctx.stroke()
     }
-    ctx.strokeStyle = "rgba(0,240,255,0.1)"
-    ctx.lineWidth = 2
-    ctx.strokeRect(ox, oy, cols * cs, rows * cs)
+
+    // World border
+    const [bx0, by0] = toScreen(0, 0)
+    const [bx1, by1] = toScreen(W, H)
+    ctx.strokeStyle = "rgba(255,68,102,0.25)"
+    ctx.lineWidth = 3
+    ctx.strokeRect(bx0, by0, bx1 - bx0, by1 - by0)
 
     // Food
     for (const [fx, fy, type] of state.food) {
-      const cx = ox + fx * cs + cs / 2, cy = oy + fy * cs + cs / 2
-      const r = cs * 0.28
+      const [sx, sy] = toScreen(fx, fy)
+      if (sx < -20 || sx > canvas.width + 20 || sy < -20 || sy > canvas.height + 20) continue
+      const r = (type === "golden" ? 4 : 3) * scale
       const color = type === "golden" ? "#FFB800" : "#FF4466"
       ctx.save()
       ctx.shadowColor = color
-      ctx.shadowBlur = cs * 0.6
+      ctx.shadowBlur = 8
       ctx.fillStyle = color
-      ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.fill()
+      ctx.globalAlpha = 0.8
+      ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.fill()
       ctx.restore()
     }
 
@@ -195,179 +219,186 @@ const SnakeCanvas = {
     if (state.powerups) {
       const t = Date.now() / 1000
       for (const [px, py, type] of state.powerups) {
-        const cx = ox + px * cs + cs / 2, cy = oy + py * cs + cs / 2
-        const color = POWERUP_COLORS[type] || "#fff"
+        const [sx, sy] = toScreen(px, py)
+        if (sx < -30 || sx > canvas.width + 30 || sy < -30 || sy > canvas.height + 30) continue
+        const color = PUP_COLORS[type] || "#fff"
         const pulse = 0.8 + 0.2 * Math.sin(t * 4)
-
         ctx.save()
         ctx.shadowColor = color
-        ctx.shadowBlur = cs * 1.2 * pulse
+        ctx.shadowBlur = 16 * pulse
         ctx.fillStyle = color
-        ctx.globalAlpha = 0.25
-        ctx.beginPath(); ctx.arc(cx, cy, cs * 0.45, 0, Math.PI * 2); ctx.fill()
+        ctx.globalAlpha = 0.3
+        ctx.beginPath(); ctx.arc(sx, sy, 14 * scale, 0, Math.PI * 2); ctx.fill()
         ctx.globalAlpha = 1
-        ctx.fillStyle = color
-        ctx.beginPath(); ctx.arc(cx, cy, cs * 0.3, 0, Math.PI * 2); ctx.fill()
+        ctx.beginPath(); ctx.arc(sx, sy, 8 * scale, 0, Math.PI * 2); ctx.fill()
         ctx.restore()
-
-        // Icon
         ctx.fillStyle = "#000"
-        ctx.font = `${cs * 0.4}px sans-serif`
+        ctx.font = `${12 * scale}px sans-serif`
         ctx.textAlign = "center"
         ctx.textBaseline = "middle"
-        ctx.fillText(POWERUP_ICONS[type] || "?", cx, cy)
+        ctx.fillText(PUP_ICONS[type] || "?", sx, sy)
         ctx.textBaseline = "alphabetic"
       }
     }
 
     // Snakes
     for (const [id, p] of Object.entries(state.players)) {
-      if (p.segments.length === 0) continue
+      if (!p.segments?.length) continue
       const alive = p.alive
       const isMe = id === this.playerId
-      const hasSpeed = p.effects?.includes("speed")
-      const hasBlade = p.effects?.includes("blade")
-      const hasShield = p.has_shield
-      const hasStar = p.effects?.includes("star")
+      const r = SEG_R * scale
 
-      // Body
-      for (let i = p.segments.length - 1; i >= 0; i--) {
-        const [sx, sy] = p.segments[i]
-        const x = ox + sx * cs, y = oy + sy * cs
-        const pad = cs * 0.08
-        const fade = 0.35 + 0.65 * (1 - i / Math.max(p.segments.length, 1))
+      // Draw body as smooth path
+      ctx.globalAlpha = alive ? 0.85 : 0.15
+      ctx.strokeStyle = p.color
+      ctx.lineWidth = r * 2
+      ctx.lineCap = "round"
+      ctx.lineJoin = "round"
+      ctx.beginPath()
+      for (let i = 0; i < p.segments.length; i++) {
+        const [sx, sy] = toScreen(p.segments[i][0], p.segments[i][1])
+        if (i === 0) ctx.moveTo(sx, sy)
+        else ctx.lineTo(sx, sy)
+      }
+      ctx.stroke()
 
-        ctx.globalAlpha = alive ? fade : fade * 0.15
+      // Head glow
+      const [hx, hy] = toScreen(p.segments[0][0], p.segments[0][1])
+      if (alive) {
+        ctx.globalAlpha = 1
+        ctx.save()
+        let glowColor = p.color
+        if (p.effects?.includes("star")) glowColor = "#E6DB74"
+        if (p.effects?.includes("blade")) glowColor = "#FF4466"
+        if (p.boosting) glowColor = "#00F0FF"
+        ctx.shadowColor = glowColor
+        ctx.shadowBlur = isMe ? 18 : 10
         ctx.fillStyle = p.color
+        ctx.beginPath(); ctx.arc(hx, hy, r * 1.3, 0, Math.PI * 2); ctx.fill()
+        ctx.restore()
 
-        const r = cs * 0.18
-        if (ctx.roundRect) {
-          ctx.beginPath()
-          ctx.roundRect(x + pad, y + pad, cs - pad * 2, cs - pad * 2, r)
-          ctx.fill()
-        } else {
-          ctx.fillRect(x + pad, y + pad, cs - pad * 2, cs - pad * 2)
+        // Eyes
+        ctx.fillStyle = "#fff"
+        const ea = p.angle || 0
+        const ed = r * 0.5
+        ctx.beginPath()
+        ctx.arc(hx + Math.cos(ea - 0.4) * ed, hy + Math.sin(ea - 0.4) * ed, r * 0.35, 0, Math.PI * 2)
+        ctx.arc(hx + Math.cos(ea + 0.4) * ed, hy + Math.sin(ea + 0.4) * ed, r * 0.35, 0, Math.PI * 2)
+        ctx.fill()
+        ctx.fillStyle = "#000"
+        ctx.beginPath()
+        ctx.arc(hx + Math.cos(ea - 0.4) * ed * 1.1, hy + Math.sin(ea - 0.4) * ed * 1.1, r * 0.18, 0, Math.PI * 2)
+        ctx.arc(hx + Math.cos(ea + 0.4) * ed * 1.1, hy + Math.sin(ea + 0.4) * ed * 1.1, r * 0.18, 0, Math.PI * 2)
+        ctx.fill()
+
+        // Shield ring
+        if (p.has_shield) {
+          ctx.strokeStyle = "#00FF87"
+          ctx.lineWidth = 2
+          ctx.globalAlpha = 0.5 + 0.3 * Math.sin(Date.now() / 200)
+          ctx.beginPath(); ctx.arc(hx, hy, r * 2.2, 0, Math.PI * 2); ctx.stroke()
         }
       }
 
-      // Head
-      const [hx, hy] = p.segments[0]
-      const headX = ox + hx * cs, headY = oy + hy * cs
-
-      ctx.globalAlpha = alive ? 1 : 0.2
-      if (alive) {
-        ctx.save()
-        let glowColor = p.color
-        if (hasStar) glowColor = "#E6DB74"
-        if (hasBlade) glowColor = "#FF4466"
-        if (hasSpeed) glowColor = "#00F0FF"
-        ctx.shadowColor = glowColor
-        ctx.shadowBlur = cs * (isMe ? 0.9 : 0.5)
-      }
-      ctx.fillStyle = p.color
-      if (ctx.roundRect) {
-        ctx.beginPath()
-        ctx.roundRect(headX + 1, headY + 1, cs - 2, cs - 2, cs * 0.22)
-        ctx.fill()
-      } else {
-        ctx.fillRect(headX + 1, headY + 1, cs - 2, cs - 2)
-      }
-      if (alive) ctx.restore()
-
-      // Shield indicator
-      if (hasShield && alive) {
-        ctx.strokeStyle = "#00FF87"
-        ctx.lineWidth = 2
-        ctx.globalAlpha = 0.6 + 0.3 * Math.sin(Date.now() / 200)
-        ctx.beginPath()
-        ctx.arc(headX + cs / 2, headY + cs / 2, cs * 0.6, 0, Math.PI * 2)
-        ctx.stroke()
-        ctx.globalAlpha = 1
-      }
-
-      // Eyes
-      if (alive) {
-        ctx.fillStyle = "#000"
-        const es = cs * 0.1
-        const d = p.direction
-        let e1x, e1y, e2x, e2y
-        if (d === "right") { e1x = 0.65; e1y = 0.28; e2x = 0.65; e2y = 0.72 }
-        else if (d === "left") { e1x = 0.35; e1y = 0.28; e2x = 0.35; e2y = 0.72 }
-        else if (d === "up") { e1x = 0.28; e1y = 0.35; e2x = 0.72; e2y = 0.35 }
-        else { e1x = 0.28; e1y = 0.65; e2x = 0.72; e2y = 0.65 }
-        ctx.beginPath()
-        ctx.arc(headX + cs * e1x, headY + cs * e1y, es, 0, Math.PI * 2)
-        ctx.fill()
-        ctx.beginPath()
-        ctx.arc(headX + cs * e2x, headY + cs * e2y, es, 0, Math.PI * 2)
-        ctx.fill()
-      }
-
-      // Name + effects
-      ctx.globalAlpha = alive ? 0.85 : 0.2
+      // Name
+      ctx.globalAlpha = alive ? 0.9 : 0.2
       ctx.fillStyle = "#fff"
-      ctx.font = `bold ${Math.max(9, cs * 0.55)}px sans-serif`
+      ctx.font = `bold ${Math.max(10, 11 * scale)}px sans-serif`
       ctx.textAlign = "center"
       let label = p.name
-      if (hasSpeed) label += " \u26A1"
-      if (hasBlade) label += " \u2694"
-      if (hasStar) label += " \u2B50"
-      ctx.fillText(label, headX + cs / 2, headY - cs * 0.25)
+      if (p.boosting && alive) label += " \u{1F4A8}"
+      ctx.fillText(label, hx, hy - r * 2.5)
       ctx.globalAlpha = 1
     }
 
     // Particles
     this.particles = this.particles.filter(p => {
-      p.x += p.vx
-      p.y += p.vy
-      p.vy += 0.03
-      p.life--
+      p.x += p.vx; p.y += p.vy; p.vy += 0.02; p.life--
       if (p.life <= 0) return false
-
-      const px = ox + p.x * cs + cs / 2
-      const py = oy + p.y * cs + cs / 2
-      const alpha = Math.min(1, p.life / 15)
-      ctx.globalAlpha = alpha
+      const [sx, sy] = toScreen(p.x, p.y)
+      ctx.globalAlpha = Math.min(1, p.life / 15)
       ctx.fillStyle = p.color
       ctx.shadowColor = p.color
-      ctx.shadowBlur = cs * 0.4
-      ctx.beginPath()
-      ctx.arc(px, py, cs * p.size, 0, Math.PI * 2)
-      ctx.fill()
+      ctx.shadowBlur = 6
+      ctx.beginPath(); ctx.arc(sx, sy, p.size * scale, 0, Math.PI * 2); ctx.fill()
       ctx.shadowBlur = 0
       ctx.globalAlpha = 1
       return true
     })
 
-    // Leaderboard (top-left, inside grid)
-    if (state.leaderboard && state.leaderboard.length > 0) {
-      const lx = ox + 8, ly = oy + 8
-      ctx.fillStyle = "rgba(6,6,16,0.7)"
-      const lh = Math.min(state.leaderboard.length, 5) * 18 + 24
-      if (ctx.roundRect) {
-        ctx.beginPath(); ctx.roundRect(lx, ly, 140, lh, 6); ctx.fill()
-      } else {
-        ctx.fillRect(lx, ly, 140, lh)
-      }
+    // Minimap
+    this.drawMinimap(ctx, canvas, state, W, H)
 
+    // Leaderboard
+    if (state.leaderboard?.length) {
+      const lx = canvas.width - 160, ly = 10
+      const lh = Math.min(state.leaderboard.length, 5) * 18 + 24
+      ctx.fillStyle = "rgba(6,6,16,0.75)"
+      ctx.beginPath()
+      if (ctx.roundRect) ctx.roundRect(lx, ly, 150, lh, 6)
+      else ctx.rect(lx, ly, 150, lh)
+      ctx.fill()
       ctx.fillStyle = "#55556A"
       ctx.font = "bold 9px sans-serif"
       ctx.textAlign = "left"
       ctx.fillText("LEADERBOARD", lx + 8, ly + 14)
-
-      state.leaderboard.slice(0, 5).forEach((entry, i) => {
+      state.leaderboard.slice(0, 5).forEach((e, i) => {
         const ey = ly + 26 + i * 18
-        ctx.fillStyle = entry.color
+        ctx.fillStyle = e.color
         ctx.fillRect(lx + 8, ey - 4, 4, 4)
-        ctx.fillStyle = entry.id === this.playerId ? "#fff" : "#9090A8"
-        ctx.font = `${entry.id === this.playerId ? "bold " : ""}10px sans-serif`
-        ctx.fillText(entry.name, lx + 18, ey)
+        ctx.fillStyle = e.id === this.playerId ? "#fff" : "#9090A8"
+        ctx.font = `${e.id === this.playerId ? "bold " : ""}10px sans-serif`
+        ctx.fillText(e.name, lx + 18, ey)
         ctx.fillStyle = "#00F0FF"
         ctx.textAlign = "right"
-        ctx.fillText(entry.total_score, lx + 132, ey)
+        ctx.fillText(e.total_score, lx + 142, ey)
         ctx.textAlign = "left"
       })
     }
+
+    // Boost indicator (bottom center)
+    if (me?.alive) {
+      const len = me.segments?.length || 0
+      const barW = 120, barH = 6
+      const bx = (canvas.width - barW) / 2, by = canvas.height - 30
+      ctx.fillStyle = "rgba(6,6,16,0.6)"
+      ctx.fillRect(bx - 2, by - 2, barW + 4, barH + 4)
+      ctx.fillStyle = me.boosting ? "#00F0FF" : "#252535"
+      ctx.fillRect(bx, by, barW * Math.min(1, len / 50), barH)
+      ctx.fillStyle = "#55556A"
+      ctx.font = "9px sans-serif"
+      ctx.textAlign = "center"
+      ctx.fillText(me.boosting ? "BOOST" : `Length: ${len}`, canvas.width / 2, by - 4)
+    }
+  },
+
+  drawMinimap(ctx, canvas, state, W, H) {
+    const mw = 120, mh = 80
+    const mx = 10, my = canvas.height - mh - 10
+    const sx = mw / W, sy = mh / H
+
+    ctx.fillStyle = "rgba(6,6,16,0.75)"
+    ctx.strokeStyle = "rgba(255,255,255,0.1)"
+    ctx.lineWidth = 1
+    ctx.fillRect(mx, my, mw, mh)
+    ctx.strokeRect(mx, my, mw, mh)
+
+    // Players on minimap
+    for (const [id, p] of Object.entries(state.players)) {
+      if (!p.alive || !p.segments?.length) continue
+      const [px, py] = p.segments[0]
+      ctx.fillStyle = p.color
+      const r = id === this.playerId ? 3 : 2
+      ctx.beginPath(); ctx.arc(mx + px * sx, my + py * sy, r, 0, Math.PI * 2); ctx.fill()
+    }
+
+    // Camera viewport on minimap
+    const vx = (this.cam.x - canvas.width / 2) * sx
+    const vy = (this.cam.y - canvas.height / 2) * sy
+    const vw = canvas.width * sx
+    const vh = canvas.height * sy
+    ctx.strokeStyle = "rgba(0,240,255,0.3)"
+    ctx.strokeRect(mx + vx, my + vy, vw, vh)
   }
 }
 
