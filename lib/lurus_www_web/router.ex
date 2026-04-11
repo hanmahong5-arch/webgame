@@ -15,20 +15,21 @@ defmodule LurusWwwWeb.Router do
     plug :accepts, ["json"]
   end
 
-  # Main game — fullscreen, no nav/footer
   scope "/", LurusWwwWeb do
     pipe_through :browser
 
-    live_session :game, layout: {LurusWwwWeb.Layouts, :game} do
-      live "/", Live.GameLive, :index
-      live "/play", Live.GameLive, :index
-      live "/play/snake/:room_id", Live.GameLive, :room
-    end
-
-    live_session :pages do
+    # Homepage = platform landing + embedded game
+    live_session :default do
+      live "/", Live.HomeLive, :index
       live "/create", Live.CreatorLive, :index
       live "/terms", Live.TermsLive, :index
       live "/privacy", Live.PrivacyLive, :index
+    end
+
+    # Fullscreen game (direct link / share)
+    live_session :game, layout: {LurusWwwWeb.Layouts, :game} do
+      live "/play", Live.GameLive, :index
+      live "/play/:room_id", Live.GameLive, :room
     end
   end
 
