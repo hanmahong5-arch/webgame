@@ -60,6 +60,7 @@ const SnakeCanvas = {
     // Server events
     this.handleEvent("joined", ({ player_id }) => {
       this.playerId = player_id
+      console.log("[WG] joined, playerId=", player_id)
     })
     this.handleEvent("save_name", ({ name }) => {
       localStorage.setItem("wg_player_name", name)
@@ -114,7 +115,16 @@ const SnakeCanvas = {
 
   sendSteer() {
     const me = this.getMe()
-    if (!me?.alive || !me.segments.length) return
+    if (!me?.alive || !me.segments.length) {
+      // Debug: why can't we steer?
+      if (!this._dbg) {
+        this._dbg = true
+        const keys = this.state?.players ? Object.keys(this.state.players) : []
+        console.log("[WG] sendSteer BLOCKED: playerId=", this.playerId, "playerKeys=", keys, "me=", me)
+        setTimeout(() => { this._dbg = false }, 2000)
+      }
+      return
+    }
     const [hx, hy] = me.segments[0]
     const sx = (hx - this.cam.x) + this.canvas.width / 2
     const sy = (hy - this.cam.y) + this.canvas.height / 2
