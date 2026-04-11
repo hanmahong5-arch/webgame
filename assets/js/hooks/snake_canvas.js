@@ -57,15 +57,25 @@ const SnakeCanvas = {
     // Identity from localStorage
     this.initIdentity()
 
-    // Server events
+    // Server events — multiple ways to get playerId for resilience
     this.handleEvent("joined", ({ player_id }) => {
       this.playerId = player_id
-      console.log("[WG] joined, playerId=", player_id)
+      console.log("[WG] joined event, pid=", player_id)
     })
     this.handleEvent("save_name", ({ name }) => {
       localStorage.setItem("wg_player_name", name)
     })
-    this.handleEvent("game_state", (s) => this.onState(s))
+    this.handleEvent("game_state", (s) => {
+      // Fallback: if playerId not set yet, try to find ourselves in the state
+      if (!this.playerId && s.players) {
+        const lsId = localStorage.getItem("wg_player_id")
+        if (lsId && s.players[lsId]) {
+          this.playerId = lsId
+          console.log("[WG] found self via localStorage id:", lsId)
+        }
+      }
+      this.onState(s)
+    })
 
     this.loop()
   },
@@ -80,8 +90,13 @@ const SnakeCanvas = {
   initIdentity() {
     let id = localStorage.getItem("wg_player_id")
     if (!id) { id = "p_" + Math.random().toString(36).slice(2, 14); localStorage.setItem("wg_player_id", id) }
+    // Set playerId immediately as baseline (will be overridden by "joined" event if different)
+    this.playerId = id
     const name = localStorage.getItem("wg_player_name") || ""
     this.pushEvent("init_player", { id, name })
+    // Also set hidden form field
+    const pidInput = document.getElementById("join-pid")
+    if (pidInput) pidInput.value = id
     const input = document.getElementById("player-name-input")
     if (input && name) input.value = name
   },

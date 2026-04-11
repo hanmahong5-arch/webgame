@@ -42,12 +42,17 @@ defmodule LurusWwwWeb.Live.GameLive do
     {:noreply, assign(socket, player_id: id, player_name: name)}
   end
 
-  def handle_event("join", %{"name" => name}, socket) do
-    name = String.trim(name)
+  def handle_event("join", params, socket) do
+    name = String.trim(params["name"] || "")
     name = if name == "", do: "Snake#{:rand.uniform(999)}", else: String.slice(name, 0..15)
 
-    # Use localStorage id if available, otherwise generate
-    player_id = socket.assigns.player_id || gen_id()
+    # Priority: assigns (from init_player) > form hidden field > generate new
+    player_id = socket.assigns.player_id ||
+      (params["pid"] |> to_string() |> String.trim() |> case do
+        "" -> nil
+        id -> id
+      end) ||
+      gen_id()
 
     case do_join(socket.assigns.room_id, player_id, name) do
       {:ok, room_id, state} ->
@@ -156,7 +161,8 @@ defmodule LurusWwwWeb.Live.GameLive do
             <div class="join-panel">
               <h1 class="join-brand">WebGame</h1>
               <p class="join-sub">Slither. Eat. Dominate.</p>
-              <form phx-submit="join" class="join-form-inline">
+              <form phx-submit="join" class="join-form-inline" id="join-form">
+                <input type="hidden" name="pid" value={@player_id || ""} id="join-pid" />
                 <input type="text" name="name" value={@player_name || ""}
                   placeholder="Your name" maxlength="16"
                   autocomplete="off" class="name-input-big" autofocus
