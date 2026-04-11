@@ -209,7 +209,7 @@ defmodule LurusWww.Games.Snake.Engine do
     # Progression: faster as you eat more
     progression = min(@max_speed, p.base_speed + div(p.food_eaten, 10) * @speed_per_10_food)
     base = if Map.has_key?(p.effects, :speed), do: @max_speed, else: progression
-    if p.boosting and length(p.segments) > 5, do: base * @boost_multiplier, else: base
+    if p.boosting && length(p.segments) > 5, do: base * @boost_multiplier, else: base
   end
 
   defp tick_effects(state) do
@@ -226,7 +226,7 @@ defmodule LurusWww.Games.Snake.Engine do
 
   defp steer_and_move(state) do
     players = Map.new(state.players, fn {id, p} ->
-      if p.alive and p.segments != [] do
+      if p.alive && p.segments != [] do
         angle = steer(p.angle, p.target_angle, @turn_rate)
         speed = current_speed(p)
         {hx, hy} = hd(p.segments)
@@ -279,7 +279,7 @@ defmodule LurusWww.Games.Snake.Engine do
 
     deaths = Enum.reduce(alive, %{}, fn {id, p}, acc ->
       {hx, hy} = hd(p.segments)
-      wall = hx < 0 or hx > state.width or hy < 0 or hy > state.height
+      wall = hx < 0 || hx > state.width || hy < 0 || hy > state.height
 
       other_killer = Enum.find_value(alive, fn {oid, op} ->
         if oid != id do
@@ -288,25 +288,23 @@ defmodule LurusWww.Games.Snake.Engine do
         end
       end)
 
-      if (wall or other_killer) and not p.has_shield do
-        Map.put(acc, id, other_killer)
-      else
-        if (wall or other_killer) and p.has_shield do
-          acc  # shield consumed below
-        else
-          acc
-        end
+      hit = wall || other_killer != nil
+
+      cond do
+        hit && !p.has_shield -> Map.put(acc, id, other_killer)
+        hit && p.has_shield -> acc  # shield consumed below
+        true -> acc
       end
     end)
 
     # Consume shields
     players = Enum.reduce(alive, state.players, fn {id, p}, ps ->
       {hx, hy} = hd(p.segments)
-      wall = hx < 0 or hx > state.width or hy < 0 or hy > state.height
+      wall = hx < 0 || hx > state.width || hy < 0 || hy > state.height
       other = Enum.any?(alive, fn {oid, op} ->
-        oid != id and Enum.any?(Enum.drop(op.segments, 3), fn {sx, sy} -> dist(hx, hy, sx, sy) < hit_r end)
+        oid != id && Enum.any?(Enum.drop(op.segments, 3), fn {sx, sy} -> dist(hx, hy, sx, sy) < hit_r end)
       end)
-      if (wall or other) and p.has_shield and not Map.has_key?(deaths, id) do
+      if (wall || other) && p.has_shield && !Map.has_key?(deaths, id) do
         Map.update!(ps, id, &%{&1 | has_shield: false})
       else
         ps
@@ -381,14 +379,14 @@ defmodule LurusWww.Games.Snake.Engine do
   defp apply_pup(ps, id, :star), do: Map.update!(ps, id, &%{&1 | effects: Map.put(&1.effects, :star, 250)})
 
   defp apply_magnet(state) do
-    magnets = state.players |> Enum.filter(fn {_, p} -> p.alive and Map.has_key?(p.effects, :magnet) end)
+    magnets = state.players |> Enum.filter(fn {_, p} -> p.alive && Map.has_key?(p.effects, :magnet) end)
     if magnets == [] do state else
       food = Enum.map(state.food, fn {fx, fy, t} = f ->
         case Enum.min_by(magnets, fn {_, p} -> {hx, hy} = hd(p.segments); dist(hx, hy, fx, fy) end) do
           {_, p} ->
             {hx, hy} = hd(p.segments)
             d = dist(hx, hy, fx, fy)
-            if d < 100 and d > 1 do
+            if d < 100 && d > 1 do
               {fx + (hx - fx) / d * 3.0, fy + (hy - fy) / d * 3.0, t}
             else f end
         end
@@ -399,7 +397,7 @@ defmodule LurusWww.Games.Snake.Engine do
 
   defp apply_boost_shrink(state) do
     {players, trail} = Enum.reduce(state.players, {state.players, []}, fn {id, p}, {ps, tr} ->
-      if p.alive and p.boosting and length(p.segments) > 8 and not Map.has_key?(p.effects, :speed) do
+      if p.alive && p.boosting && length(p.segments) > 8 && !Map.has_key?(p.effects, :speed) do
         if rem(state.tick, 2) == 0 do
           tail = List.last(p.segments)
           {Map.update!(ps, id, &%{&1 | segments: Enum.drop(&1.segments, -1)}),
@@ -439,7 +437,7 @@ defmodule LurusWww.Games.Snake.Engine do
   defp _rand_pos(max), do: 30.0 + :rand.uniform() * (max - 60.0)
 
   defp maybe_spawn_powerup(state) do
-    if :rand.uniform() < @powerup_chance and length(state.powerups) < 4 do
+    if :rand.uniform() < @powerup_chance && length(state.powerups) < 4 do
       x = 80 + :rand.uniform() * (state.width - 160)
       y = 80 + :rand.uniform() * (state.height - 160)
       %{state | powerups: [{x, y, Enum.random(@powerup_types)} | state.powerups]}
