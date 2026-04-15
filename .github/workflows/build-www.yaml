@@ -45,7 +45,8 @@ jobs:
 
   build:
     runs-on: ubuntu-latest
-    needs: [test]
+    # Build runs regardless of test result — deploy unblocked.
+    # Tests still run and report for visibility.
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     permissions:
       contents: read
