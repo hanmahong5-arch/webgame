@@ -55,7 +55,7 @@ defmodule LurusWwwWeb.Live.GameLive do
       gen_id()
 
     case do_join(socket.assigns.room_id, player_id, name) do
-      {:ok, room_id, state} ->
+      {:ok, room_id, final_pid, state} ->
         # If room changed (overflow), resubscribe
         socket = if room_id != socket.assigns.room_id do
           Phoenix.PubSub.unsubscribe(LurusWww.PubSub, "game:#{socket.assigns.room_id}")
@@ -67,9 +67,9 @@ defmodule LurusWwwWeb.Live.GameLive do
 
         {:noreply,
           socket
-          |> push_event("joined", %{player_id: player_id})
+          |> push_event("joined", %{player_id: final_pid})
           |> push_event("save_name", %{name: name})
-          |> assign(joined: true, player_id: player_id, player_name: name,
+          |> assign(joined: true, player_id: final_pid, player_name: name,
                     game_state: state, my_alive: true)}
 
       {:error, reason} ->
@@ -211,17 +211,27 @@ defmodule LurusWwwWeb.Live.GameLive do
     """
   end
 
-  # Join with auto-overflow
-  defp do_join(room_id, player_id, name) do
+  # Join with auto-overflow + duplicate-id recovery
+  defp do_join(room_id, player_id, name, retry \\ 0) do
     case GameServer.join(room_id, player_id, name) do
       {:ok, state} ->
-        {:ok, room_id, state}
+        {:ok, room_id, player_id, state}
+
       {:error, :room_full} ->
         new_room = AutoRoom.find_or_create()
         case GameServer.join(new_room, player_id, name) do
-          {:ok, state} -> {:ok, new_room, state}
+          {:ok, state} -> {:ok, new_room, player_id, state}
+          {:error, :already_joined} when retry < 2 ->
+            # Same id in new room somehow; generate fresh id
+            do_join(new_room, gen_id(), name, retry + 1)
           error -> error
         end
+
+      {:error, :already_joined} when retry < 2 ->
+        # Multi-tab on same browser: localStorage id collision
+        # Generate fresh id and retry
+        do_join(room_id, gen_id(), name, retry + 1)
+
       error -> error
     end
   end

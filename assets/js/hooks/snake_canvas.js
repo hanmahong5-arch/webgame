@@ -1,8 +1,15 @@
 import { GameAudio } from "./game_audio"
 
-const PUP_COLORS = { blade: "#FF4466", shield: "#00FF87", magnet: "#FFB800", star: "#E6DB74" }
-const PUP_ICONS = { blade: "\u2694", shield: "\uD83D\uDEE1", magnet: "\uD83E\uDDF2", star: "\u2B50" }
-const PUP_NAMES = ["blade", "shield", "magnet", "star"]
+const PUP_COLORS = {
+  blade: "#FF4466", shield: "#00FF87", magnet: "#FFB800", star: "#E6DB74",
+  ghost: "#B08EFF", mega: "#FF6BCC", freeze: "#66D9EF", slowmo: "#8AB8E6"
+}
+const PUP_ICONS = {
+  blade: "\u2694", shield: "\uD83D\uDEE1", magnet: "\uD83E\uDDF2", star: "\u2B50",
+  ghost: "\uD83D\uDC7B", mega: "\uD83D\uDCA5", freeze: "\u2744", slowmo: "\u23F3"
+}
+const PUP_NAMES = ["blade", "shield", "magnet", "star", "ghost", "mega", "freeze", "slowmo"]
+const TIER_RING = { 1: "#9090A8", 2: "#4A9EFF", 3: "#FFB800" }
 const SEG_R = 6
 
 const SnakeCanvas = {
@@ -96,14 +103,37 @@ const SnakeCanvas = {
   resize() {
     const p = this.el.parentElement
     if (!p) return
-    this.canvas.width = p.clientWidth
-    this.canvas.height = p.clientHeight
+    const dpr = window.devicePixelRatio || 1
+    this.canvas.width = p.clientWidth * dpr
+    this.canvas.height = p.clientHeight * dpr
+    this.canvas.style.width = p.clientWidth + "px"
+    this.canvas.style.height = p.clientHeight + "px"
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
+    this.dpr = dpr
+    // Pre-render glow sprites
+    this._buildGlowCache()
+  },
+
+  _buildGlowCache() {
+    this._glowCache = {}
+    const colors = { food: "#FF4466", golden: "#FFB800", head: "#00F0FF" }
+    for (const [k, c] of Object.entries(colors)) {
+      const size = k === "head" ? 32 : 16
+      const cv = document.createElement("canvas")
+      cv.width = size * 2; cv.height = size * 2
+      const g = cv.getContext("2d")
+      const r = size * 0.6
+      g.shadowColor = c; g.shadowBlur = size * 0.8
+      g.fillStyle = c; g.beginPath(); g.arc(size, size, r, 0, Math.PI * 2); g.fill()
+      this._glowCache[k] = cv
+    }
   },
 
   tryRespawn() {
-    if (!this.playerId || !this.state) return
+    if (!this.playerId) return
+    // Send if me is dead OR me is missing entirely (cleaned up server-side)
     const me = this.getMe()
-    if (me && !me.alive) this.pushEvent("respawn", {})
+    if (!me || !me.alive) this.pushEvent("respawn", {})
   },
 
   getMe() {
@@ -124,8 +154,11 @@ const SnakeCanvas = {
     const me = this.getMe()
     if (!me?.alive || !me.segments.length) return
     const [hx, hy] = me.segments[0]
-    const sx = (hx - this.cam.x) + this.canvas.width / 2
-    const sy = (hy - this.cam.y) + this.canvas.height / 2
+    // Use CSS pixels for mouse math (canvas is scaled by DPR)
+    const cw = this.canvas.width / (this.dpr || 1)
+    const ch = this.canvas.height / (this.dpr || 1)
+    const sx = (hx - this.cam.x) + cw / 2
+    const sy = (hy - this.cam.y) + ch / 2
     const angle = Math.atan2(this.mouse.y - sy, this.mouse.x - sx)
     this.pushEvent("steer", { angle })
   },
@@ -155,6 +188,9 @@ const SnakeCanvas = {
         }
         case "pup": this.audio.play("powerup"); break
         case "start": this.audio.play("start"); break
+        case "lv":
+          if (ev[1] === this.playerId) this.audio.play("powerup")
+          break
       }
     }
   },
@@ -163,129 +199,205 @@ const SnakeCanvas = {
 
   draw() {
     const { ctx, canvas, state } = this
+    // Use CSS pixel dimensions for layout math
+    const dpr = this.dpr || 1
+    const W_CSS = canvas.width / dpr, H_CSS = canvas.height / dpr
+
     if (!state || !state.size) {
-      ctx.fillStyle = "#060610"; ctx.fillRect(0, 0, canvas.width, canvas.height)
+      ctx.fillStyle = "#060610"; ctx.fillRect(0, 0, W_CSS, H_CSS)
       ctx.fillStyle = "#55556A"; ctx.font = "16px sans-serif"; ctx.textAlign = "center"
-      ctx.fillText("Connecting...", canvas.width / 2, canvas.height / 2)
+      ctx.fillText("Connecting...", W_CSS / 2, H_CSS / 2)
       return
     }
 
     const [W, H] = state.size
     const me = this.getMe()
 
-    // Camera
+    // Camera lerp
     if (me?.alive && me.segments.length) {
       const [tx, ty] = me.segments[0]
       this.cam.x += (tx - this.cam.x) * 0.12
       this.cam.y += (ty - this.cam.y) * 0.12
     }
 
-    const cx = canvas.width / 2, cy = canvas.height / 2
-    const toS = (wx, wy) => [wx - this.cam.x + cx, wy - this.cam.y + cy]
+    const cx = W_CSS / 2, cy = H_CSS / 2
+    const camX = this.cam.x, camY = this.cam.y
+    // Inline transform (avoid array allocation per call)
+    const toSx = (wx) => wx - camX + cx
+    const toSy = (wy) => wy - camY + cy
 
     // BG
-    ctx.fillStyle = "#060610"; ctx.fillRect(0, 0, canvas.width, canvas.height)
+    ctx.fillStyle = "#060610"; ctx.fillRect(0, 0, W_CSS, H_CSS)
 
-    // Grid
+    // Grid — ONE batched path
     ctx.strokeStyle = "rgba(255,255,255,0.02)"; ctx.lineWidth = 1
+    ctx.beginPath()
     const gs = 40
-    const sx = Math.floor((this.cam.x - cx) / gs) * gs
-    const sy = Math.floor((this.cam.y - cy) / gs) * gs
-    for (let gx = sx; gx < this.cam.x + cx; gx += gs) {
-      const [x] = toS(gx, 0); ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke()
+    const gsx = Math.floor((camX - cx) / gs) * gs
+    const gsy = Math.floor((camY - cy) / gs) * gs
+    for (let gx = gsx; gx < camX + cx; gx += gs) {
+      const x = toSx(gx); ctx.moveTo(x, 0); ctx.lineTo(x, H_CSS)
     }
-    for (let gy = sy; gy < this.cam.y + cy; gy += gs) {
-      const [, y] = toS(0, gy); ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke()
+    for (let gy = gsy; gy < camY + cy; gy += gs) {
+      const y = toSy(gy); ctx.moveTo(0, y); ctx.lineTo(W_CSS, y)
     }
+    ctx.stroke()
 
     // Border
-    const [bx0, by0] = toS(0, 0), [bx1, by1] = toS(W, H)
+    const bx0 = toSx(0), by0 = toSy(0), bx1 = toSx(W), by1 = toSy(H)
     ctx.strokeStyle = "rgba(255,68,102,0.2)"; ctx.lineWidth = 2
     ctx.strokeRect(bx0, by0, bx1 - bx0, by1 - by0)
 
-    // Food
+    // Food — batch by color, NO shadowBlur (use pre-rendered glow sprite)
+    const foodGlow = this._glowCache?.food
+    const goldenGlow = this._glowCache?.golden
+    ctx.globalAlpha = 0.8
     for (const f of state.food) {
-      const [fx, fy, t] = f
-      const [fsx, fsy] = toS(fx, fy)
-      if (fsx < -10 || fsx > canvas.width + 10 || fsy < -10 || fsy > canvas.height + 10) continue
-      const golden = t === 1 || t === "golden"
-      const color = golden ? "#FFB800" : "#FF4466"
-      ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = 6
-      ctx.fillStyle = color; ctx.globalAlpha = 0.75
-      ctx.beginPath(); ctx.arc(fsx, fsy, golden ? 4 : 3, 0, Math.PI * 2); ctx.fill()
-      ctx.restore()
+      const fsx = toSx(f[0]), fsy = toSy(f[1])
+      if (fsx < -10 || fsx > W_CSS + 10 || fsy < -10 || fsy > H_CSS + 10) continue
+      const golden = f[2] === 1 || f[2] === "golden"
+      const sprite = golden ? goldenGlow : foodGlow
+      if (sprite) {
+        ctx.drawImage(sprite, fsx - 8, fsy - 8, 16, 16)
+      } else {
+        ctx.fillStyle = golden ? "#FFB800" : "#FF4466"
+        ctx.beginPath(); ctx.arc(fsx, fsy, golden ? 4 : 3, 0, Math.PI * 2); ctx.fill()
+      }
     }
+    ctx.globalAlpha = 1
 
-    // Powerups
+    // Powerups — tier-based ring, no shadowBlur
     const pups = state.pups || state.powerups || []
     const t = Date.now() / 1000
-    for (const [px, py, ti] of pups) {
-      const [psx, psy] = toS(px, py)
-      if (psx < -20 || psx > canvas.width + 20 || psy < -20 || psy > canvas.height + 20) continue
+    for (const pup of pups) {
+      const px = pup[0], py = pup[1], ti = pup[2], tier = pup[3] || 1
+      const psx = toSx(px), psy = toSy(py)
+      if (psx < -20 || psx > W_CSS + 20 || psy < -20 || psy > H_CSS + 20) continue
       const type = typeof ti === "number" ? PUP_NAMES[ti] : ti
       const color = PUP_COLORS[type] || "#fff"
-      ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = 14 * (0.8 + 0.2 * Math.sin(t * 4))
-      ctx.fillStyle = color; ctx.globalAlpha = 0.3
-      ctx.beginPath(); ctx.arc(psx, psy, 12, 0, Math.PI * 2); ctx.fill()
-      ctx.globalAlpha = 1; ctx.beginPath(); ctx.arc(psx, psy, 7, 0, Math.PI * 2); ctx.fill()
-      ctx.restore()
-      ctx.fillStyle = "#000"; ctx.font = "10px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"
+      const ringColor = TIER_RING[tier] || "#9090A8"
+      const pulse = 0.7 + 0.3 * Math.sin(t * 4 + tier)
+      // Glow
+      ctx.globalAlpha = 0.2 * pulse; ctx.fillStyle = color
+      ctx.beginPath(); ctx.arc(psx, psy, 16 + tier * 2, 0, Math.PI * 2); ctx.fill()
+      // Tier ring
+      ctx.globalAlpha = 0.8
+      ctx.strokeStyle = ringColor
+      ctx.lineWidth = 2
+      ctx.beginPath(); ctx.arc(psx, psy, 11, 0, Math.PI * 2); ctx.stroke()
+      // Core
+      ctx.globalAlpha = 0.9; ctx.fillStyle = color
+      ctx.beginPath(); ctx.arc(psx, psy, 8, 0, Math.PI * 2); ctx.fill()
+      ctx.globalAlpha = 1
+      // Icon
+      ctx.fillStyle = "#000"; ctx.font = "11px sans-serif"; ctx.textAlign = "center"; ctx.textBaseline = "middle"
       ctx.fillText(PUP_ICONS[type] || "?", psx, psy); ctx.textBaseline = "alphabetic"
     }
 
     // Snakes
-    for (const [id, p] of Object.entries(state.players)) {
+    for (const id in state.players) {
+      const p = state.players[id]
       const segs = p.s || p.segments; if (!segs?.length) continue
       const alive = p.al !== undefined ? p.al : p.alive
       const color = p.c || p.color
       const name = p.n || p.name
       const angle = p.a !== undefined ? p.a : 0
       const boosting = p.b || p.boosting
-      const hasShield = p.sh || p.has_shield
-      const effects = p.ef || p.effects || []
+      const shieldStacks = p.sh !== undefined ? p.sh : (p.has_shield ? 1 : 0)
+      // effects: array of strings OR array of [type, tier, ttl]
+      const rawEff = p.ef || p.effects || []
+      const effects = rawEff.map(e => Array.isArray(e) ? e[0] : e)
+      const level = p.lv || 1
+      const invincible = !!p.inv
+      const justLeveled = !!p.ul
+      const combo = p.cmb || 0
       const isMe = id === this.playerId
-      const r = SEG_R
+      // Body thickness scales with level (slight)
+      const r = SEG_R + Math.min(level - 1, 20) * 0.15
+
+      // Invincibility: blink
+      const invisAlpha = invincible ? (0.35 + 0.35 * Math.abs(Math.sin(t * 8))) : 1
+      // Just leveled up: white flash for 1 second
+      const levelFlash = justLeveled ? Math.max(0, 1 - (state.tick % 20) / 20) : 0
 
       // Body
-      ctx.globalAlpha = alive ? 0.85 : 0.12
-      ctx.strokeStyle = color; ctx.lineWidth = r * 2; ctx.lineCap = "round"; ctx.lineJoin = "round"
+      ctx.globalAlpha = alive ? (0.85 * invisAlpha) : 0.12
+      ctx.strokeStyle = levelFlash > 0.3 ? "#FFFFFF" : color
+      ctx.lineWidth = r * 2
+      ctx.lineCap = "round"; ctx.lineJoin = "round"
       ctx.beginPath()
       for (let i = 0; i < segs.length; i++) {
-        const [sx2, sy2] = toS(segs[i][0], segs[i][1])
+        const sx2 = toSx(segs[i][0]), sy2 = toSy(segs[i][1])
         if (i === 0) ctx.moveTo(sx2, sy2); else ctx.lineTo(sx2, sy2)
       }
       ctx.stroke()
 
+      // Ghost effect: semi-transparent
+      if (effects.includes("ghost") && alive) {
+        ctx.globalAlpha = 0.4
+      }
+
       // Head
-      const [hsx, hsy] = toS(segs[0][0], segs[0][1])
+      const hsx = toSx(segs[0][0]), hsy = toSy(segs[0][1])
       if (alive) {
-        ctx.globalAlpha = 1; ctx.save()
+        ctx.globalAlpha = invisAlpha
+        // Mega: larger head
+        const headR = effects.includes("mega") ? r * 2.2 : r * 1.3
         let gc = color
         if (effects.includes("star")) gc = "#E6DB74"
-        if (effects.includes("blade")) gc = "#FF4466"
-        if (boosting) gc = "#00F0FF"
-        ctx.shadowColor = gc; ctx.shadowBlur = isMe ? 16 : 8
-        ctx.fillStyle = color; ctx.beginPath(); ctx.arc(hsx, hsy, r * 1.3, 0, Math.PI * 2); ctx.fill()
-        ctx.restore()
+        else if (effects.includes("blade")) gc = "#FF4466"
+        else if (effects.includes("freeze") || effects.includes("slowmo_target")) gc = "#66D9EF"
+        else if (boosting) gc = "#00F0FF"
+        // Only use shadowBlur on own head (expensive)
+        if (isMe) { ctx.save(); ctx.shadowColor = gc; ctx.shadowBlur = 14 }
+        ctx.fillStyle = color
+        ctx.beginPath(); ctx.arc(hsx, hsy, headR, 0, Math.PI * 2); ctx.fill()
+        if (isMe) ctx.restore()
+
         // Eyes
-        ctx.fillStyle = "#fff"; const ed = r * 0.5
+        ctx.fillStyle = "#fff"; const ed = headR * 0.4
         ctx.beginPath()
-        ctx.arc(hsx + Math.cos(angle - 0.4) * ed, hsy + Math.sin(angle - 0.4) * ed, r * 0.35, 0, Math.PI * 2)
-        ctx.arc(hsx + Math.cos(angle + 0.4) * ed, hsy + Math.sin(angle + 0.4) * ed, r * 0.35, 0, Math.PI * 2)
+        ctx.arc(hsx + Math.cos(angle - 0.4) * ed, hsy + Math.sin(angle - 0.4) * ed, headR * 0.28, 0, Math.PI * 2)
+        ctx.arc(hsx + Math.cos(angle + 0.4) * ed, hsy + Math.sin(angle + 0.4) * ed, headR * 0.28, 0, Math.PI * 2)
         ctx.fill()
         ctx.fillStyle = "#000"; ctx.beginPath()
-        ctx.arc(hsx + Math.cos(angle - 0.4) * ed * 1.1, hsy + Math.sin(angle - 0.4) * ed * 1.1, r * 0.18, 0, Math.PI * 2)
-        ctx.arc(hsx + Math.cos(angle + 0.4) * ed * 1.1, hsy + Math.sin(angle + 0.4) * ed * 1.1, r * 0.18, 0, Math.PI * 2)
+        ctx.arc(hsx + Math.cos(angle - 0.4) * ed * 1.15, hsy + Math.sin(angle - 0.4) * ed * 1.15, headR * 0.14, 0, Math.PI * 2)
+        ctx.arc(hsx + Math.cos(angle + 0.4) * ed * 1.15, hsy + Math.sin(angle + 0.4) * ed * 1.15, headR * 0.14, 0, Math.PI * 2)
         ctx.fill()
-        if (hasShield) {
-          ctx.strokeStyle = "#00FF87"; ctx.lineWidth = 2
-          ctx.globalAlpha = 0.5 + 0.3 * Math.sin(t * 5)
-          ctx.beginPath(); ctx.arc(hsx, hsy, r * 2, 0, Math.PI * 2); ctx.stroke()
+
+        // Shield rings (one per stack)
+        if (shieldStacks > 0) {
+          ctx.strokeStyle = "#00FF87"
+          ctx.lineWidth = 2
+          for (let s = 0; s < shieldStacks; s++) {
+            ctx.globalAlpha = 0.4 + 0.3 * Math.sin(t * 5 + s)
+            ctx.beginPath()
+            ctx.arc(hsx, hsy, headR * (1.5 + s * 0.35), 0, Math.PI * 2)
+            ctx.stroke()
+          }
         }
+        // Invincibility halo (respawn safety)
+        if (invincible) {
+          ctx.strokeStyle = "#FFFFFF"; ctx.lineWidth = 2
+          ctx.globalAlpha = 0.3 + 0.3 * Math.abs(Math.sin(t * 10))
+          ctx.beginPath(); ctx.arc(hsx, hsy, headR * 2, 0, Math.PI * 2); ctx.stroke()
+        }
+        ctx.globalAlpha = 1
       }
-      ctx.globalAlpha = alive ? 0.85 : 0.15
-      ctx.fillStyle = "#fff"; ctx.font = `bold ${Math.max(9, 10)}px sans-serif`; ctx.textAlign = "center"
-      ctx.fillText(name + (boosting && alive ? " \u{1F4A8}" : ""), hsx, hsy - r * 2.5)
+
+      // Name + Lv + status icons
+      ctx.globalAlpha = alive ? 0.9 : 0.18
+      ctx.fillStyle = "#fff"; ctx.font = `bold 11px sans-serif`; ctx.textAlign = "center"
+      let label = `Lv${level} ${name}`
+      if (boosting && alive) label += " \u{1F4A8}"
+      ctx.fillText(label, hsx, hsy - r * 2.5)
+
+      // Combo indicator above head (own player only, if comboing)
+      if (isMe && combo >= 3 && alive) {
+        ctx.fillStyle = "#FFB800"
+        ctx.font = "bold 13px sans-serif"
+        ctx.fillText(`x${combo} COMBO!`, hsx, hsy - r * 4)
+      }
       ctx.globalAlpha = 1
     }
 
@@ -293,51 +405,60 @@ const SnakeCanvas = {
     this.particles = this.particles.filter(p => {
       p.x += p.vx; p.y += p.vy; p.vy += 0.02; p.life--
       if (p.life <= 0) return false
-      const [psx, psy] = toS(p.x, p.y)
+      const psx = toSx(p.x), psy = toSy(p.y)
       ctx.globalAlpha = Math.min(1, p.life / 12); ctx.fillStyle = p.color
       ctx.beginPath(); ctx.arc(psx, psy, p.size, 0, Math.PI * 2); ctx.fill()
       ctx.globalAlpha = 1; return true
     })
 
     // Minimap
-    const mw = 100, mh = 70, mx = 8, my = canvas.height - mh - 8
+    const mw = 100, mh = 70, mx = 8, my = H_CSS - mh - 8
     ctx.fillStyle = "rgba(6,6,16,0.7)"; ctx.fillRect(mx, my, mw, mh)
     ctx.strokeStyle = "rgba(255,255,255,0.08)"; ctx.lineWidth = 1; ctx.strokeRect(mx, my, mw, mh)
-    for (const [id, p] of Object.entries(state.players)) {
-      const pSegs = p.s || p.segments; if (!(p.al ?? p.alive) || !pSegs?.length) continue
+    for (const id in state.players) {
+      const p = state.players[id]
+      const pSegs = p.s || p.segments
+      const pAlive = p.al !== undefined ? p.al : p.alive
+      if (!pAlive || !pSegs?.length) continue
       ctx.fillStyle = p.c || p.color
-      ctx.beginPath(); ctx.arc(mx + pSegs[0][0] / W * mw, my + pSegs[0][1] / H * mh, id === this.playerId ? 3 : 2, 0, Math.PI * 2); ctx.fill()
+      ctx.beginPath()
+      ctx.arc(mx + pSegs[0][0] / W * mw, my + pSegs[0][1] / H * mh, id === this.playerId ? 3 : 2, 0, Math.PI * 2)
+      ctx.fill()
     }
     ctx.strokeStyle = "rgba(0,240,255,0.2)"
-    ctx.strokeRect(mx + (this.cam.x - cx) / W * mw, my + (this.cam.y - cy) / H * mh, canvas.width / W * mw, canvas.height / H * mh)
+    ctx.strokeRect(mx + (camX - cx) / W * mw, my + (camY - cy) / H * mh, W_CSS / W * mw, H_CSS / H * mh)
 
-    // Leaderboard
+    // Leaderboard with level
     if (state.leaderboard?.length) {
-      const lx = canvas.width - 150, ly = 8
-      const lh = Math.min(state.leaderboard.length, 5) * 17 + 22
-      ctx.fillStyle = "rgba(6,6,16,0.7)"; ctx.fillRect(lx, ly, 142, lh)
-      ctx.fillStyle = "#55556A"; ctx.font = "bold 8px sans-serif"; ctx.textAlign = "left"
+      const lx = W_CSS - 160, ly = 8
+      const lh = Math.min(state.leaderboard.length, 5) * 18 + 22
+      ctx.fillStyle = "rgba(6,6,16,0.7)"; ctx.fillRect(lx, ly, 152, lh)
+      ctx.fillStyle = "#55556A"; ctx.font = "bold 9px sans-serif"; ctx.textAlign = "left"
       ctx.fillText("LEADERBOARD", lx + 8, ly + 13)
       state.leaderboard.slice(0, 5).forEach((e, i) => {
-        const ey = ly + 24 + i * 17
-        ctx.fillStyle = e.c || e.color; ctx.fillRect(lx + 8, ey - 3, 3, 3)
+        const ey = ly + 25 + i * 18
+        const eColor = e.c || e.color
+        const eName = e.n || e.name
+        const eLevel = e.lv || 1
+        const eScore = e.ts || e.total_score || 0
+        ctx.fillStyle = eColor; ctx.fillRect(lx + 8, ey - 4, 3, 3)
         ctx.fillStyle = e.id === this.playerId ? "#fff" : "#8888A0"
-        ctx.font = `${e.id === this.playerId ? "bold " : ""}9px sans-serif`
-        ctx.fillText(e.n || e.name, lx + 16, ey)
+        ctx.font = `${e.id === this.playerId ? "bold " : ""}10px sans-serif`
+        ctx.fillText(`L${eLevel} ${eName}`, lx + 16, ey)
         ctx.fillStyle = "#00F0FF"; ctx.textAlign = "right"
-        ctx.fillText(e.ts || e.total_score || 0, lx + 136, ey); ctx.textAlign = "left"
+        ctx.fillText(eScore, lx + 146, ey); ctx.textAlign = "left"
       })
     }
 
     // Boost bar
     if (me?.alive) {
       const len = me.segments.length
-      const bw = 100, bh = 5, bx2 = (canvas.width - bw) / 2, by2 = canvas.height - 24
+      const bw = 100, bh = 5, bx2 = (W_CSS - bw) / 2, by2 = H_CSS - 24
       ctx.fillStyle = "rgba(6,6,16,0.5)"; ctx.fillRect(bx2 - 1, by2 - 1, bw + 2, bh + 2)
       ctx.fillStyle = me.boosting ? "#00F0FF" : "#252535"
       ctx.fillRect(bx2, by2, bw * Math.min(1, len / 50), bh)
       ctx.fillStyle = "#55556A"; ctx.font = "8px sans-serif"; ctx.textAlign = "center"
-      ctx.fillText(me.boosting ? "BOOST" : `Length: ${len}`, canvas.width / 2, by2 - 3)
+      ctx.fillText(me.boosting ? "BOOST" : `Length: ${len}`, W_CSS / 2, by2 - 3)
     }
   }
 }

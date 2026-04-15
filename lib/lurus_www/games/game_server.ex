@@ -126,7 +126,7 @@ defmodule LurusWww.Games.GameServer do
     broadcast_game(engine)
     broadcast_lobby(engine)
 
-    if map_size(engine.players) == 0 do
+    if map_size(engine.players) == 0 && engine.id != "MAIN" do
       {:stop, :normal, state}
     else
       {:noreply, state}
@@ -165,11 +165,18 @@ defmodule LurusWww.Games.GameServer do
   end
 
   def handle_info(:idle_check, state) do
-    if map_size(state.engine.players) == 0 do
-      {:stop, :normal, state}
-    else
-      idle_ref = Process.send_after(self(), :idle_check, @idle_timeout)
-      {:noreply, %{state | idle_ref: idle_ref}}
+    cond do
+      state.engine.id == "MAIN" ->
+        # MAIN room never dies — keep checking but never stop
+        idle_ref = Process.send_after(self(), :idle_check, @idle_timeout)
+        {:noreply, %{state | idle_ref: idle_ref}}
+
+      map_size(state.engine.players) == 0 ->
+        {:stop, :normal, state}
+
+      true ->
+        idle_ref = Process.send_after(self(), :idle_check, @idle_timeout)
+        {:noreply, %{state | idle_ref: idle_ref}}
     end
   end
 
