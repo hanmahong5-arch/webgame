@@ -27,10 +27,12 @@ defmodule LurusWww.Games.Snake.Engine do
   @level_luck_bonus 1
 
   # ── Eating ───────────────────────────────────────────────
-  @eat_radius_mult 4.2
-  @base_grow 3
-  @golden_grow 6
-  @food_cap_grow 15
+  @eat_radius_mult 5.5
+  @magnet_eat_boost 1.5
+  @eat_head_segs 3        # head + 2 body segs can eat
+  @base_grow 4
+  @golden_grow 8
+  @food_cap_grow 18
 
   # ── Respawn safety ───────────────────────────────────────
   @invincible_ticks 50  # ~2.5s at 50ms tick
@@ -39,7 +41,7 @@ defmodule LurusWww.Games.Snake.Engine do
   # ── Food ─────────────────────────────────────────────────
   @base_food 100
   @food_per_player 15
-  @max_food 400
+  @max_food 600  # raised to accommodate death drops
   @base_golden_chance 0.08
   @food_accum_rate 2
 
@@ -52,8 +54,8 @@ defmodule LurusWww.Games.Snake.Engine do
 
   # ── Other ────────────────────────────────────────────────
   @max_players 20
-  @magnet_range 140
-  @magnet_speed 5.0
+  @magnet_range 180
+  @magnet_speed 8.5  # Must exceed snake max speed to actually catch food
 
   @colors ~w(#FF6B6B #4ECDC4 #45B7D1 #96CEB4 #FFEAA7 #DDA0DD #98D8C8 #F7DC6F #FF8C69 #B08EFF #7AFF89 #FFB800 #FF6BCC #00F0FF #66D9EF #F92672 #A6E22E #FD971F #AE81FF #E6DB74)
 
@@ -445,16 +447,27 @@ defmodule LurusWww.Games.Snake.Engine do
       end
     end)
 
-    # Apply deaths + drop food
+    # Apply deaths — drop body as food trail (every 2nd segment, scales with level)
     {players, events, food} =
       Enum.reduce(deaths, {players, state.events, state.food}, fn {id, killer}, {ps, evts, fd} ->
         dead = ps[id]
-        body_food = dead.segments |> Enum.take_every(3) |> Enum.take(12) |> Enum.map(fn {x, y} ->
-          {x, y, if(:rand.uniform() < 0.25, do: :golden, else: :normal)}
-        end)
+        # Higher level = more golden drops. Cap at 150 items for broadcast sanity.
+        golden_chance = 0.20 + dead.level * 0.01
+        body_food =
+          dead.segments
+          |> Enum.take_every(2)
+          |> Enum.take(150)
+          |> Enum.map(fn {x, y} ->
+            {x, y, if(:rand.uniform() < golden_chance, do: :golden, else: :normal)}
+          end)
+
         ps = Map.update!(ps, id, &%{&1 | alive: false, total_score: &1.total_score + &1.score})
         ps = if killer && !Map.has_key?(deaths, killer) do
-          Map.update!(ps, killer, fn kp -> %{kp | kills: kp.kills + 1, score: kp.score + 10 + dead.level} end)
+          # Bonus for big kill: scales with victim length too
+          kill_bonus = 10 + dead.level + div(length(dead.segments), 4)
+          Map.update!(ps, killer, fn kp ->
+            %{kp | kills: kp.kills + 1, score: kp.score + kill_bonus}
+          end)
         else ps end
         {ps, [{:player_died, id, killer} | evts], fd ++ body_food}
       end)
@@ -464,14 +477,18 @@ defmodule LurusWww.Games.Snake.Engine do
 
   defp collect_food(state) do
     alive = Enum.filter(state.players, fn {_, p} -> p.alive end)
-    eat_r = @seg_radius * @eat_radius_mult
 
     {players, food, events} =
       Enum.reduce(alive, {state.players, state.food, []}, fn {id, p}, {ps, fd, ev} ->
-        {hx, hy} = hd(p.segments)
+        # Magnet expands eat radius; head + first N segments all eat
+        base_r = @seg_radius * @eat_radius_mult
+        eat_r = if Map.has_key?(p.effects, :magnet), do: base_r * @magnet_eat_boost, else: base_r
         star_mult = if Map.has_key?(p.effects, :star), do: 3, else: 1
+        check_segs = Enum.take(p.segments, @eat_head_segs)
 
-        {eaten, kept} = Enum.split_with(fd, fn {fx, fy, _} -> dist(hx, hy, fx, fy) < eat_r end)
+        {eaten, kept} = Enum.split_with(fd, fn {fx, fy, _} ->
+          Enum.any?(check_segs, fn {sx, sy} -> dist(sx, sy, fx, fy) < eat_r end)
+        end)
 
         if eaten == [] do
           {ps, fd, ev}

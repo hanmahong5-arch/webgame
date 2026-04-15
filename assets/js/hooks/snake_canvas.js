@@ -22,6 +22,11 @@ const SnakeCanvas = {
     this.audio = new GameAudio()
     this.particles = []
     this.cam = { x: 900, y: 600 }
+    // Static starfield (world-space, parallax-lite)
+    this._stars = []
+    // Large ambient glow spots in world
+    this._ambient = []
+    this._seedBackground()
     this.mouse = { x: 0, y: 0 }
     this.boosting = false
 
@@ -112,6 +117,34 @@ const SnakeCanvas = {
     this.dpr = dpr
     // Pre-render glow sprites
     this._buildGlowCache()
+  },
+
+  _seedBackground() {
+    // Deterministic seed based on a fixed PRNG for consistent look
+    let s = 1337
+    const rand = () => { s = (s * 16807) % 2147483647; return s / 2147483647 }
+    // 400 stars across 2400x1600 world + margin
+    const starColors = ["#FFFFFF", "#B0E0FF", "#FFE5B0", "#E0C0FF"]
+    for (let i = 0; i < 400; i++) {
+      this._stars.push({
+        x: -200 + rand() * 2800,
+        y: -200 + rand() * 2000,
+        r: 0.4 + rand() * 1.4,
+        c: starColors[(rand() * 4) | 0],
+        twinkle: rand() * Math.PI * 2
+      })
+    }
+    // 8 ambient glow blobs
+    const glowColors = ["#4A9EFF", "#B08EFF", "#FF6BCC", "#00F0FF", "#7AFF89"]
+    for (let i = 0; i < 8; i++) {
+      this._ambient.push({
+        x: 100 + rand() * 2200,
+        y: 100 + rand() * 1400,
+        r: 120 + rand() * 180,
+        c: glowColors[(rand() * 5) | 0],
+        drift: rand() * Math.PI * 2
+      })
+    }
   },
 
   _buildGlowCache() {
@@ -226,13 +259,37 @@ const SnakeCanvas = {
     const toSx = (wx) => wx - camX + cx
     const toSy = (wy) => wy - camY + cy
 
-    // BG
-    ctx.fillStyle = "#060610"; ctx.fillRect(0, 0, W_CSS, H_CSS)
+    // BG — dark base
+    ctx.fillStyle = "#05050C"; ctx.fillRect(0, 0, W_CSS, H_CSS)
 
-    // Grid — ONE batched path
-    ctx.strokeStyle = "rgba(255,255,255,0.02)"; ctx.lineWidth = 1
+    // Ambient glow blobs (big soft circles drifting)
+    for (const a of this._ambient) {
+      const asx = toSx(a.x), asy = toSy(a.y)
+      if (asx < -a.r - 50 || asx > W_CSS + a.r + 50 || asy < -a.r - 50 || asy > H_CSS + a.r + 50) continue
+      const drift = Math.sin(t * 0.2 + a.drift) * 20
+      const grad = ctx.createRadialGradient(asx + drift, asy + drift * 0.6, 0, asx + drift, asy + drift * 0.6, a.r)
+      grad.addColorStop(0, a.c + "20")
+      grad.addColorStop(0.5, a.c + "10")
+      grad.addColorStop(1, a.c + "00")
+      ctx.fillStyle = grad
+      ctx.fillRect(asx + drift - a.r, asy + drift * 0.6 - a.r, a.r * 2, a.r * 2)
+    }
+
+    // Starfield — twinkling dots
+    for (const s of this._stars) {
+      const ssx = toSx(s.x), ssy = toSy(s.y)
+      if (ssx < -2 || ssx > W_CSS + 2 || ssy < -2 || ssy > H_CSS + 2) continue
+      const tw = 0.4 + 0.6 * Math.abs(Math.sin(t * 1.5 + s.twinkle))
+      ctx.globalAlpha = tw * 0.7
+      ctx.fillStyle = s.c
+      ctx.fillRect(ssx - s.r / 2, ssy - s.r / 2, s.r, s.r)
+    }
+    ctx.globalAlpha = 1
+
+    // Grid — single batched path, stronger inside arena
+    ctx.strokeStyle = "rgba(100,140,200,0.05)"; ctx.lineWidth = 1
     ctx.beginPath()
-    const gs = 40
+    const gs = 60
     const gsx = Math.floor((camX - cx) / gs) * gs
     const gsy = Math.floor((camY - cy) / gs) * gs
     for (let gx = gsx; gx < camX + cx; gx += gs) {
@@ -243,9 +300,15 @@ const SnakeCanvas = {
     }
     ctx.stroke()
 
-    // Border
+    // Border — glowing danger zone
     const bx0 = toSx(0), by0 = toSy(0), bx1 = toSx(W), by1 = toSy(H)
-    ctx.strokeStyle = "rgba(255,68,102,0.2)"; ctx.lineWidth = 2
+    // Outer red glow
+    ctx.strokeStyle = "rgba(255,68,102,0.4)"
+    ctx.lineWidth = 4
+    ctx.strokeRect(bx0 - 1, by0 - 1, bx1 - bx0 + 2, by1 - by0 + 2)
+    // Inner crisp line
+    ctx.strokeStyle = "rgba(255,100,130,0.9)"
+    ctx.lineWidth = 1
     ctx.strokeRect(bx0, by0, bx1 - bx0, by1 - by0)
 
     // Food — batch by color, NO shadowBlur (use pre-rendered glow sprite)
