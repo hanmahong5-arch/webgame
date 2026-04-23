@@ -374,6 +374,22 @@ defmodule LurusWww.Games.Snake.Engine do
     end
   end
 
+  # Extend tail with real spaced points in the tail's outward direction.
+  # Using List.duplicate would place points at d=0, which resample/3 immediately
+  # collapses — growth must use proper spacing to persist permanently.
+  defp extend_tail([], _, _), do: []
+  defp extend_tail([{x, y}], count, spacing) do
+    for i <- 1..count, do: {x, y + spacing * i}
+  end
+  defp extend_tail(segments, count, spacing) do
+    [{lx, ly}, {sx, sy} | _] = Enum.reverse(segments)
+    dx = lx - sx
+    dy = ly - sy
+    d = :math.sqrt(dx * dx + dy * dy)
+    {ux, uy} = if d > 0.01, do: {dx / d, dy / d}, else: {0.0, 1.0}
+    for i <- 1..count, do: {lx + ux * spacing * i, ly + uy * spacing * i}
+  end
+
   defp resample(points, spacing, count) do
     do_resample(points, spacing, count - 1, [hd(points)])
   end
@@ -507,12 +523,11 @@ defmodule LurusWww.Games.Snake.Engine do
           leveled_up = new_level > p.level
 
           ps = Map.update!(ps, id, fn pl ->
-            tail = List.last(pl.segments)
             %{pl |
               score: pl.score + pts,
               food_eaten: new_food_eaten,
               level: new_level,
-              segments: pl.segments ++ List.duplicate(tail, grow),
+              segments: pl.segments ++ extend_tail(pl.segments, grow, @seg_spacing),
               combo: combo_new,
               combo_until: state.tick + 50,
               just_leveled: leveled_up
