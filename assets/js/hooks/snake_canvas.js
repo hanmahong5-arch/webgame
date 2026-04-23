@@ -224,6 +224,9 @@ const SnakeCanvas = {
         case "lv":
           if (ev[1] === this.playerId) this.audio.play("powerup")
           break
+        case "fat":
+          if (ev[1] === this.playerId) this.audio.play("powerup")
+          break
       }
     }
   },
@@ -374,9 +377,10 @@ const SnakeCanvas = {
       const invincible = !!p.inv
       const justLeveled = !!p.ul
       const combo = p.cmb || 0
+      const girth = p.g || 1.0
       const isMe = id === this.playerId
-      // Body thickness scales with level (slight)
-      const r = SEG_R + Math.min(level - 1, 20) * 0.15
+      // Body thickness: level adds slight, girth (rogue-like fatten) multiplies
+      const r = (SEG_R + Math.min(level - 1, 20) * 0.15) * girth
 
       // Invincibility: blink
       const invisAlpha = invincible ? (0.35 + 0.35 * Math.abs(Math.sin(t * 8))) : 1

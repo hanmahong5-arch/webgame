@@ -30,9 +30,21 @@ defmodule LurusWww.Games.Snake.Engine do
   @eat_radius_mult 5.5
   @magnet_eat_boost 1.5
   @eat_head_segs 3        # head + 2 body segs can eat
-  @base_grow 4
-  @golden_grow 8
-  @food_cap_grow 18
+  @base_grow 1
+  @golden_grow 2
+  @food_cap_grow 4
+
+  # ── Girth / Fatten ───────────────────────────────────────
+  # When segments reach threshold, truncate to 60% and increase girth.
+  # Rogue-like progression: length plateau forces evolution into thickness.
+  @fatten_threshold 50
+  @fatten_shrink 0.6
+  @max_girth 3.0
+  @girth_step 0.5
+
+  # ── Self-collision ──────────────────────────────────────
+  # Head can hit own body after skipping the first @self_safe_segs (neck).
+  @self_safe_segs 12
 
   # ── Respawn safety ───────────────────────────────────────
   @invincible_ticks 50  # ~2.5s at 50ms tick
@@ -95,7 +107,8 @@ defmodule LurusWww.Games.Snake.Engine do
           effects: %{}, shield_stacks: 0,
           invincible_until: 0,
           combo: 0, combo_until: 0,
-          just_leveled: false
+          just_leveled: false,
+          girth: 1.0
         }
 
         state = %{state |
@@ -156,7 +169,8 @@ defmodule LurusWww.Games.Snake.Engine do
         reset = %{p |
           alive: true, score: 0, kills: 0, food_eaten: 0, level: 1,
           effects: %{}, shield_stacks: 0, boosting: false,
-          combo: 0, combo_until: 0, just_leveled: false
+          combo: 0, combo_until: 0, just_leveled: false,
+          girth: 1.0
         }
         state
         |> put_in([Access.key(:players), pid], reset)
@@ -177,7 +191,6 @@ defmodule LurusWww.Games.Snake.Engine do
       |> collect_food()
       |> collect_powerups()
       |> apply_magnet()
-      |> apply_boost_shrink()
       |> replenish_food()
       |> maybe_spawn_powerup()
       |> update_leaderboard()
@@ -217,7 +230,8 @@ defmodule LurusWww.Games.Snake.Engine do
           spd: r2(current_speed(p)),
           lv: p.level, fe: p.food_eaten,
           inv: p.invincible_until > state.tick,
-          cmb: p.combo, ul: p.just_leveled
+          cmb: p.combo, ul: p.just_leveled,
+          g: r2(p.girth)
         }}
       end),
       food: Enum.map(state.food, fn {x, y, t} -> [r2(x), r2(y), if(t == :golden, do: 1, else: 0)] end),
@@ -410,7 +424,6 @@ defmodule LurusWww.Games.Snake.Engine do
 
   defp detect_collisions(state) do
     alive = state.players |> Enum.filter(fn {_, p} -> p.alive end) |> Map.new()
-    hit_r = @seg_radius * 2.2
 
     deaths = Enum.reduce(alive, %{}, fn {id, p}, acc ->
       # Invincibility + ghost effect
@@ -423,14 +436,23 @@ defmodule LurusWww.Games.Snake.Engine do
 
         other_killer = Enum.find_value(alive, fn {oid, op} ->
           if oid != id && op.invincible_until <= state.tick do
+            hit_r = @seg_radius * 2.2 * op.girth
             hit = op.segments |> Enum.drop(3) |> Enum.any?(fn {sx, sy} -> dist(hx, hy, sx, sy) < hit_r end)
             if hit, do: oid
           end
         end)
 
-        if wall || other_killer do
+        # Self-collision: head hitting own body (skip the neck)
+        self_hit =
+          length(p.segments) > @self_safe_segs + 3 &&
+            p.segments
+            |> Enum.drop(@self_safe_segs)
+            |> Enum.any?(fn {sx, sy} -> dist(hx, hy, sx, sy) < @seg_radius * 1.8 * p.girth end)
+
+        if wall || other_killer || self_hit do
           cond do
             p.shield_stacks > 0 -> acc  # shield consumed below
+            self_hit -> Map.put(acc, id, id)  # self-kill
             true -> Map.put(acc, id, other_killer)
           end
         else
@@ -447,7 +469,7 @@ defmodule LurusWww.Games.Snake.Engine do
         {hx, hy} = hd(p.segments)
         wall = hx < 0 || hx > state.width || hy < 0 || hy > state.height
         other = Enum.any?(alive, fn {oid, op} ->
-          oid != id && Enum.any?(Enum.drop(op.segments, 3), fn {sx, sy} -> dist(hx, hy, sx, sy) < hit_r end)
+          oid != id && Enum.any?(Enum.drop(op.segments, 3), fn {sx, sy} -> dist(hx, hy, sx, sy) < @seg_radius * 2.2 * op.girth end)
         end)
         if wall || other do
           # Consume shield, grant brief invincibility
@@ -463,24 +485,22 @@ defmodule LurusWww.Games.Snake.Engine do
       end
     end)
 
-    # Apply deaths — drop body as food trail (every 2nd segment, scales with level)
+    # Apply deaths — drop ALL body segments as food (cap 300 for broadcast sanity).
+    # Higher level + higher girth = more golden drops.
     {players, events, food} =
       Enum.reduce(deaths, {players, state.events, state.food}, fn {id, killer}, {ps, evts, fd} ->
         dead = ps[id]
-        # Higher level = more golden drops. Cap at 150 items for broadcast sanity.
-        golden_chance = 0.20 + dead.level * 0.01
+        golden_chance = min(0.45, 0.15 + dead.level * 0.01 + (dead.girth - 1.0) * 0.08)
         body_food =
           dead.segments
-          |> Enum.take_every(2)
-          |> Enum.take(150)
+          |> Enum.take(300)
           |> Enum.map(fn {x, y} ->
             {x, y, if(:rand.uniform() < golden_chance, do: :golden, else: :normal)}
           end)
 
         ps = Map.update!(ps, id, &%{&1 | alive: false, total_score: &1.total_score + &1.score})
-        ps = if killer && !Map.has_key?(deaths, killer) do
-          # Bonus for big kill: scales with victim length too
-          kill_bonus = 10 + dead.level + div(length(dead.segments), 4)
+        ps = if killer && killer != id && !Map.has_key?(deaths, killer) do
+          kill_bonus = 15 + dead.level * 2 + div(length(dead.segments), 3) + round((dead.girth - 1.0) * 20)
           Map.update!(ps, killer, fn kp ->
             %{kp | kills: kp.kills + 1, score: kp.score + kill_bonus}
           end)
@@ -523,7 +543,7 @@ defmodule LurusWww.Games.Snake.Engine do
           leveled_up = new_level > p.level
 
           ps = Map.update!(ps, id, fn pl ->
-            %{pl |
+            grown = %{pl |
               score: pl.score + pts,
               food_eaten: new_food_eaten,
               level: new_level,
@@ -532,11 +552,14 @@ defmodule LurusWww.Games.Snake.Engine do
               combo_until: state.tick + 50,
               just_leveled: leveled_up
             }
+            maybe_fatten(grown)
           end)
 
+          fattened? = ps[id].girth > p.girth
           ev2 = if leveled_up, do: [{:level_up, id, new_level} | ev], else: ev
           ev3 = [{:food_eaten, id, if(raw_pts > 3, do: :golden, else: :normal)} | ev2]
-          {ps, kept, ev3}
+          ev4 = if fattened?, do: [{:fatten, id, ps[id].girth} | ev3], else: ev3
+          {ps, kept, ev4}
         end
       end)
 
@@ -621,21 +644,18 @@ defmodule LurusWww.Games.Snake.Engine do
     end
   end
 
-  defp apply_boost_shrink(state) do
-    {players, trail} = Enum.reduce(state.players, {state.players, []}, fn {id, p}, {ps, tr} ->
-      if p.alive && p.boosting && length(p.segments) > 8 && !Map.has_key?(p.effects, :speed) do
-        if rem(state.tick, 2) == 0 do
-          tail = List.last(p.segments)
-          {Map.update!(ps, id, &%{&1 | segments: Enum.drop(&1.segments, -1)}),
-           [{elem(tail, 0), elem(tail, 1), :normal} | tr]}
-        else
-          {ps, tr}
-        end
-      else
-        {ps, tr}
-      end
-    end)
-    %{state | players: players, food: state.food ++ trail}
+  # Fatten: when segments hit threshold, truncate to @fatten_shrink and bump girth.
+  # Rogue-like progression — length plateau forces evolution into thickness.
+  defp maybe_fatten(p) do
+    if length(p.segments) >= @fatten_threshold && p.girth < @max_girth do
+      new_len = max(@initial_length, round(length(p.segments) * @fatten_shrink))
+      %{p |
+        segments: Enum.take(p.segments, new_len),
+        girth: Float.round(min(@max_girth, p.girth + @girth_step), 2)
+      }
+    else
+      p
+    end
   end
 
   defp target_food(state) do
@@ -723,5 +743,6 @@ defmodule LurusWww.Games.Snake.Engine do
   defp encode_event({:game_started}), do: ["start"]
   defp encode_event({:powerup_collected, id, type, tier}), do: ["pup", id, pup_idx(type), tier]
   defp encode_event({:level_up, id, lv}), do: ["lv", id, lv]
+  defp encode_event({:fatten, id, g}), do: ["fat", id, g]
   defp encode_event(_), do: nil
 end
