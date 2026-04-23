@@ -245,6 +245,7 @@ const SnakeCanvas = {
 
     const [W, H] = state.size
     const me = this.getMe()
+    const t = Date.now() / 1000
 
     // Camera lerp
     if (me?.alive && me.segments.length) {
@@ -331,7 +332,6 @@ const SnakeCanvas = {
 
     // Powerups — tier-based ring, no shadowBlur
     const pups = state.pups || state.powerups || []
-    const t = Date.now() / 1000
     for (const pup of pups) {
       const px = pup[0], py = pup[1], ti = pup[2], tier = pup[3] || 1
       const psx = toSx(px), psy = toSy(py)
