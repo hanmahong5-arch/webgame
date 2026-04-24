@@ -24,6 +24,37 @@ const Hooks = {
     destroyed() {
       window.removeEventListener("scroll", this.onScroll)
     }
+  },
+
+  // Splash PLAY button: save nickname and jump to /play
+  PlayLauncher: {
+    mounted() {
+      const input = this.el.querySelector("#sio-name")
+      const btn   = this.el.querySelector("#sio-play")
+      if (!input || !btn) return
+
+      // Pre-fill with saved name
+      const saved = localStorage.getItem("wg_player_name") || ""
+      if (saved) input.value = saved
+
+      const launch = () => {
+        const name = (input.value || "").trim().slice(0, 16)
+        if (name) localStorage.setItem("wg_player_name", name)
+        window.location.href = "/play"
+      }
+
+      btn.addEventListener("click", launch)
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") { e.preventDefault(); launch() }
+      })
+
+      this._launch = launch
+      this._btn = btn
+      this._input = input
+    },
+    destroyed() {
+      if (this._btn && this._launch) this._btn.removeEventListener("click", this._launch)
+    }
   }
 }
 

@@ -39,7 +39,31 @@ defmodule LurusWwwWeb.Live.GameLive do
 
   @impl true
   def handle_event("init_player", %{"id" => id, "name" => name}, socket) do
-    {:noreply, assign(socket, player_id: id, player_name: name)}
+    socket = assign(socket, player_id: id, player_name: name)
+    trimmed = String.trim(name || "")
+
+    if trimmed != "" && !socket.assigns.joined && socket.assigns.room_id do
+      case do_join(socket.assigns.room_id, id, String.slice(trimmed, 0..15)) do
+        {:ok, room_id, final_pid, state} ->
+          socket = if room_id != socket.assigns.room_id do
+            Phoenix.PubSub.unsubscribe(LurusWww.PubSub, "game:#{socket.assigns.room_id}")
+            Phoenix.PubSub.subscribe(LurusWww.PubSub, "game:#{room_id}")
+            assign(socket, room_id: room_id)
+          else
+            socket
+          end
+
+          {:noreply,
+            socket
+            |> push_event("joined", %{player_id: final_pid})
+            |> assign(joined: true, player_id: final_pid, game_state: state, my_alive: true)}
+
+        {:error, _} ->
+          {:noreply, socket}
+      end
+    else
+      {:noreply, socket}
+    end
   end
 
   def handle_event("join", params, socket) do

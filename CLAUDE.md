@@ -1,86 +1,67 @@
-# lurus-www
+# WebGame (2c-bs-www-phoenix)
 
-Public website and marketing landing pages. Elixir/Phoenix with LiveView for SSR + interactive components. No database -- stateless, all data fetched from platform APIs at runtime.
+Phoenix LiveView 实时多人游戏（slither.io 风格 snake + RPG 进化 + 幸运系统）。
+原公司官网代码库，2026-04 转型为 webgame 产品；www 已迁回 Next.js (`2c-bs-www-next`)。
 
-| Item | Value |
-|---|---|
-| URL | `https://www.lurus.cn` (`lurus.cn` 301 redirects here) |
-| Namespace | `lurus-www` |
-| Image | `ghcr.io/hanmahong5-arch/lurus-www:main-<sha7>` |
-| Dev port | `4000` |
+- Tech: Elixir 1.17 + Phoenix 1.7 + LiveView 1.0 + Bandit + Tailwind 4
+- Namespace: `lurus-webgame`
+- Domain: `webgame.lurus.cn`
+- Image: `ghcr.io/hanmahong5-arch/webgame:latest`
+- Node: cloud-ubuntu-1-16c32g (co-located with Traefik)
+- Product Group: Lucrum / Entertainment
 
-## Tech Stack
+> 相关 skill: `/webgame` — 游戏设计、引擎踩坑、Canvas 渲染、Elixir 陷阱大全。
 
-- Elixir 1.17 + OTP 27
-- Phoenix 1.7 + LiveView 1.0 (dead-render for SEO, LiveView for interactivity)
-- Bandit (HTTP server, replaces Cowboy)
-- Tailwind CSS 4 (integrated via `mix assets.deploy`)
-- Finch (HTTP client for API proxy and server-side fetches)
-- No database, no Ecto
-
-## Directory Structure
+## Directory
 
 ```
-lurus-www/
-├── lib/
-│   ├── lurus_www/            # Application logic (OIDC, API client, release helpers)
-│   └── lurus_www_web/        # Phoenix web layer
-│       ├── controllers/      # Auth callback, health check
-│       ├── live/             # LiveView pages (Home, Pricing, Solutions, Download...)
-│       ├── components/       # Function components (Hero, Chat, Features, Portal...)
-│       ├── layouts/          # Root and app layouts
-│       └── router.ex         # Route definitions
-├── assets/                   # JS, CSS (Tailwind), static assets
-├── priv/static/              # Compiled assets (after mix assets.deploy)
-├── config/                   # Config files (config.exs, runtime.exs, prod.exs)
-├── test/                     # ExUnit tests
-├── deploy/
-│   ├── Dockerfile            # Multi-stage Elixir release build
-│   └── k8s/                  # K8s manifests (deployment, service, ingress, pdb, kustomization)
-└── _bmad-output/             # BMAD artifacts
+lib/
+├── lurus_www/
+│   ├── games/
+│   │   ├── game_server.ex           # Per-room GenServer tick loop
+│   │   ├── game_supervisor.ex       # DynamicSupervisor
+│   │   └── snake/engine.ex          # Core snake/food/collision physics
+│   └── scores/                      # Player score persistence
+└── lurus_www_web/
+    ├── live/
+    │   ├── home_live.ex             # Homepage IS the game (zero-friction)
+    │   ├── game_live.ex             # Full game room
+    │   ├── creator_live.ex          # Future: skin/room creator
+    │   └── privacy_live.ex / terms_live.ex
+    └── components/
+assets/                              # JS hooks, Canvas renderer, Tailwind
+deploy/k8s/                          # lurus-webgame ns manifests
 ```
 
 ## Commands
 
 ```bash
-# Development
 mix deps.get
-mix phx.server           # http://localhost:4000
-
-# Build
-mix assets.deploy         # Compile + digest static assets
-MIX_ENV=prod mix release  # Production release
-
-# Test
-mix test                  # ExUnit tests
-mix test --cover          # With coverage
-
-# Quality
-mix credo --strict        # Static analysis
-mix format --check-formatted  # Formatting check
+mix phx.server                   # http://localhost:4000
+mix assets.deploy                # Tailwind + esbuild + digest
+MIX_ENV=prod mix release
+mix test                         # ExUnit (lazy_html required for LV 1.1+)
+mix credo --strict
+mix format --check-formatted
+bun run test:e2e                 # Playwright (playwright.config.ts)
 ```
 
 ## Environment Variables
 
-Runtime configuration (via `config/runtime.exs`, read at boot):
-
-| Variable | Default | Description |
+| Var | Default | Purpose |
 |---|---|---|
-| `PHX_HOST` | `localhost` | Hostname for URL generation and CORS |
-| `PORT` | `4000` | HTTP listen port |
-| `SECRET_KEY_BASE` | (required) | Phoenix session/cookie signing key (64+ hex chars) |
-| `ZITADEL_ISSUER` | `https://auth.lurus.cn` | OIDC issuer URL |
-| `ZITADEL_CLIENT_ID` | (required) | OIDC public client ID |
-| `API_URL` | `https://api.lurus.cn` | Backend API base URL (proxied via Finch) |
-| `CHAT_ENABLED` | `"false"` | Enable AI chat widget |
+| `PHX_HOST` | `localhost` | URL + CORS host |
+| `PORT` | `4000` | HTTP |
+| `SECRET_KEY_BASE` | (required) | 64+ hex chars |
+| `DATABASE_URL` | (optional) | player_scores persistence |
 
-## Key Patterns
+## Gotchas (still active)
 
-- **Dead-render SSR**: All pages render full HTML on first request (SEO-friendly). LiveView upgrades to WebSocket for interactivity.
-- **OIDC auth**: Authorization Code + PKCE flow, session stored in encrypted cookie (no client-side token storage).
-- **API proxy**: Server-side requests to `api.lurus.cn` via Finch connection pool. No direct browser-to-API calls for authenticated endpoints.
-- **Static data**: Marketing content lives in module attributes / config, not hardcoded in templates.
-- **Health endpoint**: `GET /health` returns 200 for K8s probes.
+- **BadBooleanError**: 不要在 LV 模板用 `and/or/not`，一律 `&&`/`||`/`!`。
+- **TDZ ReferenceError**: Canvas `draw()` 里 `const` 必须在首次使用前声明。
+- **playerId 漂移**: 三路 fallback — localStorage baseline + form + `joined` event。
+- **Tail growth**: 必须用真实间隔 points 扩展尾部，不要 `List.duplicate`（会坍塌）。
+- **多 tab 碰撞**: 服务端每 tick push `my_id`，前端按最新覆盖。
 
 ## BMAD
 
@@ -89,8 +70,4 @@ Runtime configuration (via `config/runtime.exs`, read at boot):
 | PRD | `./_bmad-output/planning-artifacts/prd.md` |
 | Epics | `./_bmad-output/planning-artifacts/epics.md` |
 | Architecture | `./_bmad-output/planning-artifacts/architecture.md` |
-| UX Design | `./_bmad-output/planning-artifacts/ux-design-specification.md` |
-| Product Brief | `./_bmad-output/planning-artifacts/product-brief.md` |
 | Sprint Status | `./_bmad-output/sprint-status.yaml` |
-| Stories | `./_bmad-output/implementation-artifacts/stories/` |
-| Code Review | `./_bmad-output/code-review/` |
