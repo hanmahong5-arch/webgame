@@ -149,6 +149,8 @@ defmodule LurusWwwWeb.Live.GameLive do
       |> assign(game_state: state, my_alive: my_alive)}
   end
 
+  def handle_info(_, socket), do: {:noreply, socket}
+
   @impl true
   def render(assigns) do
     ~H"""

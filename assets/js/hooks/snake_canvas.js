@@ -17,11 +17,18 @@ const SnakeCanvas = {
     this.canvas = this.el
     this.ctx = this.canvas.getContext("2d")
     this.state = null
+    this.prevState = null        // snapshot one tick behind — for interpolation
+    this.lastStateAt = 0         // perf ms when current state arrived
+    this.stateInterval = 50      // ms between server ticks (learned from timing)
     this.playerId = null  // Set via "joined" event
     this.raf = null
     this.audio = new GameAudio()
     this.particles = []
+    this.rainDrops = []          // ambient food-rain particles
     this.cam = { x: 900, y: 600 }
+    this.lastDrawAt = 0
+    this.lastSteerAt = 0
+    this._steerTrailing = null
     // Static starfield (world-space, parallax-lite)
     this._stars = []
     // Large ambient glow spots in world
@@ -89,6 +96,7 @@ const SnakeCanvas = {
     window.removeEventListener("keydown", this._onKey)
     window.removeEventListener("keyup", this._onKey)
     if (this.raf) cancelAnimationFrame(this.raf)
+    if (this._steerTrailing) { clearTimeout(this._steerTrailing); this._steerTrailing = null }
   },
 
   initIdentity() {
@@ -186,6 +194,15 @@ const SnakeCanvas = {
   sendSteer() {
     const me = this.getMe()
     if (!me?.alive || !me.segments.length) return
+    // Throttle to ~20Hz: skip leading, queue trailing
+    const now = performance.now()
+    if (now - this.lastSteerAt < 50) {
+      if (!this._steerTrailing) {
+        this._steerTrailing = setTimeout(() => { this._steerTrailing = null; this.sendSteer() }, 55)
+      }
+      return
+    }
+    this.lastSteerAt = now
     const [hx, hy] = me.segments[0]
     // Use CSS pixels for mouse math (canvas is scaled by DPR)
     const cw = this.canvas.width / (this.dpr || 1)
@@ -201,7 +218,15 @@ const SnakeCanvas = {
   },
 
   onState(state) {
+    const now = performance.now()
+    if (this.state && this.lastStateAt) {
+      const dt = now - this.lastStateAt
+      // Smooth moving-average, clamp to sane range
+      if (dt > 20 && dt < 200) this.stateInterval = this.stateInterval * 0.8 + dt * 0.2
+    }
+    this.prevState = this.state
     this.state = state
+    this.lastStateAt = now
     if (!state.events) return
     for (const ev of state.events) {
       if (!ev) continue
@@ -227,6 +252,25 @@ const SnakeCanvas = {
         case "fat":
           if (ev[1] === this.playerId) this.audio.play("powerup")
           break
+        case "streak": {
+          if (ev[1] === this.playerId) this.audio.play("powerup")
+          this.flashBanner = { text: `${ev[2]}x KILLSTREAK!`, color: "#FFB800", until: now + 1400 }
+          break
+        }
+        case "rain": {
+          this.flashBanner = { text: "FOOD RAIN!", color: "#00F0FF", until: now + 1800 }
+          // Seed ambient drops from screen top
+          const burst = Math.min(40, ev[1] || 20)
+          for (let i = 0; i < burst; i++) {
+            this.rainDrops.push({
+              x: Math.random() * 2400, y: -40 - Math.random() * 200,
+              vx: (Math.random() - 0.5) * 0.5, vy: 2 + Math.random() * 2,
+              life: 120 + Math.random() * 60,
+              golden: Math.random() < 0.25
+            })
+          }
+          break
+        }
       }
     }
   },
@@ -248,13 +292,53 @@ const SnakeCanvas = {
 
     const [W, H] = state.size
     const me = this.getMe()
-    const t = Date.now() / 1000
+    const nowMs = performance.now()
+    const t = nowMs / 1000
+    const dtMs = this.lastDrawAt ? Math.min(50, nowMs - this.lastDrawAt) : 16
+    this.lastDrawAt = nowMs
 
-    // Camera lerp
-    if (me?.alive && me.segments.length) {
-      const [tx, ty] = me.segments[0]
-      this.cam.x += (tx - this.cam.x) * 0.12
-      this.cam.y += (ty - this.cam.y) * 0.12
+    // Interpolation alpha 0..1 between prevState and state over stateInterval
+    const interval = Math.max(20, this.stateInterval || 50)
+    const rawAlpha = this.lastStateAt ? (nowMs - this.lastStateAt) / interval : 1
+    // Render "one tick behind" for smoothness — map [0..1] onto prev→curr; clamp light overshoot
+    const ialpha = Math.max(0, Math.min(1.15, rawAlpha))
+
+    // Build interpolated segments per player (snap if segment counts differ — growth/death frame)
+    const rsegs = {}
+    if (this.prevState?.players) {
+      for (const id in state.players) {
+        const cur = state.players[id]
+        const prev = this.prevState.players[id]
+        const cs = cur.s || cur.segments
+        const ps = prev?.s || prev?.segments
+        if (!cs?.length) continue
+        if (!ps || ps.length !== cs.length) {
+          rsegs[id] = cs
+        } else {
+          const out = new Array(cs.length)
+          for (let i = 0; i < cs.length; i++) {
+            out[i] = [
+              ps[i][0] + (cs[i][0] - ps[i][0]) * ialpha,
+              ps[i][1] + (cs[i][1] - ps[i][1]) * ialpha
+            ]
+          }
+          rsegs[id] = out
+        }
+      }
+    } else {
+      for (const id in state.players) {
+        const cur = state.players[id]
+        const cs = cur.s || cur.segments
+        if (cs?.length) rsegs[id] = cs
+      }
+    }
+
+    // Camera lerp — dt-based so feel is consistent across 30/60/120Hz displays
+    const camHead = me?.alive ? rsegs[this.playerId]?.[0] || me.segments[0] : null
+    if (camHead) {
+      const lerpF = 1 - Math.pow(1 - 0.12, dtMs / 16.67)
+      this.cam.x += (camHead[0] - this.cam.x) * lerpF
+      this.cam.y += (camHead[1] - this.cam.y) * lerpF
     }
 
     const cx = W_CSS / 2, cy = H_CSS / 2
@@ -360,10 +444,32 @@ const SnakeCanvas = {
       ctx.fillText(PUP_ICONS[type] || "?", psx, psy); ctx.textBaseline = "alphabetic"
     }
 
+    // Boost particle trail (emit behind boosting snakes)
+    for (const id in state.players) {
+      const p = state.players[id]
+      const b = p.b || p.boosting
+      if (!b) continue
+      const segs = rsegs[id] || p.s || p.segments
+      if (!segs?.length || segs.length < 3) continue
+      const tailIdx = Math.min(segs.length - 1, 6)
+      const [tx, ty] = segs[tailIdx]
+      if (Math.random() < 0.6) {
+        this.particles.push({
+          x: tx + (Math.random() - 0.5) * 6,
+          y: ty + (Math.random() - 0.5) * 6,
+          vx: (Math.random() - 0.5) * 0.6,
+          vy: (Math.random() - 0.5) * 0.6,
+          life: 14 + Math.random() * 10,
+          color: p.c || p.color || "#00F0FF",
+          size: 1.5 + Math.random() * 1.5
+        })
+      }
+    }
+
     // Snakes
     for (const id in state.players) {
       const p = state.players[id]
-      const segs = p.s || p.segments; if (!segs?.length) continue
+      const segs = rsegs[id] || p.s || p.segments; if (!segs?.length) continue
       const alive = p.al !== undefined ? p.al : p.alive
       const color = p.c || p.color
       const name = p.n || p.name
@@ -377,6 +483,7 @@ const SnakeCanvas = {
       const invincible = !!p.inv
       const justLeveled = !!p.ul
       const combo = p.cmb || 0
+      const streak = p.st || 0
       const girth = p.g || 1.0
       const isMe = id === this.playerId
       // Body thickness: level adds slight, girth (rogue-like fatten) multiplies
@@ -449,6 +556,18 @@ const SnakeCanvas = {
           ctx.globalAlpha = 0.3 + 0.3 * Math.abs(Math.sin(t * 10))
           ctx.beginPath(); ctx.arc(hsx, hsy, headR * 2, 0, Math.PI * 2); ctx.stroke()
         }
+        // Killstreak flame ring (>= 3 kills within window)
+        if (streak >= 3) {
+          const flameR = headR * (1.7 + 0.15 * Math.sin(t * 9))
+          ctx.strokeStyle = streak >= 7 ? "#FF4466" : "#FFB800"
+          ctx.lineWidth = 3
+          ctx.globalAlpha = 0.55 + 0.35 * Math.abs(Math.sin(t * 7))
+          ctx.beginPath(); ctx.arc(hsx, hsy, flameR, 0, Math.PI * 2); ctx.stroke()
+          // Inner spark ring
+          ctx.strokeStyle = "#FFE5B0"; ctx.lineWidth = 1
+          ctx.globalAlpha = 0.8
+          ctx.beginPath(); ctx.arc(hsx, hsy, flameR * 0.75, 0, Math.PI * 2); ctx.stroke()
+        }
         ctx.globalAlpha = 1
       }
 
@@ -465,6 +584,12 @@ const SnakeCanvas = {
         ctx.font = "bold 13px sans-serif"
         ctx.fillText(`x${combo} COMBO!`, hsx, hsy - r * 4)
       }
+      // Streak indicator above head for anyone with streak >= 3
+      if (streak >= 3 && alive) {
+        ctx.fillStyle = streak >= 7 ? "#FF4466" : "#FFB800"
+        ctx.font = "bold 12px sans-serif"
+        ctx.fillText(`\uD83D\uDD25 ${streak} STREAK`, hsx, hsy - r * 3.5)
+      }
       ctx.globalAlpha = 1
     }
 
@@ -477,6 +602,21 @@ const SnakeCanvas = {
       ctx.beginPath(); ctx.arc(psx, psy, p.size, 0, Math.PI * 2); ctx.fill()
       ctx.globalAlpha = 1; return true
     })
+
+    // Food-rain ambient drops (purely cosmetic — server seeds real food separately)
+    if (this.rainDrops.length) {
+      this.rainDrops = this.rainDrops.filter(d => {
+        d.x += d.vx; d.y += d.vy; d.life--
+        if (d.life <= 0 || d.y > H + 40) return false
+        const dsx = toSx(d.x), dsy = toSy(d.y)
+        if (dsx < -6 || dsx > W_CSS + 6 || dsy < -6 || dsy > H_CSS + 6) return true
+        ctx.globalAlpha = Math.min(0.8, d.life / 60)
+        ctx.fillStyle = d.golden ? "#FFB800" : "#FF4466"
+        ctx.beginPath(); ctx.arc(dsx, dsy, d.golden ? 3 : 2.2, 0, Math.PI * 2); ctx.fill()
+        ctx.globalAlpha = 1
+        return true
+      })
+    }
 
     // Minimap
     const mw = 100, mh = 70, mx = 8, my = H_CSS - mh - 8
@@ -526,6 +666,29 @@ const SnakeCanvas = {
       ctx.fillRect(bx2, by2, bw * Math.min(1, len / 50), bh)
       ctx.fillStyle = "#55556A"; ctx.font = "8px sans-serif"; ctx.textAlign = "center"
       ctx.fillText(me.boosting ? "BOOST" : `Length: ${len}`, W_CSS / 2, by2 - 3)
+    }
+
+    // Flash banner (streak / food rain / events)
+    if (this.flashBanner && nowMs < this.flashBanner.until) {
+      const remaining = this.flashBanner.until - nowMs
+      const totalDur = 1400
+      const a = Math.min(1, remaining / 400) * Math.min(1, (totalDur - remaining) / 150 + 0.2)
+      ctx.globalAlpha = a
+      ctx.fillStyle = this.flashBanner.color
+      ctx.font = "bold 42px sans-serif"
+      ctx.textAlign = "center"
+      ctx.shadowColor = this.flashBanner.color; ctx.shadowBlur = 24
+      ctx.fillText(this.flashBanner.text, W_CSS / 2, H_CSS * 0.22)
+      ctx.shadowBlur = 0
+      ctx.globalAlpha = 1
+    } else if (this.flashBanner) {
+      this.flashBanner = null
+    }
+
+    // Rain overlay tint (subtle cyan haze while rain active)
+    if (state.rain) {
+      ctx.fillStyle = "rgba(0,240,255,0.035)"
+      ctx.fillRect(0, 0, W_CSS, H_CSS)
     }
   }
 }

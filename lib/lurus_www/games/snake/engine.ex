@@ -47,7 +47,7 @@ defmodule LurusWww.Games.Snake.Engine do
   @self_safe_segs 12
 
   # ── Respawn safety ───────────────────────────────────────
-  @invincible_ticks 50  # ~2.5s at 50ms tick
+  @invincible_ticks 80  # ~4s at 50ms tick
   @spawn_candidates 12
 
   # ── Food ─────────────────────────────────────────────────
@@ -56,6 +56,17 @@ defmodule LurusWww.Games.Snake.Engine do
   @max_food 600  # raised to accommodate death drops
   @base_golden_chance 0.08
   @food_accum_rate 2
+
+  # ── Killstreak ───────────────────────────────────────────
+  # Every kill within @streak_window ticks of the last extends the streak.
+  # Score multiplier scales up to 2x at streak=5.
+  @streak_window 240  # ~12s
+  @streak_cap 10
+
+  # ── Food Rain (chaos event) ─────────────────────────────
+  # Every @rain_interval ticks (±25%), spawn a burst of food across arena.
+  @rain_interval 700
+  @rain_burst 80
 
   # ── Powerups ─────────────────────────────────────────────
   @powerup_types [:blade, :shield, :magnet, :star, :ghost, :mega, :freeze, :slowmo]
@@ -82,7 +93,9 @@ defmodule LurusWww.Games.Snake.Engine do
     status: :waiting,
     events: [],
     player_order: [],
-    leaderboard: []
+    leaderboard: [],
+    rain_until: 0,
+    next_rain_at: 0
   ]
 
   # ── Public API ──────────────────────────────────────────
@@ -108,7 +121,8 @@ defmodule LurusWww.Games.Snake.Engine do
           invincible_until: 0,
           combo: 0, combo_until: 0,
           just_leveled: false,
-          girth: 1.0
+          girth: 1.0,
+          streak: 0, streak_until: 0
         }
 
         state = %{state |
@@ -147,8 +161,8 @@ defmodule LurusWww.Games.Snake.Engine do
 
   def set_target(state, id, angle) when is_number(angle) do
     case Map.get(state.players, id) do
-      nil -> state
-      p -> %{state | players: Map.put(state.players, id, %{p | target_angle: angle * 1.0})}
+      %{alive: true} = p -> %{state | players: Map.put(state.players, id, %{p | target_angle: angle * 1.0})}
+      _ -> state
     end
   end
   def set_target(state, _, _), do: state
@@ -170,7 +184,8 @@ defmodule LurusWww.Games.Snake.Engine do
           alive: true, score: 0, kills: 0, food_eaten: 0, level: 1,
           effects: %{}, shield_stacks: 0, boosting: false,
           combo: 0, combo_until: 0, just_leveled: false,
-          girth: 1.0
+          girth: 1.0,
+          streak: 0, streak_until: 0
         }
         state
         |> put_in([Access.key(:players), pid], reset)
@@ -212,6 +227,7 @@ defmodule LurusWww.Games.Snake.Engine do
       status: state.status,
       events: state.events |> Enum.map(&encode_event/1) |> Enum.reject(&is_nil/1),
       leaderboard: Enum.take(state.leaderboard, 8),
+      rain: state.rain_until > state.tick,
       players: Map.new(state.players, fn {id, p} ->
         # LOD for long tails
         segs = if length(p.segments) > 30 do
@@ -231,7 +247,8 @@ defmodule LurusWww.Games.Snake.Engine do
           lv: p.level, fe: p.food_eaten,
           inv: p.invincible_until > state.tick,
           cmb: p.combo, ul: p.just_leveled,
-          g: r2(p.girth)
+          g: r2(p.girth),
+          st: if(p.streak_until > state.tick, do: p.streak, else: 0)
         }}
       end),
       food: Enum.map(state.food, fn {x, y, t} -> [r2(x), r2(y), if(t == :golden, do: 1, else: 0)] end),
@@ -311,7 +328,7 @@ defmodule LurusWww.Games.Snake.Engine do
     cond do
       Map.has_key?(p.effects, :freeze) -> 0.0
       Map.has_key?(p.effects, :slowmo_target) -> base * 0.4
-      p.boosting && length(p.segments) > 5 -> base * @boost_multiplier
+      p.boosting && length(p.segments) >= 3 -> base * @boost_multiplier
       true -> base
     end
   end
@@ -498,17 +515,40 @@ defmodule LurusWww.Games.Snake.Engine do
             {x, y, if(:rand.uniform() < golden_chance, do: :golden, else: :normal)}
           end)
 
-        ps = Map.update!(ps, id, &%{&1 | alive: false, total_score: &1.total_score + &1.score})
-        ps = if killer && killer != id && !Map.has_key?(deaths, killer) do
-          kill_bonus = 15 + dead.level * 2 + div(length(dead.segments), 3) + round((dead.girth - 1.0) * 20)
-          Map.update!(ps, killer, fn kp ->
-            %{kp | kills: kp.kills + 1, score: kp.score + kill_bonus}
-          end)
-        else ps end
+        ps = Map.update!(ps, id, &%{&1 |
+          alive: false,
+          total_score: &1.total_score + &1.score,
+          streak: 0,
+          streak_until: 0
+        })
+
+        {ps, evts} =
+          if killer && killer != id && !Map.has_key?(deaths, killer) do
+            kp = ps[killer]
+            streak_active? = kp.streak_until > state.tick
+            new_streak = if streak_active?, do: min(@streak_cap, kp.streak + 1), else: 1
+            # Multiplier: 1.0x at streak=1, scales to 2.0x at streak=5, caps at 2.5x at streak=10
+            mult = 1.0 + min(new_streak - 1, 9) * 0.15
+            base_bonus = 15 + dead.level * 2 + div(length(dead.segments), 3) + round((dead.girth - 1.0) * 20)
+            kill_bonus = round(base_bonus * mult)
+            ps2 = Map.update!(ps, killer, fn kp2 ->
+              %{kp2 |
+                kills: kp2.kills + 1,
+                score: kp2.score + kill_bonus,
+                streak: new_streak,
+                streak_until: state.tick + @streak_window
+              }
+            end)
+            evts2 = if new_streak >= 3, do: [{:streak, killer, new_streak} | evts], else: evts
+            {ps2, evts2}
+          else
+            {ps, evts}
+          end
         {ps, [{:player_died, id, killer} | evts], fd ++ body_food}
       end)
 
-    %{state | players: players, events: events, food: food}
+    capped_food = if length(food) > @max_food, do: Enum.take(food, @max_food), else: food
+    %{state | players: players, events: events, food: capped_food}
   end
 
   defp collect_food(state) do
@@ -633,8 +673,9 @@ defmodule LurusWww.Games.Snake.Engine do
             speed = @magnet_speed * (0.7 + tier * 0.3)
             {hx, hy} = hd(p.segments)
             d = dist(hx, hy, fx, fy)
-            if d < range && d > 1 do
-              {fx + (hx - fx) / d * speed, fy + (hy - fy) / d * speed, t}
+            if d < range do
+              safe_d = max(d, 0.01)
+              {fx + (hx - fx) / safe_d * speed, fy + (hy - fy) / safe_d * speed, t}
             else
               f
             end
@@ -666,8 +707,38 @@ defmodule LurusWww.Games.Snake.Engine do
   end
 
   defp replenish_food(state) do
+    state = maybe_food_rain(state)
     needed = target_food(state) - length(state.food)
-    if needed > 3, do: seed_food(state, min(needed, 10)), else: state
+    if needed > 0, do: seed_food(state, min(needed, 30)), else: state
+  end
+
+  # Periodic food-rain event. Schedules next rain with jitter on first call or after expiry.
+  defp maybe_food_rain(%{next_rain_at: 0} = state) do
+    jitter = div(@rain_interval, 4)
+    delay = @rain_interval + :rand.uniform(jitter * 2) - jitter
+    %{state | next_rain_at: state.tick + delay}
+  end
+  defp maybe_food_rain(state) do
+    cond do
+      state.tick < state.next_rain_at ->
+        state
+
+      true ->
+        burst = Enum.min([@rain_burst, @max_food - length(state.food)])
+        if burst > 0 do
+          jitter = div(@rain_interval, 4)
+          delay = @rain_interval + :rand.uniform(jitter * 2) - jitter
+          state
+          |> seed_food(burst)
+          |> Map.merge(%{
+            rain_until: state.tick + 50,
+            next_rain_at: state.tick + delay,
+            events: [{:food_rain, burst} | state.events]
+          })
+        else
+          %{state | next_rain_at: state.tick + 200}
+        end
+    end
   end
 
   defp seed_food(state, count) do
@@ -744,5 +815,7 @@ defmodule LurusWww.Games.Snake.Engine do
   defp encode_event({:powerup_collected, id, type, tier}), do: ["pup", id, pup_idx(type), tier]
   defp encode_event({:level_up, id, lv}), do: ["lv", id, lv]
   defp encode_event({:fatten, id, g}), do: ["fat", id, g]
+  defp encode_event({:streak, id, n}), do: ["streak", id, n]
+  defp encode_event({:food_rain, n}), do: ["rain", n]
   defp encode_event(_), do: nil
 end
