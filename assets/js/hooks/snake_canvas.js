@@ -25,10 +25,14 @@ const SnakeCanvas = {
     this.audio = new GameAudio()
     this.particles = []
     this.rainDrops = []          // ambient food-rain particles
+    this.MAX_PARTICLES = 400
+    this.MAX_RAINDROPS = 200
     this.cam = { x: 900, y: 600 }
     this.lastDrawAt = 0
     this.lastSteerAt = 0
     this._steerTrailing = null
+    this._wasAlive = false       // tracks dead→alive transition for camera snap
+    this._lastKiller = null      // {name, color} captured from die event
     // Static starfield (world-space, parallax-lite)
     this._stars = []
     // Large ambient glow spots in world
@@ -47,6 +51,8 @@ const SnakeCanvas = {
     })
     this.canvas.addEventListener("mousedown", () => this.setBoosting(true))
     this.canvas.addEventListener("mouseup", () => this.setBoosting(false))
+    // Clear stuck boost when pointer leaves canvas
+    this.canvas.addEventListener("mouseleave", () => this.setBoosting(false))
 
     // Touch
     this.canvas.addEventListener("touchmove", (e) => {
@@ -60,8 +66,9 @@ const SnakeCanvas = {
       this.sendSteer()
       this.tryRespawn()
     }, { passive: true })
-    this.canvas.addEventListener("touchend", (e) => {
-      if (e.touches.length < 2) this.setBoosting(false)
+    this.canvas.addEventListener("touchend", () => {
+      // Always clear boost on any touchend — previous logic missed multi-tap edge cases
+      this.setBoosting(false)
     }, { passive: true })
 
     this.canvas.addEventListener("click", () => this.tryRespawn())
@@ -217,6 +224,11 @@ const SnakeCanvas = {
     if (this.boosting !== active) { this.boosting = active; this.pushEvent("boost", { active }) }
   },
 
+  pushKillerToLV() {
+    if (!this._lastKiller) return
+    this.pushEvent("set_killer", { name: this._lastKiller.name, color: this._lastKiller.color })
+  },
+
   onState(state) {
     const now = performance.now()
     if (this.state && this.lastStateAt) {
@@ -227,13 +239,48 @@ const SnakeCanvas = {
     this.prevState = this.state
     this.state = state
     this.lastStateAt = now
+
+    // Cap visual particle arrays so they can't grow unbounded across long sessions / rain bursts
+    if (this.rainDrops.length > this.MAX_RAINDROPS) {
+      this.rainDrops.splice(0, this.rainDrops.length - this.MAX_RAINDROPS)
+    }
+    if (this.particles.length > this.MAX_PARTICLES) {
+      this.particles.splice(0, this.particles.length - this.MAX_PARTICLES)
+    }
+
+    // Camera snap on dead→alive transition (avoid 1-frame jitter from old cam position)
+    const me = state.players?.[this.playerId]
+    const isAliveNow = me && (me.al !== undefined ? me.al : me.alive)
+    if (isAliveNow && !this._wasAlive) {
+      const segs = me.s || me.segments
+      if (segs?.[0]) { this.cam.x = segs[0][0]; this.cam.y = segs[0][1] }
+      this._lastKiller = null
+    }
+    this._wasAlive = !!isAliveNow
+
     if (!state.events) return
     for (const ev of state.events) {
       if (!ev) continue
       switch (ev[0]) {
         case "eat": this.audio.play("eat", ev[2] === 1); break
         case "die": {
-          this.audio.play("die", ev[1] === this.playerId)
+          const wasMe = ev[1] === this.playerId
+          this.audio.play("die", wasMe)
+          // Capture killer info if I was the victim
+          if (wasMe) {
+            const killerId = ev[2]
+            const killerName = ev[3]
+            if (killerId && killerId !== ev[1]) {
+              const kp = state.players?.[killerId]
+              this._lastKiller = {
+                name: killerName || (kp?.n || kp?.name || "?"),
+                color: kp?.c || kp?.color || "#FF4466"
+              }
+            } else {
+              this._lastKiller = { name: "the wall", color: "#FF4466" }
+            }
+            this.pushKillerToLV()
+          }
           const dp = state.players?.[ev[1]]
           const dSegs = dp?.s || dp?.segments
           if (dSegs?.length) {

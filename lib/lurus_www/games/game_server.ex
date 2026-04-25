@@ -151,12 +151,16 @@ defmodule LurusWww.Games.GameServer do
 
   @impl true
   def handle_info(:tick, state) do
+    # Compensate for processing time so ticks don't drift on heavy frames.
+    start_t = System.monotonic_time(:millisecond)
     engine = Engine.tick(state.engine)
     broadcast_game(engine)
+    elapsed = System.monotonic_time(:millisecond) - start_t
+    next_delay = max(5, @tick_interval - elapsed)
 
     tick_ref =
       if engine.status == :playing do
-        Process.send_after(self(), :tick, @tick_interval)
+        Process.send_after(self(), :tick, next_delay)
       else
         nil
       end
@@ -194,7 +198,7 @@ defmodule LurusWww.Games.GameServer do
     # Persist scores for players who just died
     for event <- engine.events do
       case event do
-        {:player_died, player_id, _killer} ->
+        {:player_died, player_id, _killer, _killer_name} ->
           case Map.get(engine.players, player_id) do
             %{name: name, score: score, kills: kills} when score > 0 ->
               Task.start(fn -> LurusWww.Scores.record_score(name, score, kills) end)

@@ -983,6 +983,85 @@ body {
   color: var(--color-accent-amber);
   font-variant-numeric: tabular-nums;
   border: 1px solid rgba(255, 184, 0, 0.15);
+  text-shadow: 0 0 8px rgba(255, 184, 0, 0.5);
+}
+
+.hud-right { display: flex; gap: 6px; align-items: center; }
+.hud-left  { display: flex; gap: 8px; align-items: center; }
+
+.hud-level {
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(10, 10, 15, 0.7);
+  backdrop-filter: blur(8px);
+  font-size: 12px;
+  font-weight: 800;
+  color: #B08EFF;
+  letter-spacing: 0.04em;
+  border: 1px solid rgba(176, 142, 255, 0.25);
+}
+
+.hud-streak {
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: rgba(255, 68, 102, 0.15);
+  backdrop-filter: blur(8px);
+  font-size: 12px;
+  font-weight: 900;
+  color: #FFB800;
+  border: 1px solid rgba(255, 184, 0, 0.5);
+  animation: streakPulse 0.8s ease-in-out infinite;
+  text-shadow: 0 0 10px rgba(255, 184, 0, 0.8);
+}
+
+@keyframes streakPulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.06); }
+}
+
+.hud-buffs {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.buff-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  height: 24px;
+  padding: 0 5px;
+  border-radius: 6px;
+  background: rgba(10, 10, 15, 0.7);
+  backdrop-filter: blur(8px);
+  font-size: 12px;
+  line-height: 1;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.buff-blade   { border-color: rgba(255, 68, 102, 0.55); color: #FF4466; }
+.buff-shield  { border-color: rgba(0, 255, 135, 0.55); color: #00FF87; }
+.buff-magnet  { border-color: rgba(255, 184, 0, 0.55); color: #FFB800; }
+.buff-star    { border-color: rgba(230, 219, 116, 0.55); color: #E6DB74; }
+.buff-ghost   { border-color: rgba(176, 142, 255, 0.55); color: #B08EFF; }
+.buff-mega    { border-color: rgba(255, 107, 204, 0.55); color: #FF6BCC; }
+.buff-freeze  { border-color: rgba(102, 217, 239, 0.55); color: #66D9EF; }
+.buff-slowmo  { border-color: rgba(138, 184, 230, 0.55); color: #8AB8E6; }
+
+.buff-tier-2 { box-shadow: 0 0 0 1px rgba(74, 158, 255, 0.5); }
+.buff-tier-3 { box-shadow: 0 0 0 1px rgba(255, 184, 0, 0.7), 0 0 12px rgba(255, 184, 0, 0.4); }
+
+.killed-by {
+  margin: 6px 0 14px;
+  font-size: 14px;
+  color: #B0B0C8;
+  text-align: center;
+}
+.killer-name {
+  font-weight: 800;
+  text-shadow: 0 0 8px currentColor;
 }
 
 .hud-effect {

@@ -324,6 +324,8 @@ defmodule LurusWww.Games.Snake.Engine do
     level_bonus = (p.level - 1) * @level_speed_bonus
     base = min(@max_speed, @base_speed + level_bonus)
     base = if Map.has_key?(p.effects, :star), do: base * 1.1, else: base
+    # Kill Cascade Aura: streak >= 3 grants +10% speed (synergy with existing streak system)
+    base = if p.streak >= 3, do: base * 1.10, else: base
     # Frozen = no move
     cond do
       Map.has_key?(p.effects, :freeze) -> 0.0
@@ -364,8 +366,11 @@ defmodule LurusWww.Games.Snake.Engine do
 
         # Combo decay
         combo = if p.combo_until > state.tick, do: p.combo, else: 0
+        # Streak decay — reset when window expires
+        {streak, streak_until} =
+          if p.streak_until >= state.tick, do: {p.streak, p.streak_until}, else: {0, 0}
 
-        {id, %{p | effects: effects, combo: combo}}
+        {id, %{p | effects: effects, combo: combo, streak: streak, streak_until: streak_until}}
       else
         {id, p}
       end
@@ -525,7 +530,7 @@ defmodule LurusWww.Games.Snake.Engine do
         {ps, evts} =
           if killer && killer != id && !Map.has_key?(deaths, killer) do
             kp = ps[killer]
-            streak_active? = kp.streak_until > state.tick
+            streak_active? = kp.streak_until >= state.tick
             new_streak = if streak_active?, do: min(@streak_cap, kp.streak + 1), else: 1
             # Multiplier: 1.0x at streak=1, scales to 2.0x at streak=5, caps at 2.5x at streak=10
             mult = 1.0 + min(new_streak - 1, 9) * 0.15
@@ -544,7 +549,8 @@ defmodule LurusWww.Games.Snake.Engine do
           else
             {ps, evts}
           end
-        {ps, [{:player_died, id, killer} | evts], fd ++ body_food}
+        killer_name = if killer && killer != id, do: ps[killer][:name], else: nil
+        {ps, [{:player_died, id, killer, killer_name} | evts], fd ++ body_food}
       end)
 
     capped_food = if length(food) > @max_food, do: Enum.take(food, @max_food), else: food
@@ -632,7 +638,7 @@ defmodule LurusWww.Games.Snake.Engine do
   defp apply_pup(ps, _state, id, :freeze, tier) do
     # Freeze all OTHER alive players for the duration
     freezer_id = id
-    dur = @tier_duration[tier]
+    dur = @tier_duration[tier] || @tier_duration[1]
     Map.new(ps, fn {pid, p} ->
       if pid == freezer_id || !p.alive do
         {pid, p}
@@ -644,7 +650,7 @@ defmodule LurusWww.Games.Snake.Engine do
 
   defp apply_pup(ps, _state, id, :slowmo, tier) do
     slower_id = id
-    dur = @tier_duration[tier]
+    dur = @tier_duration[tier] || @tier_duration[1]
     Map.new(ps, fn {pid, p} ->
       if pid == slower_id || !p.alive do
         {pid, p}
@@ -655,8 +661,8 @@ defmodule LurusWww.Games.Snake.Engine do
   end
 
   defp apply_pup(ps, _state, id, type, tier) do
-    # Generic: add effect with tier-based duration
-    dur = @tier_duration[tier]
+    # Generic: add effect with tier-based duration. Falls back to t1 dur if tier invalid.
+    dur = @tier_duration[tier] || @tier_duration[1]
     Map.update!(ps, id, fn p -> %{p | effects: Map.put(p.effects, type, {dur, tier})} end)
   end
 
@@ -809,7 +815,8 @@ defmodule LurusWww.Games.Snake.Engine do
   end
 
   defp encode_event({:food_eaten, id, type}), do: ["eat", id, if(type == :golden, do: 1, else: 0)]
-  defp encode_event({:player_died, id, killer}), do: ["die", id, killer]
+  defp encode_event({:player_died, id, killer, killer_name}), do: ["die", id, killer, killer_name]
+  defp encode_event({:player_died, id, killer}), do: ["die", id, killer, nil]
   defp encode_event({:player_respawned, id}), do: ["spawn", id]
   defp encode_event({:game_started}), do: ["start"]
   defp encode_event({:powerup_collected, id, type, tier}), do: ["pup", id, pup_idx(type), tier]

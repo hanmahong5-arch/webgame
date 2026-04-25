@@ -13,7 +13,8 @@ defmodule LurusWwwWeb.Live.GameLive do
       player_name: nil,
       joined: false,
       game_state: nil,
-      my_alive: false
+      my_alive: false,
+      last_killer: nil
     )
 
     if connected?(socket) do
@@ -105,7 +106,11 @@ defmodule LurusWwwWeb.Live.GameLive do
     if socket.assigns.player_id && socket.assigns.room_id do
       GameServer.respawn(socket.assigns.room_id, socket.assigns.player_id)
     end
-    {:noreply, assign(socket, my_alive: true)}
+    {:noreply, assign(socket, my_alive: true, last_killer: nil)}
+  end
+
+  def handle_event("set_killer", %{"name" => name, "color" => color}, socket) do
+    {:noreply, assign(socket, last_killer: %{name: to_string(name), color: to_string(color)})}
   end
 
   def handle_event("steer", %{"angle" => a}, socket) when is_number(a) do
@@ -164,11 +169,30 @@ defmodule LurusWwwWeb.Live.GameLive do
         <div class="game-hud">
           <div class="hud-left">
             <a href="/" class="game-brand">WebGame</a>
+            <%= if @joined && @game_state do %>
+              <% me_hud = (@game_state.players || %{})[@player_id] %>
+              <%= if me_hud do %>
+                <span class="hud-buffs">
+                  <%= for [type, tier, _ttl] <- (me_hud[:ef] || []) do %>
+                    <span class={"buff-pill buff-#{type} buff-tier-#{tier}"} title={"#{type} (T#{tier})"}>
+                      {effect_icon(type)}
+                    </span>
+                  <% end %>
+                  <%= if me_hud[:sh] && me_hud[:sh] > 0 do %>
+                    <span class="buff-pill buff-shield" title={"shield x#{me_hud[:sh]}"}>🛡 {me_hud[:sh]}</span>
+                  <% end %>
+                </span>
+              <% end %>
+            <% end %>
           </div>
           <div class="hud-right">
             <%= if @joined && @game_state do %>
               <% me = (@game_state.players || %{})[@player_id] %>
               <%= if me do %>
+                <span class="hud-level">Lv {me[:lv] || 1}</span>
+                <%= if (me[:st] || 0) >= 3 do %>
+                  <span class="hud-streak">🔥 {me[:st]}</span>
+                <% end %>
                 <span class="hud-score">{me[:sc] || me[:score] || 0}</span>
               <% end %>
             <% end %>
@@ -212,6 +236,11 @@ defmodule LurusWwwWeb.Live.GameLive do
           <div class="respawn-overlay" phx-click="respawn">
             <div class="respawn-card">
               <h3 class="respawn-title">Game Over</h3>
+              <%= if @last_killer do %>
+                <p class="killed-by">
+                  Killed by <span class="killer-name" style={"color:#{@last_killer.color}"}>{@last_killer.name}</span>
+                </p>
+              <% end %>
               <%= if @game_state do %>
                 <% me = (@game_state.players || %{})[@player_id] %>
                 <%= if me do %>
@@ -223,6 +252,10 @@ defmodule LurusWwwWeb.Live.GameLive do
                     <div class="stat-item">
                       <span class="stat-value">{me[:k] || me[:kills] || 0}</span>
                       <span class="stat-label">Kills</span>
+                    </div>
+                    <div class="stat-item">
+                      <span class="stat-value">{me[:lv] || 1}</span>
+                      <span class="stat-label">Level</span>
                     </div>
                   </div>
                 <% end %>
@@ -263,4 +296,15 @@ defmodule LurusWwwWeb.Live.GameLive do
   end
 
   defp gen_id, do: Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
+
+  defp effect_icon("blade"), do: "⚔"
+  defp effect_icon("shield"), do: "🛡"
+  defp effect_icon("magnet"), do: "🧲"
+  defp effect_icon("star"), do: "⭐"
+  defp effect_icon("ghost"), do: "👻"
+  defp effect_icon("mega"), do: "💥"
+  defp effect_icon("freeze"), do: "❄"
+  defp effect_icon("slowmo"), do: "⏳"
+  defp effect_icon("slowmo_target"), do: "🐌"
+  defp effect_icon(_), do: "✦"
 end
