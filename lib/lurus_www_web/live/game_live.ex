@@ -43,7 +43,8 @@ defmodule LurusWwwWeb.Live.GameLive do
     socket = assign(socket, player_id: id, player_name: name)
     trimmed = String.trim(name || "")
 
-    if trimmed != "" && !socket.assigns.joined && socket.assigns.room_id do
+    if trimmed != "" && !socket.assigns.joined && socket.assigns.room_id &&
+         rate_limit_ok?(:init_player, 3, 10_000) do
       case do_join(socket.assigns.room_id, id, String.slice(trimmed, 0..15)) do
         {:ok, room_id, final_pid, state} ->
           socket = if room_id != socket.assigns.room_id do
@@ -71,6 +72,14 @@ defmodule LurusWwwWeb.Live.GameLive do
   end
 
   def handle_event("join", params, socket) do
+    if not rate_limit_ok?(:join, 5, 30_000) do
+      {:noreply, put_flash(socket, :error, "Too many attempts — slow down")}
+    else
+      do_handle_join(params, socket)
+    end
+  end
+
+  defp do_handle_join(params, socket) do
     name = String.trim(params["name"] || "")
     name = if name == "", do: "Snake#{:rand.uniform(999)}", else: String.slice(name, 0..15)
 
@@ -107,7 +116,8 @@ defmodule LurusWwwWeb.Live.GameLive do
   end
 
   def handle_event("respawn", _, socket) do
-    if socket.assigns.player_id && socket.assigns.room_id do
+    if rate_limit_ok?(:respawn, 8, 5_000) &&
+         socket.assigns.player_id && socket.assigns.room_id do
       GameServer.respawn(socket.assigns.room_id, socket.assigns.player_id)
     end
     {:noreply, assign(socket, my_alive: true, last_killer: nil)}
@@ -156,6 +166,10 @@ defmodule LurusWwwWeb.Live.GameLive do
       socket
       |> push_event("game_state", payload)
       |> assign(game_state: state, my_alive: my_alive)}
+  end
+
+  def handle_info({:server_shutdown}, socket) do
+    {:noreply, push_event(socket, "server_shutdown", %{})}
   end
 
   def handle_info(_, socket), do: {:noreply, socket}
@@ -293,6 +307,23 @@ defmodule LurusWwwWeb.Live.GameLive do
   end
 
   defp gen_id, do: Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
+
+  # Per-LV-pid sliding-window rate limit using process dictionary.
+  # Rejects events when the user has exceeded `max` calls within `window_ms`.
+  # Each LV is a single Erlang process so this is race-free.
+  defp rate_limit_ok?(key, max, window_ms) do
+    now = System.monotonic_time(:millisecond)
+    history = Process.get({:rl, key}, [])
+    fresh = Enum.filter(history, fn t -> now - t < window_ms end)
+
+    if length(fresh) >= max do
+      :telemetry.execute([:webgame, :game, :rate_limited], %{count: 1}, %{event: key})
+      false
+    else
+      Process.put({:rl, key}, [now | fresh])
+      true
+    end
+  end
 
   defp derive_alive(state, pid) do
     case Map.get(state.players || %{}, pid) do

@@ -27,6 +27,9 @@ spec:
       # Schedule on master node (co-located with Traefik for direct pod routing)
       nodeSelector:
         kubernetes.io/hostname: cloud-ubuntu-1-16c32g
+      # Give the BEAM time to run prep_stop, broadcast shutdown to active rooms,
+      # and let LV clients flush their final messages before kubelet SIGKILL.
+      terminationGracePeriodSeconds: 15
       securityContext:
         runAsNonRoot: true
         runAsUser: 65534

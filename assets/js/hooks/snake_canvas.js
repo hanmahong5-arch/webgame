@@ -94,6 +94,15 @@ const SnakeCanvas = {
       if (s.my_id) this.playerId = s.my_id
       this.onState(s)
     })
+    this.handleEvent("server_shutdown", () => {
+      // Pod is rolling out. Show a banner; LV will auto-reconnect on the new pod
+      // and resume_player will restore our snake by localStorage id.
+      this.flashBanner = {
+        text: "Server restarting — reconnecting…",
+        color: "#FFB800",
+        until: performance.now() + 8000
+      }
+    })
 
     this.loop()
   },
@@ -719,11 +728,11 @@ const SnakeCanvas = {
       ctx.fillText(me.boosting ? "BOOST" : `Length: ${len}`, W_CSS / 2, by2 - 3)
     }
 
-    // Flash banner (streak / food rain / events)
+    // Flash banner (streak / food rain / events / shutdown)
     if (this.flashBanner && nowMs < this.flashBanner.until) {
       const remaining = this.flashBanner.until - nowMs
-      const totalDur = 1400
-      const a = Math.min(1, remaining / 400) * Math.min(1, (totalDur - remaining) / 150 + 0.2)
+      // Fade-out window: last 400ms ramps from 1→0; otherwise full alpha
+      const a = remaining < 400 ? remaining / 400 : 1
       ctx.globalAlpha = a
       ctx.fillStyle = this.flashBanner.color
       ctx.font = "bold 42px sans-serif"

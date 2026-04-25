@@ -102,6 +102,7 @@ defmodule LurusWww.Games.GameServer do
 
     case result do
       {:ok, engine} ->
+        :telemetry.execute([:webgame, :game, :join], %{count: 1}, %{room_id: engine.id})
         engine = maybe_fill_bots(engine)
         state = ensure_ticking(%{state | engine: engine})
         state = reset_idle(state)
@@ -124,6 +125,7 @@ defmodule LurusWww.Games.GameServer do
 
   @impl true
   def handle_cast({:leave, player_id}, state) do
+    :telemetry.execute([:webgame, :game, :leave], %{count: 1}, %{room_id: state.engine.id})
     engine = Engine.remove_player(state.engine, player_id)
     # If the last human left, drain bots so the room actually idles.
     engine = if Engine.human_count(engine) == 0, do: drain_bots(engine), else: engine
@@ -159,6 +161,7 @@ defmodule LurusWww.Games.GameServer do
   end
 
   def handle_cast({:respawn, player_id}, state) do
+    :telemetry.execute([:webgame, :game, :respawn], %{count: 1}, %{room_id: state.engine.id})
     engine = Engine.respawn(state.engine, player_id)
     broadcast_game(engine)
     {:noreply, reset_idle(%{state | engine: engine})}
@@ -167,12 +170,32 @@ defmodule LurusWww.Games.GameServer do
   @impl true
   def handle_info(:tick, state) do
     # Compensate for processing time so ticks don't drift on heavy frames.
-    start_t = System.monotonic_time(:millisecond)
+    start_us = System.monotonic_time(:microsecond)
     engine = Engine.tick(state.engine)
     # Maintain bot population every 60 ticks (~3s) — cheap, idempotent.
     engine = if rem(engine.tick, 60) == 0, do: maybe_fill_bots(engine), else: engine
     broadcast_game(engine)
-    elapsed = System.monotonic_time(:millisecond) - start_t
+
+    elapsed_us = System.monotonic_time(:microsecond) - start_us
+    :telemetry.execute(
+      [:webgame, :game, :tick],
+      %{duration: elapsed_us},
+      %{room_id: engine.id}
+    )
+
+    # Emit kill/death counters for events produced this tick.
+    for ev <- engine.events do
+      case ev do
+        {:player_died, victim_id, killer, _kn} ->
+          :telemetry.execute([:webgame, :game, :death], %{count: 1}, %{room_id: engine.id})
+          if killer && killer != victim_id do
+            :telemetry.execute([:webgame, :game, :kill], %{count: 1}, %{room_id: engine.id})
+          end
+        _ -> :ok
+      end
+    end
+
+    elapsed = div(elapsed_us, 1000)
     next_delay = max(5, @tick_interval - elapsed)
 
     tick_ref =
@@ -244,7 +267,7 @@ defmodule LurusWww.Games.GameServer do
       status: engine.status,
       players:
         Enum.map(engine.players, fn {_id, p} ->
-          %{name: p.name, color: p.color, alive: p.alive}
+          %{name: p.name, color: p.color, alive: p.alive, is_bot: p.is_bot}
         end)
     }
   end
@@ -268,7 +291,9 @@ defmodule LurusWww.Games.GameServer do
         deficit = min(@bot_target_total - (humans + bots), @bot_max - bots)
         Enum.reduce(1..deficit, engine, fn _, acc ->
           case Engine.add_bot(acc) do
-            {:ok, new_engine, _id} -> new_engine
+            {:ok, new_engine, _id} ->
+              :telemetry.execute([:webgame, :game, :bot_spawn], %{count: 1}, %{room_id: acc.id})
+              new_engine
             _ -> acc
           end
         end)
