@@ -286,16 +286,16 @@ defmodule LurusWww.Games.Snake.EngineTest do
   end
 
   describe "steer_toward / angle steering" do
-    test "steer moves angle by at most turn_rate (0.14) per tick" do
+    test "steer moves angle by at most turn_rate (0.15) per tick" do
       {state, id} = one_player()
       orig_angle = 0.0
       state = %{state | players: Map.update!(state.players, id, &%{&1 | angle: orig_angle, target_angle: :math.pi()})}
       state2 = Engine.tick(state)
       new_angle = state2.players[id].angle
-      # Angle must have changed by at most turn_rate=0.14 in either direction
+      # Angle must have changed by at most turn_rate=0.15 in either direction
       diff = abs(new_angle - orig_angle)
-      # Accounting for wraparound: diff should be <= 0.14 + epsilon
-      assert diff <= 0.14 + 0.001 or diff >= 2 * :math.pi() - 0.14 - 0.001
+      # Accounting for wraparound: diff should be <= 0.15 + epsilon
+      assert diff <= 0.15 + 0.001 or diff >= 2 * :math.pi() - 0.15 - 0.001
     end
 
     test "steer toward -pi wraps correctly (does not go the long way)" do

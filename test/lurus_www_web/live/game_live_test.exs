@@ -562,7 +562,9 @@ defmodule LurusWwwWeb.Live.GameLiveTest do
         size: [2400, 1600]
       }})
 
-      html = view |> element("[phx-click=\"respawn\"]") |> render_click()
+      # Two elements have phx-click="respawn" (the overlay div and the button);
+      # target the button specifically to avoid the ambiguity error.
+      html = view |> element("button.btn-play[phx-click='respawn']") |> render_click()
       refute html =~ "respawn-overlay"
     end
   end
