@@ -3,6 +3,13 @@ defmodule LurusWwwWeb.Live.HomeLiveTest do
 
   import Phoenix.LiveViewTest
 
+  # The homepage is now a slither.io-style splash inside the default app layout.
+  # Tests assert on:
+  #   - the splash UI (#sio-home, #sio-name, #sio-play, .sio-logo-text, .sio-tips)
+  #   - the surrounding layout (topbar nav, footer)
+  # Old marketing copy ("Featured Games", "How It Works", "Ready?", etc.) was
+  # removed when 2c-bs-www-phoenix pivoted from corporate site to webgame product.
+
   # ── Mount ───────────────────────────────────────────────────────────────────
 
   describe "mount" do
@@ -11,211 +18,98 @@ defmodule LurusWwwWeb.Live.HomeLiveTest do
       assert html =~ "WebGame"
     end
 
-    test "sets page_title to platform name", %{conn: conn} do
+    test "sets page_title containing the game name", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/")
-      assert page_title(view) =~ "WebGame"
+      # New title is "Snake Arena — play now"
+      assert page_title(view) =~ "Snake Arena" or page_title(view) =~ "WebGame"
     end
   end
 
-  # ── Hero Section ────────────────────────────────────────────────────────────
+  # ── Splash UI (slither.io-style) ────────────────────────────────────────────
 
-  describe "hero section" do
-    test "renders hero section wrapper", %{conn: conn} do
+  describe "splash UI" do
+    test "renders the sio-home container with PlayLauncher hook", %{conn: conn} do
       {:ok, _view, html} = live(conn, "/")
-      assert html =~ "hero-section"
+      assert html =~ ~s(id="sio-home")
+      assert html =~ "sio-home"
+      assert html =~ "PlayLauncher"
     end
 
-    test "renders hero h1 with platform name", %{conn: conn} do
+    test "renders the SNAKE.ARENA logo text", %{conn: conn} do
       {:ok, _view, html} = live(conn, "/")
-      assert html =~ "<h1"
-      assert html =~ "WebGame"
+      assert html =~ "sio-logo-text"
+      # Logo is split into "SNAKE" + dot + "ARENA"
+      assert html =~ "SNAKE"
+      assert html =~ "ARENA"
     end
 
-    test "renders hero tagline", %{conn: conn} do
+    test "renders the logo subtitle", %{conn: conn} do
       {:ok, _view, html} = live(conn, "/")
-      assert html =~ "Create"
-      assert html =~ "Play"
-      assert html =~ "Share"
-      assert html =~ "Earn"
-    end
-
-    test "renders hero description mentioning AI and real-time", %{conn: conn} do
-      {:ok, _view, html} = live(conn, "/")
-      assert html =~ "AI-powered"
+      # Logo sub mentions multiplayer / real-time / no install
+      assert html =~ "multiplayer"
       assert html =~ "real-time"
     end
 
-    test "renders Platform Online badge", %{conn: conn} do
+    test "renders the nickname input with id sio-name", %{conn: conn} do
       {:ok, _view, html} = live(conn, "/")
-      assert html =~ "Platform Online"
+      assert html =~ ~s(id="sio-name")
+      assert html =~ ~s(class="sio-name")
+      assert html =~ ~s(placeholder="nickname")
     end
 
-    test "renders Play Now CTA link pointing to #games anchor", %{conn: conn} do
+    test "nickname input enforces 16-char maxlength", %{conn: conn} do
       {:ok, _view, html} = live(conn, "/")
-      assert html =~ ~s(href="#games")
-      assert html =~ "Play Now"
+      assert html =~ ~s(maxlength="16")
     end
 
-    test "renders Create a Game CTA link pointing to /create", %{conn: conn} do
+    test "renders the Play button with id sio-play", %{conn: conn} do
       {:ok, _view, html} = live(conn, "/")
+      assert html =~ ~s(id="sio-play")
+      assert html =~ ~s(class="sio-play")
+      assert html =~ ">Play<"
+    end
+
+    test "renders Create a game ghost link to /create", %{conn: conn} do
+      {:ok, _view, html} = live(conn, "/")
+      # The splash has a secondary "Create a game" link
       assert html =~ ~s(href="/create")
-      assert html =~ "Create a Game"
+      assert html =~ "Create a game"
+    end
+
+    test "renders control tips for mouse + boost", %{conn: conn} do
+      {:ok, _view, html} = live(conn, "/")
+      assert html =~ "sio-tips"
+      assert html =~ "steer"
+      assert html =~ "boost"
+    end
+
+    test "renders animated background worms and pellets", %{conn: conn} do
+      {:ok, _view, html} = live(conn, "/")
+      # Decorative elements that establish the slither.io vibe.
+      assert html =~ "sio-bg"
+      assert html =~ "sio-worm"
+      assert html =~ "sio-pellet"
+    end
+
+    test "renders footer links to terms and privacy in the splash", %{conn: conn} do
+      {:ok, _view, html} = live(conn, "/")
+      # The splash has its own minimalist footer + the layout footer.
+      assert html =~ ~s(href="/terms")
+      assert html =~ ~s(href="/privacy")
+    end
+
+    test "splash form prevents native submission; PlayLauncher drives nav via JS", %{conn: conn} do
+      {:ok, _view, html} = live(conn, "/")
+      # The form has onsubmit="return false;" to suppress native form posts;
+      # phx-submit="noop" is a defensive no-op on the LV side. Real navigation
+      # is driven client-side by the PlayLauncher hook on click.
+      assert html =~ ~s(onsubmit="return false;")
     end
   end
 
-  # ── How It Works Section ─────────────────────────────────────────────────────
+  # ── Layout (app shell: topbar + footer) ──────────────────────────────────────
 
-  describe "how-it-works section" do
-    test "renders how-it-works heading", %{conn: conn} do
-      {:ok, _view, html} = live(conn, "/")
-      assert html =~ "How It Works"
-    end
-
-    test "renders all three steps", %{conn: conn} do
-      {:ok, _view, html} = live(conn, "/")
-      assert html =~ "Describe"
-      assert html =~ "Play"
-      # step-title "Share & Earn" is HTML-escaped to "Share &amp; Earn"
-      assert html =~ "Share &amp; Earn"
-    end
-
-    test "renders step numbers 01 02 03", %{conn: conn} do
-      {:ok, _view, html} = live(conn, "/")
-      assert html =~ "01"
-      assert html =~ "02"
-      assert html =~ "03"
-    end
-
-    test "renders step descriptions mentioning key concepts", %{conn: conn} do
-      {:ok, _view, html} = live(conn, "/")
-      # Step 1: describe to AI
-      assert html =~ "plain language"
-      # Step 2: runs in browser, multiplayer
-      assert html =~ "browser"
-      # Step 3: tokens / creators / revenue
-      assert html =~ "tokens"
-    end
-  end
-
-  # ── Featured Games Section ───────────────────────────────────────────────────
-
-  describe "featured games section" do
-    test "renders games section with id=games anchor", %{conn: conn} do
-      {:ok, _view, html} = live(conn, "/")
-      assert html =~ ~s(id="games")
-    end
-
-    test "renders Featured Games heading", %{conn: conn} do
-      {:ok, _view, html} = live(conn, "/")
-      assert html =~ "Featured Games"
-    end
-
-    test "renders Snake Arena game card", %{conn: conn} do
-      {:ok, _view, html} = live(conn, "/")
-      assert html =~ "Snake Arena"
-    end
-
-    test "Snake Arena card links to /play", %{conn: conn} do
-      {:ok, _view, html} = live(conn, "/")
-      assert html =~ ~s(href="/play")
-    end
-
-    test "Snake Arena card has Multiplayer badge", %{conn: conn} do
-      {:ok, _view, html} = live(conn, "/")
-      assert html =~ "Multiplayer"
-    end
-
-    test "Snake Arena card shows capability tags", %{conn: conn} do
-      {:ok, _view, html} = live(conn, "/")
-      assert html =~ "Real-time"
-      assert html =~ "PvP"
-      assert html =~ "Powerups"
-      assert html =~ "Mobile"
-    end
-
-    test "renders coming soon cards", %{conn: conn} do
-      {:ok, _view, html} = live(conn, "/")
-      assert html =~ "Battle Pong"
-      assert html =~ "Block Builder"
-      assert html =~ "Your Game"
-    end
-
-    test "coming soon cards show Coming Soon badge", %{conn: conn} do
-      {:ok, _view, html} = live(conn, "/")
-      assert html =~ "Coming Soon"
-    end
-
-    test "Your Game card links to /create", %{conn: conn} do
-      {:ok, _view, html} = live(conn, "/")
-      assert html =~ "Create Now"
-    end
-  end
-
-  # ── Platform Features Grid ───────────────────────────────────────────────────
-
-  describe "platform features grid" do
-    test "renders Platform Capabilities heading", %{conn: conn} do
-      {:ok, _view, html} = live(conn, "/")
-      assert html =~ "Platform Capabilities"
-    end
-
-    test "renders Real-time Multiplayer feature card", %{conn: conn} do
-      {:ok, _view, html} = live(conn, "/")
-      assert html =~ "Real-time Multiplayer"
-    end
-
-    test "renders AI Game Creator feature card", %{conn: conn} do
-      {:ok, _view, html} = live(conn, "/")
-      assert html =~ "AI Game Creator"
-    end
-
-    test "renders Secure Sandbox feature card", %{conn: conn} do
-      {:ok, _view, html} = live(conn, "/")
-      assert html =~ "Secure Sandbox"
-    end
-
-    test "renders Token Economy feature card", %{conn: conn} do
-      {:ok, _view, html} = live(conn, "/")
-      assert html =~ "Token Economy"
-    end
-
-    test "feature cards describe key benefits", %{conn: conn} do
-      {:ok, _view, html} = live(conn, "/")
-      assert html =~ "Sub-50ms"
-      assert html =~ "BEAM process"
-      assert html =~ "Monetize"
-    end
-  end
-
-  # ── CTA Section ──────────────────────────────────────────────────────────────
-
-  describe "cta section" do
-    test "renders Ready? headline", %{conn: conn} do
-      {:ok, _view, html} = live(conn, "/")
-      assert html =~ "Ready?"
-    end
-
-    test "renders no-account-required copy", %{conn: conn} do
-      {:ok, _view, html} = live(conn, "/")
-      assert html =~ "No account required"
-    end
-
-    test "CTA section has Play Now button pointing to #games", %{conn: conn} do
-      {:ok, _view, html} = live(conn, "/")
-      # Two Play Now links exist (hero + CTA); at least one targets #games
-      assert html =~ ~s(href="#games")
-    end
-
-    test "CTA section has Create a Game link", %{conn: conn} do
-      {:ok, _view, html} = live(conn, "/")
-      # Both hero and CTA sections render this link
-      assert Regex.scan(~r{href="/create"}, html) |> length() >= 1
-    end
-  end
-
-  # ── Layout / Nav / Footer ────────────────────────────────────────────────────
-
-  describe "layout" do
+  describe "app layout shell" do
     test "renders topbar nav with Play link", %{conn: conn} do
       {:ok, _view, html} = live(conn, "/")
       assert html =~ ~s(href="/play")
@@ -240,6 +134,21 @@ defmodule LurusWwwWeb.Live.HomeLiveTest do
     test "renders login link for unauthenticated users", %{conn: conn} do
       {:ok, _view, html} = live(conn, "/")
       assert html =~ ~s(href="/auth/login")
+    end
+
+    test "renders the WebGame brand in the topbar", %{conn: conn} do
+      {:ok, _view, html} = live(conn, "/")
+      assert html =~ "topbar-logo"
+      assert html =~ "WebGame"
+    end
+  end
+
+  # ── No-op event handler ──────────────────────────────────────────────────────
+
+  describe "noop event" do
+    test "the splash form has phx-submit='noop' wired to the view", %{conn: conn} do
+      {:ok, _view, html} = live(conn, "/")
+      assert html =~ ~s(phx-submit="noop")
     end
   end
 end

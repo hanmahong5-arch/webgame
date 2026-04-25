@@ -58,11 +58,12 @@ defmodule LurusWww.Games.Snake.EngineTest do
       assert length(p.segments) >= 10
     end
 
-    test "second player joins mid-game without :game_started event" do
+    test "second player joins mid-game without an extra :game_started event" do
       {:ok, s1} = Engine.add_player(Engine.new("r"), "p1", "Alice")
       {:ok, s2} = Engine.add_player(s1, "p2", "Bob")
-      # Only one game_started in total events since tick resets them
-      assert Enum.count(s2.events, &match?({:game_started}, &1)) == 0
+      # The original :game_started from p1 is still present (events are reset
+      # on tick, not on join), but joining p2 must NOT push another one.
+      assert Enum.count(s2.events, &match?({:game_started}, &1)) == 1
     end
 
     test "second player is immediately alive" do
@@ -208,12 +209,17 @@ defmodule LurusWww.Games.Snake.EngineTest do
       assert Enum.any?(state.events, &match?({:player_respawned, ^id}, &1))
     end
 
-    test "respawn on already-alive player is a no-op" do
+    test "respawn on an alive player resets stats and re-spawns segments" do
+      # New behaviour (post-RPG-overhaul): respawn unconditionally resets the
+      # player. Calling it on an alive player is harmless but does mutate state
+      # — segments are re-rolled, score/kills cleared, alive stays true.
       {state, id} = one_player()
-      segs_before = state.players[id].segments
+      state = %{state | players: Map.update!(state.players, id, &%{&1 | score: 99, kills: 7})}
       state2 = Engine.respawn(state, id)
-      # alive player: pattern match fails, returns state unchanged
-      assert state2.players[id].segments == segs_before
+      assert state2.players[id].alive == true
+      assert state2.players[id].score == 0
+      assert state2.players[id].kills == 0
+      assert length(state2.players[id].segments) >= 10
     end
 
     test "respawn on unknown player id is a no-op" do
@@ -433,74 +439,72 @@ defmodule LurusWww.Games.Snake.EngineTest do
   # ── 3. Collision ─────────────────────────────────────────────────────────────
 
   describe "wall collision" do
+    # Helper for wall tests: after teleporting the head, also pin the angle so
+    # steer_and_move doesn't carry the head back inside before detect_collisions
+    # gets a chance to register the kill.
+    defp pin_for_wall(state, id, angle) do
+      %{state |
+        players: Map.update!(state.players, id, &%{&1 |
+          angle: angle, target_angle: angle, invincible_until: 0
+        }),
+        tick: 100
+      }
+    end
+
     test "player dies when head goes past left wall (x < 0)" do
       {state, id} = one_player()
-      state = move_head(state, id, -1.0, 700.0)
-      state = %{state | players: Map.update!(state.players, id, &%{&1 | invincible_until: 0}), tick: 100}
+      state = state |> move_head(id, -1.0, 700.0) |> pin_for_wall(id, :math.pi())
       state2 = Engine.tick(state)
       assert state2.players[id].alive == false
     end
 
     test "player dies when head goes past right wall (x > 2400)" do
       {state, id} = one_player()
-      state = move_head(state, id, 2401.0, 700.0)
-      state = %{state | players: Map.update!(state.players, id, &%{&1 | invincible_until: 0}), tick: 100}
+      state = state |> move_head(id, 2401.0, 700.0) |> pin_for_wall(id, 0.0)
       state2 = Engine.tick(state)
       assert state2.players[id].alive == false
     end
 
     test "player dies when head goes past top wall (y < 0)" do
       {state, id} = one_player()
-      state = move_head(state, id, 1000.0, -1.0)
-      state = %{state | players: Map.update!(state.players, id, &%{&1 | invincible_until: 0}), tick: 100}
+      state = state |> move_head(id, 1000.0, -1.0) |> pin_for_wall(id, -:math.pi() / 2)
       state2 = Engine.tick(state)
       assert state2.players[id].alive == false
     end
 
     test "player dies when head goes past bottom wall (y > 1600)" do
       {state, id} = one_player()
-      state = move_head(state, id, 1000.0, 1601.0)
-      state = %{state | players: Map.update!(state.players, id, &%{&1 | invincible_until: 0}), tick: 100}
+      state = state |> move_head(id, 1000.0, 1601.0) |> pin_for_wall(id, :math.pi() / 2)
       state2 = Engine.tick(state)
       assert state2.players[id].alive == false
     end
 
-    test "player exactly at boundary (x=0) dies" do
+    test "player just past the left boundary dies" do
       {state, id} = one_player()
-      # invincibility wears off after @invincible_ticks (80); first tick is invincible
-      state = move_head(state, id, 0.0, 700.0)
-      state = %{state | players: Map.update!(state.players, id, &%{&1 | invincible_until: 0}), tick: 100}
+      state = state |> move_head(id, -1.0, 700.0) |> pin_for_wall(id, :math.pi())
       state2 = Engine.tick(state)
-      # x=0 is NOT past the wall (engine uses strict x < 0 / x > width); after one move at angle 0 head will be at speed > 0 → still inside.
-      # Force head past the boundary right after teleport and clear invincibility:
-      state2 = move_head(state2, id, -1.0, 700.0)
-      state3 = Engine.tick(state2)
-      assert state3.players[id].alive == false
+      assert state2.players[id].alive == false
     end
 
-    test "player exactly at right boundary (x=2400) dies" do
+    test "player just past the right boundary dies" do
       {state, id} = one_player()
-      # x = 2400 is the boundary; engine kills when x > width, so push slightly past
-      state = move_head(state, id, 2400.5, 700.0)
-      state = %{state | players: Map.update!(state.players, id, &%{&1 | invincible_until: 0}), tick: 100}
+      state = state |> move_head(id, 2400.5, 700.0) |> pin_for_wall(id, 0.0)
       state2 = Engine.tick(state)
       assert state2.players[id].alive == false
     end
 
     test "wall kill drops body food" do
       {state, id} = one_player()
-      state = move_head(state, id, -5.0, 700.0)
-      state = %{state | players: Map.update!(state.players, id, &%{&1 | invincible_until: 0}), tick: 100}
+      state = state |> move_head(id, -5.0, 700.0) |> pin_for_wall(id, :math.pi())
       food_before = length(state.food)
       state2 = Engine.tick(state)
-      # Body food is added on death
+      # Body food is added on death (replenishment may also add — strict >).
       assert length(state2.food) > food_before
     end
 
     test "wall kill emits :player_died event with nil killer" do
       {state, id} = one_player()
-      state = move_head(state, id, -5.0, 700.0)
-      state = %{state | players: Map.update!(state.players, id, &%{&1 | invincible_until: 0}), tick: 100}
+      state = state |> move_head(id, -5.0, 700.0) |> pin_for_wall(id, :math.pi())
       state2 = Engine.tick(state)
       # Engine emits 4-tuple: {:player_died, id, killer, killer_name}
       assert Enum.any?(state2.events, &match?({:player_died, ^id, nil, nil}, &1))
@@ -508,8 +512,8 @@ defmodule LurusWww.Games.Snake.EngineTest do
 
     test "wall-killed player with shield consumes shield and survives" do
       {state, id} = one_player()
-      state = move_head(state, id, -5.0, 700.0)
-      state = %{state | players: Map.update!(state.players, id, &%{&1 | shield_stacks: 1, invincible_until: 0}), tick: 100}
+      state = state |> move_head(id, -5.0, 700.0) |> pin_for_wall(id, :math.pi())
+      state = %{state | players: Map.update!(state.players, id, &%{&1 | shield_stacks: 1})}
       state2 = Engine.tick(state)
       # Shield absorbs hit: alive stays true, shield_stacks decremented
       assert state2.players[id].alive == true
@@ -600,13 +604,14 @@ defmodule LurusWww.Games.Snake.EngineTest do
       {:ok, s1} = Engine.add_player(Engine.new("r"), "p1", "A")
       {:ok, state} = Engine.add_player(s1, "p2", "B")
 
-      # Both hit walls simultaneously (engine width is 2400)
+      # Both hit walls simultaneously (engine width is 2400). Pin angle so
+      # steer_and_move keeps the head past the wall instead of curving back.
       state = move_head(state, "p1", -5.0, 700.0)
       state = move_head(state, "p2", 2405.0, 700.0)
       state = %{state |
         players: state.players
-          |> Map.update!("p1", &%{&1 | invincible_until: 0})
-          |> Map.update!("p2", &%{&1 | invincible_until: 0}),
+          |> Map.update!("p1", &%{&1 | invincible_until: 0, angle: :math.pi(), target_angle: :math.pi()})
+          |> Map.update!("p2", &%{&1 | invincible_until: 0, angle: 0.0, target_angle: 0.0}),
         tick: 100
       }
 
@@ -621,7 +626,13 @@ defmodule LurusWww.Games.Snake.EngineTest do
 
     test "death increments total_score by current score" do
       {state, id} = one_player()
-      state = %{state | players: Map.update!(state.players, id, &%{&1 | score: 42, invincible_until: 0}), tick: 100}
+      state = %{state |
+        players: Map.update!(state.players, id, &%{&1 |
+          score: 42, invincible_until: 0,
+          angle: :math.pi(), target_angle: :math.pi()
+        }),
+        tick: 100
+      }
       state = move_head(state, id, -5.0, 700.0)
       state2 = Engine.tick(state)
       assert state2.players[id].total_score == 42
@@ -837,27 +848,49 @@ defmodule LurusWww.Games.Snake.EngineTest do
   end
 
   describe "magnet attraction" do
+    # Pick the food item nearest to (x0, y0) — use this to find the placed food
+    # in the post-tick food list (replenish_food adds extras every tick).
+    defp find_food_near(food, x0, y0) do
+      Enum.min_by(food, fn {fx, fy, _} ->
+        dx = fx - x0
+        dy = fy - y0
+        dx * dx + dy * dy
+      end)
+    end
+
     test "food within magnet range moves toward snake head" do
       {state, id} = one_player()
       state = move_head(state, id, 500.0, 500.0)
-      # Place food 50 units away (well within tier-1 range ~180)
-      state = %{state | food: [{550.0, 500.0, :normal}],
-                        players: Map.update!(state.players, id, &%{&1 | effects: %{magnet: {200, 1}}})}
+      # Place food 100 units away — outside the magnet-boosted eat radius (~50)
+      # but well inside the tier-1 magnet range (~180). Pin the angle so the
+      # head doesn't drift over and eat it.
+      state = %{state |
+        food: [{600.0, 500.0, :normal}],
+        players: Map.update!(state.players, id, &%{&1 |
+          angle: :math.pi(), target_angle: :math.pi(),
+          effects: %{magnet: {200, 1}}
+        })
+      }
       state2 = Engine.tick(state)
-      [{fx, _, _}] = state2.food
-      # Food should have moved closer to 500.0
-      assert fx < 550.0
+      {fx, _, _} = find_food_near(state2.food, 600.0, 500.0)
+      # Food should have moved closer to the head (i.e. toward x=500 → fx<600).
+      assert fx < 600.0
     end
 
     test "food beyond magnet range is not attracted" do
       {state, id} = one_player()
       state = move_head(state, id, 500.0, 500.0)
-      # Tier-1 range = 180 * (0.7 + 0.3) = 180; place food at distance 300 (well outside)
-      state = %{state | food: [{800.0, 500.0, :normal}],
-                        players: Map.update!(state.players, id, &%{&1 | effects: %{magnet: {200, 1}}})}
+      # Tier-1 range = 180 * (0.7 + 0.3) = 180; place food at distance 300 (outside)
+      state = %{state |
+        food: [{800.0, 500.0, :normal}],
+        players: Map.update!(state.players, id, &%{&1 |
+          angle: :math.pi(), target_angle: :math.pi(),
+          effects: %{magnet: {200, 1}}
+        })
+      }
       state2 = Engine.tick(state)
-      [{fx, _, _}] = state2.food
-      # Food is 300 away, beyond range, should not have moved
+      {fx, _, _} = find_food_near(state2.food, 800.0, 500.0)
+      # Food is 300 away, beyond range, should not have moved.
       assert_in_delta fx, 800.0, 0.5
     end
   end
@@ -1074,6 +1107,9 @@ defmodule LurusWww.Games.Snake.EngineTest do
 
     test "leaderboard entry includes :al field for alive status" do
       {state, _} = one_player()
+      # Leaderboard is materialised inside tick/update_leaderboard, not on
+      # add_player. Tick once so the board is non-empty.
+      state = Engine.tick(state)
       client = Engine.to_client(state)
       entry = hd(client.leaderboard)
       assert Map.has_key?(entry, :al)

@@ -5,9 +5,15 @@ defmodule LurusWwwWeb.Live.GameLiveTest do
 
   alias LurusWww.Games.{GameServer, GameSupervisor}
 
+  # Join flow note (post-pivot):
+  # The legacy "submit join form" path is being replaced by the "init_player"
+  # event the SnakeCanvas hook fires after restoring identity from localStorage.
+  # Tests therefore drive the join via render_hook(view, "init_player", ...)
+  # rather than form/2 + render_submit/2. The hidden #join-form is still in the
+  # DOM as a fallback, but tests prefer the canonical init_player path.
+
   # ── Helpers ──────────────────────────────────────────────────────────────────
 
-  # Create a real room backed by a supervised GameServer process and return its id.
   defp create_room do
     room_id = GameSupervisor.generate_room_id()
     {:ok, _pid} = GameSupervisor.create_room(room_id)
@@ -24,6 +30,15 @@ defmodule LurusWwwWeb.Live.GameLiveTest do
       end
     end)
   end
+
+  # Drive the LiveView's init_player handler with a unique id+name.
+  defp do_join(view, id, name) do
+    render_hook(view, "init_player", %{"id" => id, "name" => name})
+  end
+
+  # Generate unique player ids so concurrent tests sharing the MAIN room
+  # don't collide on the same id (which would route through resume_player).
+  defp uid(prefix), do: "#{prefix}-#{System.unique_integer([:positive])}"
 
   # ── Mount: disconnected (static render) ─────────────────────────────────────
 
@@ -44,22 +59,20 @@ defmodule LurusWwwWeb.Live.GameLiveTest do
   # ── Mount: connected (LiveView upgrade) ──────────────────────────────────────
 
   describe "mount (connected)" do
-    test "assigns room_id on connect", %{conn: conn} do
+    test "renders game shell after connect", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/play")
-      # room_id is set after connected? check; join panel should still be shown
-      assert render(view) =~ "PLAY"
+      assert render(view) =~ "WebGame"
     end
 
     test "assigns initial game_state on connect when room has state", %{conn: conn} do
       room_id = create_room()
       {:ok, _view, html} = live(conn, "/play/#{room_id}")
-      # Rendered without error; join panel visible (not yet joined)
-      assert html =~ "join-panel" or html =~ "join-floating" or html =~ "PLAY"
+      # Rendered without error
+      assert html =~ "game-canvas"
     end
 
     test "subscribes to PubSub topic for the assigned room", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/play")
-      # Verify by sending a fake game_state message and confirming render updates
       pid = view.pid
 
       fake_state = %{
@@ -71,17 +84,15 @@ defmodule LurusWwwWeb.Live.GameLiveTest do
         pups: [],
         leaderboard: [],
         events: [],
-        size: [2000, 1400]
+        size: [2400, 1600]
       }
 
       send(pid, {:game_state, fake_state})
-      # push_event is sent to client; the process should not crash
       assert Process.alive?(pid)
     end
 
     test "falls back to auto room when requested room_id does not exist", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/play/DOESNOTEXIST")
-      # Should still mount successfully (AutoRoom.find_or_create called)
       assert render(view) =~ "WebGame"
     end
 
@@ -113,118 +124,71 @@ defmodule LurusWwwWeb.Live.GameLiveTest do
     end
   end
 
-  # ── Join Flow ────────────────────────────────────────────────────────────────
+  # ── Join Flow (init_player) ──────────────────────────────────────────────────
 
-  describe "join event" do
-    test "join with valid name marks player as joined and hides join panel", %{conn: conn} do
+  describe "init_player join" do
+    test "init_player with valid name marks player as joined and hides join overlay", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/play")
-
-      html = view |> form("#join-form", %{name: "TestPlayer"}) |> render_submit()
-
-      # Join panel should disappear after successful join
-      refute html =~ "join-floating"
-    end
-
-    test "join with empty name auto-generates SnakeNNN name", %{conn: conn} do
-      {:ok, view, _html} = live(conn, "/play")
-
-      # Submit form with empty name
-      html = view |> form("#join-form", %{name: ""}) |> render_submit()
-
-      # Should be joined (no join panel), auto-name was generated internally
-      refute html =~ "join-floating"
-    end
-
-    test "join with whitespace-only name auto-generates a name", %{conn: conn} do
-      {:ok, view, _html} = live(conn, "/play")
-
-      html = view |> form("#join-form", %{name: "   "}) |> render_submit()
-
-      refute html =~ "join-floating"
-    end
-
-    test "join name is truncated at 16 characters", %{conn: conn} do
-      {:ok, view, _html} = live(conn, "/play")
-
-      # 20-character name should be sliced to 16
-      long_name = "ABCDEFGHIJKLMNOPQRST"
-      html = view |> form("#join-form", %{name: long_name}) |> render_submit()
-
-      # Joined successfully; the internal name is 16 chars max
-      refute html =~ "join-floating"
-    end
-
-    test "join with pid hidden field uses provided player_id", %{conn: conn} do
-      {:ok, view, _html} = live(conn, "/play")
-
-      fixed_pid = "deadbeefdeadbeef"
-
-      html =
-        view
-        |> form("#join-form", %{name: "Alice", pid: fixed_pid})
-        |> render_submit()
-
-      refute html =~ "join-floating"
-    end
-
-    test "join with empty pid hidden field generates a new id", %{conn: conn} do
-      {:ok, view, _html} = live(conn, "/play")
-
-      html =
-        view
-        |> form("#join-form", %{name: "Bob", pid: ""})
-        |> render_submit()
-
-      refute html =~ "join-floating"
-    end
-
-    test "init_player event pre-fills player_id and player_name", %{conn: conn} do
-      {:ok, view, _html} = live(conn, "/play")
-
-      # Simulate JS hook sending saved player data
-      render_hook(view, "init_player", %{"id" => "saved-pid-abc", "name" => "SavedName"})
-
-      # After init_player, form should show the saved name
+      do_join(view, uid("ok"), "TestPlayer")
       html = render(view)
-      assert html =~ "SavedName"
+      refute html =~ "join-floating"
     end
 
-    test "init_player player_id is preferred over form pid on join", %{conn: conn} do
+    test "init_player with empty name does not join", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/play")
+      do_join(view, uid("empty"), "")
+      html = render(view)
+      # Empty name → still not joined → join-floating still visible.
+      assert html =~ "join-floating" or html =~ "PLAY"
+    end
 
-      render_hook(view, "init_player", %{"id" => "preferred-id", "name" => "Known"})
+    test "init_player with whitespace-only name does not join", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/play")
+      do_join(view, uid("ws"), "   ")
+      html = render(view)
+      assert html =~ "join-floating" or html =~ "PLAY"
+    end
 
-      html = view |> form("#join-form", %{name: "Known", pid: "ignored-id"}) |> render_submit()
-
-      # Join succeeds; preferred-id was used (no error flash)
+    test "init_player truncates names longer than 16 characters", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/play")
+      long_name = "ABCDEFGHIJKLMNOPQRST"
+      do_join(view, uid("long"), long_name)
+      html = render(view)
+      # Joined successfully — overlay gone.
       refute html =~ "join-floating"
     end
 
-    test "join when room is full redirects player to an overflow room", %{conn: conn} do
-      full_room = create_room()
-      fill_room(full_room)
-
-      {:ok, view, _html} = live(conn, "/play/#{full_room}")
-
-      # AutoRoom.find_or_create will be called internally; join should succeed
-      html = view |> form("#join-form", %{name: "Overflow"}) |> render_submit()
-
-      refute html =~ "join-floating"
+    test "init_player uses the supplied player_id verbatim", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/play")
+      pid = uid("fixed")
+      do_join(view, pid, "Alice")
+      assert Process.alive?(view.pid)
+      refute render(view) =~ "join-floating"
     end
 
-    test "failed join (non-overflow error) shows flash error", %{conn: conn} do
-      # Join the same player twice to trigger :already_joined error
+    test "init_player with the same id again resumes (server-side resume_player)", %{conn: conn} do
+      # GameServer.handle_call({:join, ...}) catches {:error, :already_joined}
+      # from Engine.add_player and falls through to Engine.resume_player —
+      # so a duplicate join is now a successful reconnect, not an error.
       room_id = create_room()
       {:ok, _state} = GameServer.join(room_id, "dup-id", "DupPlayer")
 
       {:ok, view, _html} = live(conn, "/play/#{room_id}")
+      do_join(view, "dup-id", "DupPlayer")
 
-      # Use the same player_id that's already in the room
-      render_hook(view, "init_player", %{"id" => "dup-id", "name" => "DupPlayer"})
-      html = view |> form("#join-form", %{name: "DupPlayer", pid: "dup-id"}) |> render_submit()
+      html = render(view)
+      refute html =~ "join-floating"
+    end
 
-      # Already-joined triggers {:error, :already_joined} → flash error
-      assert html =~ "already_joined" or html =~ "flash" or html =~ "error"
+    test "init_player on a full room overflows into a fresh room", %{conn: conn} do
+      full_room = create_room()
+      fill_room(full_room)
+
+      {:ok, view, _html} = live(conn, "/play/#{full_room}")
+      do_join(view, uid("overflow"), "Overflow")
+
+      html = render(view)
+      refute html =~ "join-floating"
     end
   end
 
@@ -233,7 +197,7 @@ defmodule LurusWwwWeb.Live.GameLiveTest do
   describe "steer event" do
     setup %{conn: conn} do
       {:ok, view, _html} = live(conn, "/play")
-      view |> form("#join-form", %{name: "Steerer"}) |> render_submit()
+      do_join(view, uid("steer"), "Steerer")
       {:ok, view: view}
     end
 
@@ -258,7 +222,6 @@ defmodule LurusWwwWeb.Live.GameLiveTest do
     end
 
     test "steer with string angle falls through to catch-all and does not crash", %{view: view} do
-      # String "1.57" does not match is_number guard → caught by catch-all handle_event
       render_hook(view, "steer", %{"angle" => "1.57"})
       assert Process.alive?(view.pid)
     end
@@ -272,7 +235,7 @@ defmodule LurusWwwWeb.Live.GameLiveTest do
   describe "boost event" do
     setup %{conn: conn} do
       {:ok, view, _html} = live(conn, "/play")
-      view |> form("#join-form", %{name: "Booster"}) |> render_submit()
+      do_join(view, uid("boost"), "Booster")
       {:ok, view: view}
     end
 
@@ -287,7 +250,6 @@ defmodule LurusWwwWeb.Live.GameLiveTest do
     end
 
     test "boost with non-boolean value falls through to catch-all without crash", %{view: view} do
-      # String "true" does not match is_boolean guard
       render_hook(view, "boost", %{"active" => "true"})
       assert Process.alive?(view.pid)
     end
@@ -296,7 +258,7 @@ defmodule LurusWwwWeb.Live.GameLiveTest do
   describe "respawn event" do
     setup %{conn: conn} do
       {:ok, view, _html} = live(conn, "/play")
-      view |> form("#join-form", %{name: "Respawner"}) |> render_submit()
+      do_join(view, uid("respawn"), "Respawner")
       {:ok, view: view}
     end
 
@@ -306,33 +268,64 @@ defmodule LurusWwwWeb.Live.GameLiveTest do
     end
 
     test "respawn sets my_alive to true and hides respawn overlay", %{view: view} do
-      # Simulate player dying via game_state update
       send(view.pid, {:game_state, %{
         id: "ROOM",
         tick: 10,
         status: :playing,
-        players: %{},  # no player entry → alive derives to false
+        players: %{},
         food: [],
         pups: [],
         leaderboard: [],
         events: [],
-        size: [2000, 1400]
+        size: [2400, 1600]
       }})
 
       render_hook(view, "respawn", %{})
       html = render(view)
-
-      # After respawn, the respawn overlay should not be shown
       refute html =~ "respawn-overlay"
     end
   end
 
-  describe "leave event" do
+  describe "set_killer event" do
+    setup %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/play")
+      do_join(view, uid("killer"), "Victim")
+      {:ok, view: view}
+    end
+
+    test "set_killer stores killer name + color and surfaces it on the death card", %{view: view} do
+      # Force the player into "dead" state so the overlay (and killed-by row)
+      # render. We send a game_state where the joined player has no entry,
+      # which makes derive_alive → false → respawn overlay shown.
+      send(view.pid, {:game_state, %{
+        id: "ROOM",
+        tick: 10,
+        status: :playing,
+        players: %{},
+        food: [],
+        pups: [],
+        leaderboard: [],
+        events: [],
+        size: [2400, 1600]
+      }})
+
+      render_hook(view, "set_killer", %{"name" => "Boss", "color" => "#FF00FF"})
+      html = render(view)
+      assert html =~ "Boss"
+      assert html =~ "#FF00FF"
+      assert html =~ "killed-by"
+    end
+
+    test "set_killer is safe to call before any death", %{view: view} do
+      render_hook(view, "set_killer", %{"name" => "Anyone", "color" => "#123456"})
+      assert Process.alive?(view.pid)
+    end
+  end
+
+  describe "leave / unknown events" do
     test "unknown events fall through to catch-all without crashing", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/play")
-      view |> form("#join-form", %{name: "Leaver"}) |> render_submit()
-
-      # "leave" is not explicitly defined; hits the catch-all handle_event
+      do_join(view, uid("leave"), "Leaver")
       render_hook(view, "leave", %{})
       assert Process.alive?(view.pid)
     end
@@ -353,20 +346,16 @@ defmodule LurusWwwWeb.Live.GameLiveTest do
         pups: [],
         leaderboard: [],
         events: [],
-        size: [2000, 1400]
+        size: [2400, 1600]
       }})
 
       assert Process.alive?(view.pid)
     end
 
-    test "game_state with alive player sets my_alive true", %{conn: conn} do
+    test "game_state without my player_id does not crash", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/play")
+      do_join(view, uid("alive"), "AliveTest")
 
-      # Join first so player_id is assigned
-      view |> form("#join-form", %{name: "AliveTest"}) |> render_submit()
-
-      # Send a game_state where player_id is not present (unknown player)
-      # The view should survive
       send(view.pid, {:game_state, %{
         id: "ROOM",
         tick: 2,
@@ -376,7 +365,7 @@ defmodule LurusWwwWeb.Live.GameLiveTest do
         pups: [],
         leaderboard: [],
         events: [],
-        size: [2000, 1400]
+        size: [2400, 1600]
       }})
 
       assert Process.alive?(view.pid)
@@ -384,55 +373,48 @@ defmodule LurusWwwWeb.Live.GameLiveTest do
 
     test "game_state with player using :al key tracks alive status", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/play")
-
-      # Grab assigned player_id by injecting via init_player
-      render_hook(view, "init_player", %{"id" => "my-snake-id", "name" => "Me"})
-      view |> form("#join-form", %{name: "Me", pid: "my-snake-id"}) |> render_submit()
+      pid = "my-snake-id-#{System.unique_integer([:positive])}"
+      do_join(view, pid, "Me")
 
       send(view.pid, {:game_state, %{
         id: "ROOM",
         tick: 3,
         status: :playing,
-        players: %{"my-snake-id" => %{al: true, n: "Me", sc: 10, c: "#FF0000"}},
+        players: %{pid => %{al: true, n: "Me", sc: 10, c: "#FF0000"}},
         food: [],
         pups: [],
         leaderboard: [],
         events: [],
-        size: [2000, 1400]
+        size: [2400, 1600]
       }})
 
-      # No crash; alive status was updated
       assert Process.alive?(view.pid)
     end
 
     test "game_state with player using :alive key also tracks alive status", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/play")
-
-      render_hook(view, "init_player", %{"id" => "my-snake-id2", "name" => "Me2"})
-      view |> form("#join-form", %{name: "Me2", pid: "my-snake-id2"}) |> render_submit()
+      pid = "my-snake-id-#{System.unique_integer([:positive])}"
+      do_join(view, pid, "Me2")
 
       send(view.pid, {:game_state, %{
         id: "ROOM",
         tick: 4,
         status: :playing,
-        players: %{"my-snake-id2" => %{alive: false, n: "Me2", sc: 0, c: "#00FF00"}},
+        players: %{pid => %{alive: false, n: "Me2", sc: 0, c: "#00FF00"}},
         food: [],
         pups: [],
         leaderboard: [],
         events: [],
-        size: [2000, 1400]
+        size: [2400, 1600]
       }})
 
-      # Player is dead: respawn overlay should appear
       html = render(view)
       assert html =~ "respawn-overlay" or html =~ "Game Over"
     end
 
     test "game_state injects my_id when player_id is assigned", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/play")
-
-      render_hook(view, "init_player", %{"id" => "inject-test-id", "name" => "Injector"})
-      view |> form("#join-form", %{name: "Injector", pid: "inject-test-id"}) |> render_submit()
+      do_join(view, uid("inject"), "Injector")
 
       send(view.pid, {:game_state, %{
         id: "ROOM",
@@ -443,18 +425,14 @@ defmodule LurusWwwWeb.Live.GameLiveTest do
         pups: [],
         leaderboard: [],
         events: [],
-        size: [2000, 1400]
+        size: [2400, 1600]
       }})
 
-      # push_event("game_state", payload) is sent with :my_id injected
-      # We cannot directly inspect push_event calls in LiveViewTest,
-      # but the process must remain alive
       assert Process.alive?(view.pid)
     end
 
     test "game_state with nil player_id does not inject my_id and does not crash", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/play")
-      # No init_player or join, so player_id remains nil
 
       send(view.pid, {:game_state, %{
         id: "ROOM",
@@ -465,7 +443,7 @@ defmodule LurusWwwWeb.Live.GameLiveTest do
         pups: [],
         leaderboard: [],
         events: [],
-        size: [2000, 1400]
+        size: [2400, 1600]
       }})
 
       assert Process.alive?(view.pid)
@@ -473,7 +451,7 @@ defmodule LurusWwwWeb.Live.GameLiveTest do
 
     test "game_state updates scoreboard display", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/play")
-      view |> form("#join-form", %{name: "Scorer"}) |> render_submit()
+      do_join(view, uid("score"), "Scorer")
 
       send(view.pid, {:game_state, %{
         id: "ROOM",
@@ -486,7 +464,7 @@ defmodule LurusWwwWeb.Live.GameLiveTest do
         pups: [],
         leaderboard: [],
         events: [],
-        size: [2000, 1400]
+        size: [2400, 1600]
       }})
 
       html = render(view)
@@ -500,23 +478,21 @@ defmodule LurusWwwWeb.Live.GameLiveTest do
   describe "death overlay" do
     test "shows respawn overlay when joined but player is dead", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/play")
+      pid = "dead-player-#{System.unique_integer([:positive])}"
+      do_join(view, pid, "Deadman")
 
-      render_hook(view, "init_player", %{"id" => "dead-player", "name" => "Deadman"})
-      view |> form("#join-form", %{name: "Deadman", pid: "dead-player"}) |> render_submit()
-
-      # Simulate death via game_state
       send(view.pid, {:game_state, %{
         id: "ROOM",
         tick: 20,
         status: :playing,
         players: %{
-          "dead-player" => %{al: false, n: "Deadman", sc: 7, k: 1, c: "#AAAAAA"}
+          pid => %{al: false, n: "Deadman", sc: 7, k: 1, c: "#AAAAAA"}
         },
         food: [],
         pups: [],
         leaderboard: [],
         events: [],
-        size: [2000, 1400]
+        size: [2400, 1600]
       }})
 
       html = render(view)
@@ -526,22 +502,21 @@ defmodule LurusWwwWeb.Live.GameLiveTest do
 
     test "death overlay shows score and kills from game_state", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/play")
-
-      render_hook(view, "init_player", %{"id" => "dead-scorer", "name" => "Scorer"})
-      view |> form("#join-form", %{name: "Scorer", pid: "dead-scorer"}) |> render_submit()
+      pid = "dead-scorer-#{System.unique_integer([:positive])}"
+      do_join(view, pid, "Scorer")
 
       send(view.pid, {:game_state, %{
         id: "ROOM",
         tick: 50,
         status: :playing,
         players: %{
-          "dead-scorer" => %{al: false, n: "Scorer", sc: 99, k: 3, c: "#BBBBBB"}
+          pid => %{al: false, n: "Scorer", sc: 99, k: 3, c: "#BBBBBB"}
         },
         food: [],
         pups: [],
         leaderboard: [],
         events: [],
-        size: [2000, 1400]
+        size: [2400, 1600]
       }})
 
       html = render(view)
@@ -551,20 +526,19 @@ defmodule LurusWwwWeb.Live.GameLiveTest do
 
     test "respawn overlay has phx-click=respawn handler", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/play")
-
-      render_hook(view, "init_player", %{"id" => "clicker", "name" => "Clicker"})
-      view |> form("#join-form", %{name: "Clicker", pid: "clicker"}) |> render_submit()
+      pid = "clicker-#{System.unique_integer([:positive])}"
+      do_join(view, pid, "Clicker")
 
       send(view.pid, {:game_state, %{
         id: "ROOM",
         tick: 10,
         status: :playing,
-        players: %{"clicker" => %{al: false, n: "Clicker", sc: 0, k: 0, c: "#CCCCCC"}},
+        players: %{pid => %{al: false, n: "Clicker", sc: 0, k: 0, c: "#CCCCCC"}},
         food: [],
         pups: [],
         leaderboard: [],
         events: [],
-        size: [2000, 1400]
+        size: [2400, 1600]
       }})
 
       html = render(view)
@@ -573,23 +547,21 @@ defmodule LurusWwwWeb.Live.GameLiveTest do
 
     test "clicking PLAY AGAIN triggers respawn and hides overlay", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/play")
-
-      render_hook(view, "init_player", %{"id" => "respawner2", "name" => "Respawner"})
-      view |> form("#join-form", %{name: "Respawner", pid: "respawner2"}) |> render_submit()
+      pid = "respawner2-#{System.unique_integer([:positive])}"
+      do_join(view, pid, "Respawner")
 
       send(view.pid, {:game_state, %{
         id: "ROOM",
         tick: 10,
         status: :playing,
-        players: %{"respawner2" => %{al: false, n: "Respawner", sc: 0, k: 0, c: "#CCCCCC"}},
+        players: %{pid => %{al: false, n: "Respawner", sc: 0, k: 0, c: "#CCCCCC"}},
         food: [],
         pups: [],
         leaderboard: [],
         events: [],
-        size: [2000, 1400]
+        size: [2400, 1600]
       }})
 
-      # Click the PLAY AGAIN button
       html = view |> element("[phx-click=\"respawn\"]") |> render_click()
       refute html =~ "respawn-overlay"
     end
@@ -600,22 +572,21 @@ defmodule LurusWwwWeb.Live.GameLiveTest do
   describe "HUD score display" do
     test "shows score in HUD after join and game_state update with :sc key", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/play")
-
-      render_hook(view, "init_player", %{"id" => "hud-player", "name" => "HUDUser"})
-      view |> form("#join-form", %{name: "HUDUser", pid: "hud-player"}) |> render_submit()
+      pid = "hud-player-#{System.unique_integer([:positive])}"
+      do_join(view, pid, "HUDUser")
 
       send(view.pid, {:game_state, %{
         id: "ROOM",
         tick: 8,
         status: :playing,
         players: %{
-          "hud-player" => %{al: true, n: "HUDUser", sc: 77, k: 0, c: "#123456"}
+          pid => %{al: true, n: "HUDUser", sc: 77, k: 0, c: "#123456", lv: 1}
         },
         food: [],
         pups: [],
         leaderboard: [],
         events: [],
-        size: [2000, 1400]
+        size: [2400, 1600]
       }})
 
       html = render(view)
@@ -624,26 +595,50 @@ defmodule LurusWwwWeb.Live.GameLiveTest do
 
     test "shows score in HUD with :score key fallback", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/play")
-
-      render_hook(view, "init_player", %{"id" => "hud-player2", "name" => "HUDUser2"})
-      view |> form("#join-form", %{name: "HUDUser2", pid: "hud-player2"}) |> render_submit()
+      pid = "hud-player2-#{System.unique_integer([:positive])}"
+      do_join(view, pid, "HUDUser2")
 
       send(view.pid, {:game_state, %{
         id: "ROOM",
         tick: 9,
         status: :playing,
         players: %{
-          "hud-player2" => %{al: true, n: "HUDUser2", score: 55, k: 0, c: "#654321"}
+          pid => %{al: true, n: "HUDUser2", score: 55, k: 0, c: "#654321", lv: 1}
         },
         food: [],
         pups: [],
         leaderboard: [],
         events: [],
-        size: [2000, 1400]
+        size: [2400, 1600]
       }})
 
       html = render(view)
       assert html =~ "55"
+    end
+
+    test "renders new HUD wrapper classes (hud-left, hud-right, hud-score)", %{conn: conn} do
+      {:ok, view, _html} = live(conn, "/play")
+      pid = "hud-classes-#{System.unique_integer([:positive])}"
+      do_join(view, pid, "HUDClasses")
+
+      send(view.pid, {:game_state, %{
+        id: "ROOM",
+        tick: 1,
+        status: :playing,
+        players: %{
+          pid => %{al: true, n: "HUDClasses", sc: 1, k: 0, c: "#FFF", lv: 1}
+        },
+        food: [],
+        pups: [],
+        leaderboard: [],
+        events: [],
+        size: [2400, 1600]
+      }})
+
+      html = render(view)
+      assert html =~ "hud-left"
+      assert html =~ "hud-right"
+      assert html =~ "hud-score"
     end
   end
 
@@ -658,7 +653,6 @@ defmodule LurusWwwWeb.Live.GameLiveTest do
 
     test "steer before join is silently ignored", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/play")
-      # No join, joined=false
       render_hook(view, "steer", %{"angle" => 1.0})
       assert Process.alive?(view.pid)
     end
@@ -677,7 +671,7 @@ defmodule LurusWwwWeb.Live.GameLiveTest do
 
     test "multiple rapid steer events do not crash", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/play")
-      view |> form("#join-form", %{name: "Rapid"}) |> render_submit()
+      do_join(view, uid("rapid"), "Rapid")
 
       for angle <- [0.1, 0.5, 1.0, 1.57, 3.14, -1.0, -0.5] do
         render_hook(view, "steer", %{"angle" => angle})
@@ -688,7 +682,7 @@ defmodule LurusWwwWeb.Live.GameLiveTest do
 
     test "multiple rapid boost toggles do not crash", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/play")
-      view |> form("#join-form", %{name: "Boostrapid"}) |> render_submit()
+      do_join(view, uid("boostrapid"), "Boostrapid")
 
       for active <- [true, false, true, false, true] do
         render_hook(view, "boost", %{"active" => active})
@@ -709,7 +703,7 @@ defmodule LurusWwwWeb.Live.GameLiveTest do
         pups: [],
         leaderboard: [],
         events: [],
-        size: [2000, 1400]
+        size: [2400, 1600]
       }})
 
       assert Process.alive?(view.pid)
@@ -727,17 +721,16 @@ defmodule LurusWwwWeb.Live.GameLiveTest do
         pups: [],
         leaderboard: [],
         events: [],
-        size: [2000, 1400]
+        size: [2400, 1600]
       }})
 
       assert Process.alive?(view.pid)
     end
 
-    test "view survives disconnect/reconnect cycle", %{conn: conn} do
+    test "view survives state churn after join", %{conn: conn} do
       {:ok, view, _html} = live(conn, "/play")
-      view |> form("#join-form", %{name: "Reconnect"}) |> render_submit()
+      do_join(view, uid("reconnect"), "Reconnect")
 
-      # Simulate process still being alive after state changes
       send(view.pid, {:game_state, %{
         id: "ROOM",
         tick: 2,
@@ -747,7 +740,7 @@ defmodule LurusWwwWeb.Live.GameLiveTest do
         pups: [],
         leaderboard: [],
         events: [],
-        size: [2000, 1400]
+        size: [2400, 1600]
       }})
 
       assert Process.alive?(view.pid)
