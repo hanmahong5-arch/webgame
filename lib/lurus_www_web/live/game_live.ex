@@ -54,10 +54,13 @@ defmodule LurusWwwWeb.Live.GameLive do
             socket
           end
 
+          # Resume: player may already be dead (rejoined after dying); derive from state.
+          my_alive = derive_alive(state, final_pid)
+
           {:noreply,
             socket
             |> push_event("joined", %{player_id: final_pid})
-            |> assign(joined: true, player_id: final_pid, game_state: state, my_alive: true)}
+            |> assign(joined: true, player_id: final_pid, game_state: state, my_alive: my_alive)}
 
         {:error, _} ->
           {:noreply, socket}
@@ -90,12 +93,13 @@ defmodule LurusWwwWeb.Live.GameLive do
           socket
         end
 
+        my_alive = derive_alive(state, final_pid)
         {:noreply,
           socket
           |> push_event("joined", %{player_id: final_pid})
           |> push_event("save_name", %{name: name})
           |> assign(joined: true, player_id: final_pid, player_name: name,
-                    game_state: state, my_alive: true)}
+                    game_state: state, my_alive: my_alive)}
 
       {:error, reason} ->
         {:noreply, put_flash(socket, :error, "#{reason}")}
@@ -270,8 +274,9 @@ defmodule LurusWwwWeb.Live.GameLive do
     """
   end
 
-  # Join with auto-overflow + duplicate-id recovery
-  defp do_join(room_id, player_id, name, retry \\ 0) do
+  # Join with auto-overflow. `:already_joined` is now handled server-side as a resume,
+  # so we treat it as success here (server returned :ok in that branch).
+  defp do_join(room_id, player_id, name) do
     case GameServer.join(room_id, player_id, name) do
       {:ok, state} ->
         {:ok, room_id, player_id, state}
@@ -280,22 +285,22 @@ defmodule LurusWwwWeb.Live.GameLive do
         new_room = AutoRoom.find_or_create()
         case GameServer.join(new_room, player_id, name) do
           {:ok, state} -> {:ok, new_room, player_id, state}
-          {:error, :already_joined} when retry < 2 ->
-            # Same id in new room somehow; generate fresh id
-            do_join(new_room, gen_id(), name, retry + 1)
           error -> error
         end
-
-      {:error, :already_joined} when retry < 2 ->
-        # Multi-tab on same browser: localStorage id collision
-        # Generate fresh id and retry
-        do_join(room_id, gen_id(), name, retry + 1)
 
       error -> error
     end
   end
 
   defp gen_id, do: Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
+
+  defp derive_alive(state, pid) do
+    case Map.get(state.players || %{}, pid) do
+      %{al: a} -> a
+      %{alive: a} -> a
+      _ -> false
+    end
+  end
 
   defp effect_icon("blade"), do: "⚔"
   defp effect_icon("shield"), do: "🛡"

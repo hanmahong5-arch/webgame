@@ -80,6 +80,19 @@ defmodule LurusWww.Games.Snake.Engine do
   @magnet_range 180
   @magnet_speed 8.5  # Must exceed snake max speed to actually catch food
 
+  # ── Reconnect / idle ─────────────────────────────────────
+  # Player slot kept this many ticks after last action; abandoned then.
+  @idle_player_ticks 1200  # ~60s
+
+  # ── Bots ─────────────────────────────────────────────────
+  @bot_names ~w(Cobra Viper Mamba Anaconda Python Boa Asp Krait Sidewinder Adder)
+  @bot_min_humans 1     # only fill bots when at least 1 human is around
+  @bot_target_total 4   # bots top up the room to this total (humans + bots)
+  @bot_max 5            # never more than this many bots in a room
+  @bot_wall_margin 160
+  @bot_avoid_radius 90
+  @bot_respawn_delay 60  # ticks dead before respawn (~3s)
+
   @colors ~w(#FF6B6B #4ECDC4 #45B7D1 #96CEB4 #FFEAA7 #DDA0DD #98D8C8 #F7DC6F #FF8C69 #B08EFF #7AFF89 #FFB800 #FF6BCC #00F0FF #66D9EF #F92672 #A6E22E #FD971F #AE81FF #E6DB74)
 
   defstruct [
@@ -122,7 +135,10 @@ defmodule LurusWww.Games.Snake.Engine do
           combo: 0, combo_until: 0,
           just_leveled: false,
           girth: 1.0,
-          streak: 0, streak_until: 0
+          streak: 0, streak_until: 0,
+          last_seen: state.tick,
+          is_bot: false,
+          dead_at: 0
         }
 
         state = %{state |
@@ -139,6 +155,77 @@ defmodule LurusWww.Games.Snake.Engine do
         {:ok, spawn_player(state, id)}
     end
   end
+
+  @doc "Reconnect: same id rejoins. Updates name + refreshes last_seen, keeps everything else."
+  def resume_player(state, id, name) do
+    case Map.get(state.players, id) do
+      nil -> {:error, :not_found}
+      _p ->
+        state = update_in(state.players[id], fn p ->
+          %{p | name: name, last_seen: state.tick}
+        end)
+        {:ok, state}
+    end
+  end
+
+  @doc "Refresh last_seen so player isn't culled. Safe no-op if player gone."
+  def touch_player(state, id) do
+    case Map.get(state.players, id) do
+      nil -> state
+      _p -> update_in(state.players[id], fn p -> %{p | last_seen: state.tick} end)
+    end
+  end
+
+  @doc "Spawn a bot with auto-generated id/name. Always succeeds unless room full."
+  def add_bot(state) do
+    if map_size(state.players) >= @max_players do
+      {:error, :room_full}
+    else
+      id = "bot_" <> Base.encode16(:crypto.strong_rand_bytes(4), case: :lower)
+      taken_names = state.players |> Map.values() |> Enum.map(& &1.name) |> MapSet.new()
+      name_base = Enum.random(@bot_names)
+      name = if MapSet.member?(taken_names, name_base), do: "#{name_base}#{:rand.uniform(99)}", else: name_base
+      idx = length(state.player_order)
+      color = Enum.at(@colors, rem(idx, length(@colors)))
+      angle = :rand.uniform() * :math.pi() * 2
+
+      player = %{
+        id: id, name: name, color: color,
+        segments: [], angle: angle, target_angle: angle,
+        boosting: false,
+        score: 0, alive: false, kills: 0, total_score: 0,
+        food_eaten: 0, level: 1,
+        effects: %{}, shield_stacks: 0,
+        invincible_until: 0,
+        combo: 0, combo_until: 0,
+        just_leveled: false,
+        girth: 1.0,
+        streak: 0, streak_until: 0,
+        last_seen: state.tick,
+        is_bot: true,
+        dead_at: 0
+      }
+
+      state = %{state |
+        players: Map.put(state.players, id, player),
+        player_order: state.player_order ++ [id]
+      }
+
+      state = if state.status == :waiting do
+        state |> seed_food(target_food(state)) |> Map.merge(%{status: :playing, tick: 0, events: [{:game_started}]})
+      else
+        state
+      end
+
+      {:ok, spawn_player(state, id), id}
+    end
+  end
+
+  def bot_count(state),
+    do: state.players |> Map.values() |> Enum.count(& &1.is_bot)
+
+  def human_count(state),
+    do: state.players |> Map.values() |> Enum.count(&(!&1.is_bot))
 
   def remove_player(state, id) do
     state = case Map.get(state.players, id) do
@@ -161,7 +248,8 @@ defmodule LurusWww.Games.Snake.Engine do
 
   def set_target(state, id, angle) when is_number(angle) do
     case Map.get(state.players, id) do
-      %{alive: true} = p -> %{state | players: Map.put(state.players, id, %{p | target_angle: angle * 1.0})}
+      %{alive: true} = p ->
+        %{state | players: Map.put(state.players, id, %{p | target_angle: angle * 1.0, last_seen: state.tick})}
       _ -> state
     end
   end
@@ -170,7 +258,7 @@ defmodule LurusWww.Games.Snake.Engine do
   def set_boost(state, id, boosting) when is_boolean(boosting) do
     case Map.get(state.players, id) do
       nil -> state
-      p -> %{state | players: Map.put(state.players, id, %{p | boosting: boosting})}
+      p -> %{state | players: Map.put(state.players, id, %{p | boosting: boosting, last_seen: state.tick})}
     end
   end
   def set_boost(state, _, _), do: state
@@ -185,7 +273,8 @@ defmodule LurusWww.Games.Snake.Engine do
           effects: %{}, shield_stacks: 0, boosting: false,
           combo: 0, combo_until: 0, just_leveled: false,
           girth: 1.0,
-          streak: 0, streak_until: 0
+          streak: 0, streak_until: 0,
+          last_seen: state.tick, dead_at: 0
         }
         state
         |> put_in([Access.key(:players), pid], reset)
@@ -201,6 +290,7 @@ defmodule LurusWww.Games.Snake.Engine do
       |> reset_transient_flags()
       |> Map.update!(:tick, &(&1 + 1))
       |> tick_effects()
+      |> tick_bots()
       |> steer_and_move()
       |> detect_collisions()
       |> collect_food()
@@ -208,6 +298,8 @@ defmodule LurusWww.Games.Snake.Engine do
       |> apply_magnet()
       |> replenish_food()
       |> maybe_spawn_powerup()
+      |> respawn_dead_bots()
+      |> cull_idle_players()
       |> update_leaderboard()
     else
       state
@@ -248,7 +340,8 @@ defmodule LurusWww.Games.Snake.Engine do
           inv: p.invincible_until > state.tick,
           cmb: p.combo, ul: p.just_leveled,
           g: r2(p.girth),
-          st: if(p.streak_until > state.tick, do: p.streak, else: 0)
+          st: if(p.streak_until > state.tick, do: p.streak, else: 0),
+          bot: p.is_bot
         }}
       end),
       food: Enum.map(state.food, fn {x, y, t} -> [r2(x), r2(y), if(t == :golden, do: 1, else: 0)] end),
@@ -524,7 +617,8 @@ defmodule LurusWww.Games.Snake.Engine do
           alive: false,
           total_score: &1.total_score + &1.score,
           streak: 0,
-          streak_until: 0
+          streak_until: 0,
+          dead_at: state.tick
         })
 
         {ps, evts} =
@@ -799,11 +893,131 @@ defmodule LurusWww.Games.Snake.Engine do
         %{id: id, n: p.name, c: p.color,
           s: p.score, k: p.kills,
           ts: p.total_score + p.score, al: p.alive,
-          l: length(p.segments), lv: p.level}
+          l: length(p.segments), lv: p.level,
+          bot: p.is_bot}
       end)
       |> Enum.sort_by(&(-&1.ts))
       |> Enum.take(10)
     %{state | leaderboard: board}
+  end
+
+  # ── Bot AI ──────────────────────────────────────────────
+  # Tiny rule-based AI: wall-avoid → threat-avoid → food-seek.
+  # Decisions are stateless (target_angle recomputed each tick) so bots
+  # behave reactively without complex pathfinding.
+
+  defp tick_bots(state) do
+    alive_bots =
+      state.players
+      |> Enum.filter(fn {_, p} -> p.alive && p.is_bot end)
+
+    if alive_bots == [] do
+      state
+    else
+      Enum.reduce(alive_bots, state, fn {id, p}, acc ->
+        target = bot_decide(acc, p)
+        boost = bot_should_boost?(acc, p)
+        update_in(acc.players[id], fn pp ->
+          %{pp | target_angle: target, boosting: boost, last_seen: acc.tick}
+        end)
+      end)
+    end
+  end
+
+  defp bot_decide(state, p) do
+    {hx, hy} = hd(p.segments)
+    cur = p.angle
+
+    cond do
+      hx < @bot_wall_margin ->
+        # Bias toward arena center on x with mild y noise
+        :math.atan2(state.height / 2 - hy + (:rand.uniform() - 0.5) * 200, state.width / 2 - hx)
+
+      hx > state.width - @bot_wall_margin ->
+        :math.atan2(state.height / 2 - hy + (:rand.uniform() - 0.5) * 200, state.width / 2 - hx)
+
+      hy < @bot_wall_margin ->
+        :math.atan2(state.height / 2 - hy, state.width / 2 - hx + (:rand.uniform() - 0.5) * 200)
+
+      hy > state.height - @bot_wall_margin ->
+        :math.atan2(state.height / 2 - hy, state.width / 2 - hx + (:rand.uniform() - 0.5) * 200)
+
+      true ->
+        case bot_nearest_threat(state, p.id, hx, hy) do
+          {tx, ty, d} when d < @bot_avoid_radius ->
+            # Turn away from the threat
+            :math.atan2(hy - ty, hx - tx)
+
+          _ ->
+            # Recompute food target only every few ticks to save CPU
+            phase = :erlang.phash2(p.id, 8)
+            if rem(state.tick, 8) == phase do
+              bot_seek_food(state.food, hx, hy, cur)
+            else
+              cur
+            end
+        end
+    end
+  end
+
+  defp bot_nearest_threat(state, my_id, hx, hy) do
+    # Sample one segment per other snake for cheapness; head + body mid-points are good proxies.
+    state.players
+    |> Enum.reject(fn {oid, op} -> oid == my_id || !op.alive end)
+    |> Enum.flat_map(fn {_, op} ->
+      segs = op.segments
+      n = length(segs)
+      if n < 2, do: segs, else: [hd(segs), Enum.at(segs, div(n, 2))]
+    end)
+    |> Enum.min_by(fn {sx, sy} ->
+      dx = sx - hx
+      dy = sy - hy
+      dx * dx + dy * dy
+    end, fn -> nil end)
+    |> case do
+      nil -> nil
+      {sx, sy} -> {sx, sy, dist(hx, hy, sx, sy)}
+    end
+  end
+
+  defp bot_seek_food([], _hx, _hy, fallback), do: fallback
+  defp bot_seek_food(food, hx, hy, _fallback) do
+    {fx, fy, _t} =
+      Enum.min_by(food, fn {fx, fy, _} ->
+        dx = fx - hx
+        dy = fy - hy
+        dx * dx + dy * dy
+      end)
+
+    :math.atan2(fy - hy, fx - hx)
+  end
+
+  # Boost when chasing food and the snake is fat enough to spare growth.
+  defp bot_should_boost?(_state, p) do
+    length(p.segments) > 25 && :rand.uniform() < 0.05
+  end
+
+  defp respawn_dead_bots(state) do
+    to_respawn =
+      state.players
+      |> Enum.filter(fn {_, p} ->
+        p.is_bot && !p.alive && p.dead_at > 0 && state.tick - p.dead_at >= @bot_respawn_delay
+      end)
+      |> Enum.map(&elem(&1, 0))
+
+    Enum.reduce(to_respawn, state, &respawn(&2, &1))
+  end
+
+  # Cull humans who have been silent for @idle_player_ticks. Bots are exempt.
+  defp cull_idle_players(state) do
+    cutoff = state.tick - @idle_player_ticks
+
+    stale =
+      state.players
+      |> Enum.filter(fn {_, p} -> !p.is_bot && p.last_seen < cutoff end)
+      |> Enum.map(&elem(&1, 0))
+
+    Enum.reduce(stale, state, &remove_player(&2, &1))
   end
 
   # ── Helpers ─────────────────────────────────────────────

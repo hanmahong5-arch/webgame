@@ -8,6 +8,10 @@ defmodule LurusWww.Games.GameServer do
   @tick_interval 50
   @idle_timeout 60_000
 
+  # Bot management — only fill when humans present.
+  @bot_target_total 4
+  @bot_max 5
+
   # ── Client API ──────────────────────────────────────────
 
   def start_link(opts) do
@@ -88,8 +92,17 @@ defmodule LurusWww.Games.GameServer do
 
   @impl true
   def handle_call({:join, player_id, player_name}, _from, state) do
-    case Engine.add_player(state.engine, player_id, player_name) do
+    result =
+      case Engine.add_player(state.engine, player_id, player_name) do
+        {:ok, engine} -> {:ok, engine}
+        # Same id rejoining (multi-tab or LV reconnect): resume the slot.
+        {:error, :already_joined} -> Engine.resume_player(state.engine, player_id, player_name)
+        error -> error
+      end
+
+    case result do
       {:ok, engine} ->
+        engine = maybe_fill_bots(engine)
         state = ensure_ticking(%{state | engine: engine})
         state = reset_idle(state)
         broadcast_game(engine)
@@ -112,6 +125,8 @@ defmodule LurusWww.Games.GameServer do
   @impl true
   def handle_cast({:leave, player_id}, state) do
     engine = Engine.remove_player(state.engine, player_id)
+    # If the last human left, drain bots so the room actually idles.
+    engine = if Engine.human_count(engine) == 0, do: drain_bots(engine), else: engine
     state = %{state | engine: engine}
 
     # Stop ticking if no players
@@ -154,6 +169,8 @@ defmodule LurusWww.Games.GameServer do
     # Compensate for processing time so ticks don't drift on heavy frames.
     start_t = System.monotonic_time(:millisecond)
     engine = Engine.tick(state.engine)
+    # Maintain bot population every 60 ticks (~3s) — cheap, idempotent.
+    engine = if rem(engine.tick, 60) == 0, do: maybe_fill_bots(engine), else: engine
     broadcast_game(engine)
     elapsed = System.monotonic_time(:millisecond) - start_t
     next_delay = max(5, @tick_interval - elapsed)
@@ -235,5 +252,35 @@ defmodule LurusWww.Games.GameServer do
   defp reset_idle(state) do
     if state.idle_ref, do: Process.cancel_timer(state.idle_ref)
     %{state | idle_ref: Process.send_after(self(), :idle_check, @idle_timeout)}
+  end
+
+  # Top up bots so total snakes ≈ @bot_target_total whenever any human is around.
+  # Idempotent: caller can invoke after every state change.
+  defp maybe_fill_bots(engine) do
+    humans = Engine.human_count(engine)
+    bots = Engine.bot_count(engine)
+
+    cond do
+      humans == 0 -> engine
+      bots >= @bot_max -> engine
+      humans + bots >= @bot_target_total -> engine
+      true ->
+        deficit = min(@bot_target_total - (humans + bots), @bot_max - bots)
+        Enum.reduce(1..deficit, engine, fn _, acc ->
+          case Engine.add_bot(acc) do
+            {:ok, new_engine, _id} -> new_engine
+            _ -> acc
+          end
+        end)
+    end
+  end
+
+  defp drain_bots(engine) do
+    bot_ids =
+      engine.players
+      |> Enum.filter(fn {_, p} -> p.is_bot end)
+      |> Enum.map(&elem(&1, 0))
+
+    Enum.reduce(bot_ids, engine, &Engine.remove_player(&2, &1))
   end
 end

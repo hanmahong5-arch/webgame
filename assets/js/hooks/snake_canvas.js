@@ -621,7 +621,9 @@ const SnakeCanvas = {
       // Name + Lv + status icons
       ctx.globalAlpha = alive ? 0.9 : 0.18
       ctx.fillStyle = "#fff"; ctx.font = `bold 11px sans-serif`; ctx.textAlign = "center"
+      const isBot = !!p.bot
       let label = `Lv${level} ${name}`
+      if (isBot) label = "🤖 " + label
       if (boosting && alive) label += " \u{1F4A8}"
       ctx.fillText(label, hsx, hsy - r * 2.5)
 
@@ -695,10 +697,12 @@ const SnakeCanvas = {
         const eName = e.n || e.name
         const eLevel = e.lv || 1
         const eScore = e.ts || e.total_score || 0
+        const eBot = !!e.bot
         ctx.fillStyle = eColor; ctx.fillRect(lx + 8, ey - 4, 3, 3)
         ctx.fillStyle = e.id === this.playerId ? "#fff" : "#8888A0"
         ctx.font = `${e.id === this.playerId ? "bold " : ""}10px sans-serif`
-        ctx.fillText(`L${eLevel} ${eName}`, lx + 16, ey)
+        const prefix = eBot ? "🤖 " : ""
+        ctx.fillText(`${prefix}L${eLevel} ${eName}`, lx + 16, ey)
         ctx.fillStyle = "#00F0FF"; ctx.textAlign = "right"
         ctx.fillText(eScore, lx + 146, ey); ctx.textAlign = "left"
       })
