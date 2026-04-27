@@ -42,7 +42,9 @@ spec:
             readOnlyRootFilesystem: true
             capabilities:
               drop: [ALL]
-          imagePullPolicy: IfNotPresent
+          # `:latest` is mutable — always pull on pod start so a CI image
+          # bump actually reaches new pods after `rollout restart`.
+          imagePullPolicy: Always
           ports:
             - containerPort: 4000
               name: http
