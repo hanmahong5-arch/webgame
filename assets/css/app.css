@@ -1064,6 +1064,39 @@ body {
   text-shadow: 0 0 8px currentColor;
 }
 
+/* Mobile boost button — hidden on devices that have a real pointer (mouse). */
+.touch-boost-btn {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  width: 84px;
+  height: 84px;
+  border-radius: 50%;
+  border: 2px solid rgba(0, 240, 255, 0.7);
+  background: radial-gradient(circle, rgba(0, 240, 255, 0.35), rgba(0, 240, 255, 0.10));
+  color: #00F0FF;
+  font-size: 38px;
+  line-height: 1;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  box-shadow: 0 0 24px rgba(0, 240, 255, 0.4);
+  cursor: pointer;
+}
+.touch-boost-btn:active {
+  transform: scale(0.92);
+  background: radial-gradient(circle, rgba(0, 240, 255, 0.6), rgba(0, 240, 255, 0.25));
+}
+/* Coarse-pointer (touch) devices only */
+@media (hover: none) and (pointer: coarse) {
+  .touch-boost-btn { display: flex; }
+}
+
 .hud-effect {
   padding: 3px 6px;
   border-radius: 6px;

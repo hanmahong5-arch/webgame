@@ -183,6 +183,10 @@ defmodule LurusWwwWeb.Live.GameLive do
           <canvas id="game-canvas" phx-hook="SnakeCanvas" phx-update="ignore"></canvas>
         </div>
 
+        <%!-- Mobile-only on-screen boost button. Hidden on hover-capable devices via CSS. --%>
+        <button id="touch-boost-btn" class="touch-boost-btn" aria-label="boost"
+                phx-update="ignore" tabindex="-1">⚡</button>
+
         <%!-- Top HUD --%>
         <div class="game-hud">
           <div class="hud-left">
@@ -244,7 +248,7 @@ defmodule LurusWwwWeb.Live.GameLive do
                   id="player-name-input" />
                 <button type="submit" class="btn-play">PLAY</button>
               </form>
-              <p class="join-controls">Mouse = steer &middot; Click/Space = boost</p>
+              <p class="join-controls">Mouse = steer &middot; Click / Space / Shift = boost &middot; mobile: hold ⚡ button</p>
             </div>
           </div>
         <% end %>

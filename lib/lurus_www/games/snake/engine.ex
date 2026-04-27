@@ -67,7 +67,10 @@ defmodule LurusWww.Games.Snake.Engine do
   @rain_burst 80
 
   # ── Powerups ─────────────────────────────────────────────
-  @powerup_types [:blade, :shield, :magnet, :star, :ghost, :mega, :freeze, :slowmo]
+  # Pool is 6 self-buffs only. Freeze/slowmo were removed because they
+  # disrupted other players' flow ("snake suddenly stops moving") with no
+  # warning, which felt like a bug rather than a counter-play opportunity.
+  @powerup_types [:blade, :shield, :magnet, :star, :ghost, :mega]
   @powerup_chance 0.020
   @max_powerups 6
   # Tier durations (ticks at 50ms) and effect strength

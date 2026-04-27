@@ -54,9 +54,33 @@ const SnakeCanvas = {
     // Clear stuck boost when pointer leaves canvas
     this.canvas.addEventListener("mouseleave", () => this.setBoosting(false))
 
-    // Touch
+    // Touch — single finger steers; long-press (>180ms) anywhere boosts.
+    // Multi-touch also boosts (legacy gesture). The two work together so
+    // mobile players don't need an on-screen button.
+    this._touchPressTimer = null
+    this._touchBoostByPress = false
+
+    const startBoostTimer = () => {
+      if (this._touchPressTimer) clearTimeout(this._touchPressTimer)
+      this._touchPressTimer = setTimeout(() => {
+        this._touchBoostByPress = true
+        this.setBoosting(true)
+      }, 180)
+    }
+    const cancelBoostTimer = () => {
+      if (this._touchPressTimer) { clearTimeout(this._touchPressTimer); this._touchPressTimer = null }
+      if (this._touchBoostByPress) { this._touchBoostByPress = false; this.setBoosting(false) }
+    }
+
     this.canvas.addEventListener("touchmove", (e) => {
       e.preventDefault()
+      // First significant move cancels the press-to-boost timer so dragging
+      // (steering) doesn't accidentally trigger boost. Already-active boost
+      // from press is preserved — players can boost-then-steer.
+      if (this._touchPressTimer && !this._touchBoostByPress) {
+        clearTimeout(this._touchPressTimer)
+        this._touchPressTimer = null
+      }
       this.mouse.x = e.touches[0].clientX; this.mouse.y = e.touches[0].clientY
       this.sendSteer()
     }, { passive: false })
@@ -65,16 +89,46 @@ const SnakeCanvas = {
       this.mouse.x = e.touches[0].clientX; this.mouse.y = e.touches[0].clientY
       this.sendSteer()
       this.tryRespawn()
+      if (e.touches.length === 1) startBoostTimer()
     }, { passive: true })
-    this.canvas.addEventListener("touchend", () => {
-      // Always clear boost on any touchend — previous logic missed multi-tap edge cases
-      this.setBoosting(false)
+    this.canvas.addEventListener("touchend", (e) => {
+      // Multi-touch boost ends when any finger lifts; press-and-hold boost
+      // ends only when the last finger lifts.
+      if (e.touches.length < 2) this.setBoosting(false)
+      cancelBoostTimer()
+    }, { passive: true })
+    this.canvas.addEventListener("touchcancel", () => {
+      this.setBoosting(false); cancelBoostTimer()
     }, { passive: true })
 
     this.canvas.addEventListener("click", () => this.tryRespawn())
 
+    // Visible boost button (rendered for touch devices via CSS media query).
+    // Press-hold pattern, intentionally separate from canvas touch handlers.
+    const boostBtn = document.getElementById("touch-boost-btn")
+    if (boostBtn) {
+      const onPress = (e) => { e.preventDefault(); this.setBoosting(true) }
+      const onRelease = (e) => { e.preventDefault(); this.setBoosting(false) }
+      boostBtn.addEventListener("touchstart", onPress, { passive: false })
+      boostBtn.addEventListener("touchend", onRelease, { passive: false })
+      boostBtn.addEventListener("touchcancel", onRelease, { passive: false })
+      boostBtn.addEventListener("mousedown", onPress)
+      boostBtn.addEventListener("mouseup", onRelease)
+      boostBtn.addEventListener("mouseleave", onRelease)
+      this._boostBtnHandlers = { btn: boostBtn, onPress, onRelease }
+    }
+
+    // Keyboard. Multiple boost keys so any layout works:
+    //   Space / Shift / Enter / W (also press-anywhere on mobile)
+    // Browsers fire keydown repeatedly while held; setBoosting de-dupes the
+    // PubSub push so holding space gives one cast, not 30/sec.
+    const BOOST_KEYS = new Set(["Space", "ShiftLeft", "ShiftRight", "Enter", "KeyW"])
     this._onKey = (e) => {
-      if (e.code === "Space") { e.preventDefault(); this.setBoosting(e.type === "keydown") }
+      if (BOOST_KEYS.has(e.code)) {
+        if (e.code === "Space") e.preventDefault()
+        this.setBoosting(e.type === "keydown")
+        return
+      }
       if (e.type === "keydown") this.tryRespawn()
     }
     window.addEventListener("keydown", this._onKey)
@@ -113,6 +167,7 @@ const SnakeCanvas = {
     window.removeEventListener("keyup", this._onKey)
     if (this.raf) cancelAnimationFrame(this.raf)
     if (this._steerTrailing) { clearTimeout(this._steerTrailing); this._steerTrailing = null }
+    if (this._touchPressTimer) { clearTimeout(this._touchPressTimer); this._touchPressTimer = null }
   },
 
   initIdentity() {
@@ -584,6 +639,45 @@ const SnakeCanvas = {
         ctx.beginPath(); ctx.arc(hsx, hsy, headR, 0, Math.PI * 2); ctx.fill()
         if (isMe) ctx.restore()
 
+        // Forward + perpendicular unit vectors for head accessories
+        const fxv = Math.cos(angle), fyv = Math.sin(angle)
+        const pxv = -fyv, pyv = fxv
+
+        // Crown (Lv 15+) — golden spikes behind the eyes, drawn first so eyes overlay
+        if (level >= 15) {
+          ctx.fillStyle = level >= 25 ? "#FFD700" : "#C8A040"
+          for (const i of [-1.2, -0.4, 0.4, 1.2]) {
+            const baseX = hsx + fxv * (-headR * 0.45) + pxv * i * headR * 0.35
+            const baseY = hsy + fyv * (-headR * 0.45) + pyv * i * headR * 0.35
+            const tipX = baseX + fxv * (-headR * 0.65)
+            const tipY = baseY + fyv * (-headR * 0.65)
+            ctx.beginPath()
+            ctx.moveTo(baseX - pxv * 1.5, baseY - pyv * 1.5)
+            ctx.lineTo(baseX + pxv * 1.5, baseY + pyv * 1.5)
+            ctx.lineTo(tipX, tipY)
+            ctx.closePath()
+            ctx.fill()
+          }
+        }
+
+        // Horns (Lv 5+) — two short curved spikes
+        if (level >= 5) {
+          const hornLen = headR * (0.5 + Math.min(level - 5, 15) * 0.04)
+          ctx.fillStyle = level >= 20 ? "#FFD700" : "#3A3A4A"
+          for (const sign of [-1, 1]) {
+            const baseX = hsx + fxv * (-headR * 0.1) + pxv * sign * headR * 0.7
+            const baseY = hsy + fyv * (-headR * 0.1) + pyv * sign * headR * 0.7
+            const tipX = baseX + fxv * (-hornLen * 0.4) + pxv * sign * hornLen * 0.7
+            const tipY = baseY + fyv * (-hornLen * 0.4) + pyv * sign * hornLen * 0.7
+            ctx.beginPath()
+            ctx.moveTo(baseX - pxv * sign * headR * 0.18, baseY - pyv * sign * headR * 0.18)
+            ctx.lineTo(baseX + pxv * sign * headR * 0.18, baseY + pyv * sign * headR * 0.18)
+            ctx.lineTo(tipX, tipY)
+            ctx.closePath()
+            ctx.fill()
+          }
+        }
+
         // Eyes
         ctx.fillStyle = "#fff"; const ed = headR * 0.4
         ctx.beginPath()
@@ -594,6 +688,38 @@ const SnakeCanvas = {
         ctx.arc(hsx + Math.cos(angle - 0.4) * ed * 1.15, hsy + Math.sin(angle - 0.4) * ed * 1.15, headR * 0.14, 0, Math.PI * 2)
         ctx.arc(hsx + Math.cos(angle + 0.4) * ed * 1.15, hsy + Math.sin(angle + 0.4) * ed * 1.15, headR * 0.14, 0, Math.PI * 2)
         ctx.fill()
+
+        // Tongue flick (Lv 10+) — animated red forked tongue extending from front
+        if (level >= 10) {
+          // Per-snake phase from id so all snakes don't flick in sync
+          const phase = isMe ? 0 : ((id.charCodeAt(0) || 0) % 7) * 0.4
+          const flick = Math.max(0, Math.sin(t * 4 + phase))
+          if (flick > 0.1) {
+            const tlen = headR * (0.4 + flick * 0.7)
+            const baseX = hsx + fxv * headR * 0.95
+            const baseY = hsy + fyv * headR * 0.95
+            const tipX = baseX + fxv * tlen
+            const tipY = baseY + fyv * tlen
+            ctx.strokeStyle = "#FF3355"
+            ctx.lineWidth = Math.max(1, headR * 0.15)
+            ctx.lineCap = "round"
+            ctx.beginPath()
+            // Two-prong fork
+            ctx.moveTo(baseX, baseY)
+            ctx.lineTo(tipX + pxv * tlen * 0.25, tipY + pyv * tlen * 0.25)
+            ctx.moveTo(baseX, baseY)
+            ctx.lineTo(tipX - pxv * tlen * 0.25, tipY - pyv * tlen * 0.25)
+            ctx.stroke()
+          }
+        }
+
+        // Elder aura (Lv 30+) — slow rainbow ring
+        if (level >= 30) {
+          const auraR = headR * (1.85 + 0.15 * Math.sin(t * 3))
+          ctx.strokeStyle = `hsla(${(t * 50) % 360}, 80%, 65%, 0.55)`
+          ctx.lineWidth = 2
+          ctx.beginPath(); ctx.arc(hsx, hsy, auraR, 0, Math.PI * 2); ctx.stroke()
+        }
 
         // Shield rings (one per stack)
         if (shieldStacks > 0) {
