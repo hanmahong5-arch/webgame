@@ -171,10 +171,26 @@ defmodule LurusWww.Games.GameServer do
   def handle_info(:tick, state) do
     # Compensate for processing time so ticks don't drift on heavy frames.
     start_us = System.monotonic_time(:microsecond)
-    engine = Engine.tick(state.engine)
+
+    # Wrap the tick in try/rescue: a single buggy tick (e.g. unexpected
+    # nil/empty edge case) must not crash the GenServer and freeze the room.
+    # On error, keep the previous engine state and try again next tick.
+    {engine, tick_ok?} =
+      try do
+        {Engine.tick(state.engine), true}
+      rescue
+        e ->
+          require Logger
+          Logger.error("engine tick crashed: #{Exception.message(e)}")
+          {state.engine, false}
+      end
+
     # Maintain bot population every 60 ticks (~3s) — cheap, idempotent.
     engine = if rem(engine.tick, 60) == 0, do: maybe_fill_bots(engine), else: engine
-    broadcast_game(engine)
+
+    if tick_ok? do
+      broadcast_game(engine)
+    end
 
     elapsed_us = System.monotonic_time(:microsecond) - start_us
     :telemetry.execute(
@@ -198,6 +214,9 @@ defmodule LurusWww.Games.GameServer do
     elapsed = div(elapsed_us, 1000)
     next_delay = max(5, @tick_interval - elapsed)
 
+    # Schedule next tick when the room still has work. If the previous tick
+    # crashed, status is unchanged (we kept old engine), so playing rooms
+    # keep ticking through hiccups instead of freezing.
     tick_ref =
       if engine.status == :playing do
         Process.send_after(self(), :tick, next_delay)

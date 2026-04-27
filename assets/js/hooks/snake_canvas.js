@@ -728,6 +728,24 @@ const SnakeCanvas = {
       ctx.fillText(me.boosting ? "BOOST" : `Length: ${len}`, W_CSS / 2, by2 - 3)
     }
 
+    // Stale-state overlay: server stopped sending broadcasts. Tells the user
+    // the game is paused, not that their input is broken. LV will auto-reconnect.
+    const staleMs = this.lastStateAt ? nowMs - this.lastStateAt : 0
+    if (staleMs > 2500) {
+      ctx.fillStyle = "rgba(6,6,16,0.55)"
+      ctx.fillRect(0, 0, W_CSS, H_CSS)
+      ctx.fillStyle = "#FFB800"
+      ctx.font = "bold 28px sans-serif"
+      ctx.textAlign = "center"
+      ctx.shadowColor = "#FFB800"; ctx.shadowBlur = 16
+      ctx.fillText("Reconnecting…", W_CSS / 2, H_CSS / 2 - 10)
+      ctx.shadowBlur = 0
+      ctx.font = "12px sans-serif"
+      ctx.fillStyle = "#B0B0C8"
+      const secs = Math.floor(staleMs / 1000)
+      ctx.fillText(`No signal for ${secs}s — auto-reconnect in progress`, W_CSS / 2, H_CSS / 2 + 18)
+    }
+
     // Flash banner (streak / food rain / events / shutdown)
     if (this.flashBanner && nowMs < this.flashBanner.until) {
       const remaining = this.flashBanner.until - nowMs

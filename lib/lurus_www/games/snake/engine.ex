@@ -42,9 +42,9 @@ defmodule LurusWww.Games.Snake.Engine do
   @max_girth 3.0
   @girth_step 0.5
 
-  # ── Self-collision ──────────────────────────────────────
-  # Head can hit own body after skipping the first @self_safe_segs (neck).
-  @self_safe_segs 12
+  # Self-collision is intentionally disabled — see detect_collisions/1.
+  # Slither-style snakes overlap themselves constantly through tight turns
+  # and magnet-pull, so killing on self-overlap is too punishing.
 
   # ── Respawn safety ───────────────────────────────────────
   @invincible_ticks 80  # ~4s at 50ms tick
@@ -557,18 +557,13 @@ defmodule LurusWww.Games.Snake.Engine do
           end
         end)
 
-        # Self-collision: head hitting own body (skip the neck)
-        self_hit =
-          length(p.segments) > @self_safe_segs + 3 &&
-            p.segments
-            |> Enum.drop(@self_safe_segs)
-            |> Enum.any?(fn {sx, sy} -> dist(hx, hy, sx, sy) < @seg_radius * 1.8 * p.girth end)
-
-        if wall || other_killer || self_hit do
-          cond do
-            p.shield_stacks > 0 -> acc  # shield consumed below
-            self_hit -> Map.put(acc, id, id)  # self-kill
-            true -> Map.put(acc, id, other_killer)
+        # Self-collision is disabled — bumping into your own tail no longer kills.
+        # Friendly UX: with magnet/boost, near-self-overlap is too easy to trigger.
+        if wall || other_killer do
+          if p.shield_stacks > 0 do
+            acc  # shield absorbs, consumed below
+          else
+            Map.put(acc, id, other_killer)
           end
         else
           acc
