@@ -34,13 +34,11 @@ defmodule LurusWww.Games.Snake.Engine do
   @golden_grow 2
   @food_cap_grow 4
 
-  # ── Girth / Fatten ───────────────────────────────────────
-  # When segments reach threshold, truncate to 60% and increase girth.
-  # Rogue-like progression: length plateau forces evolution into thickness.
-  @fatten_threshold 50
-  @fatten_shrink 0.6
+  # ── Girth ────────────────────────────────────────────────
+  # Snakes get visually thicker as they level up (smooth, monotonic).
+  # No length truncation — the old fatten-and-truncate mechanic caused
+  # a freeze-feeling jolt that broke gameplay flow.
   @max_girth 3.0
-  @girth_step 0.5
 
   # Self-collision is intentionally disabled — see detect_collisions/1.
   # Slither-style snakes overlap themselves constantly through tight turns
@@ -321,13 +319,21 @@ defmodule LurusWww.Games.Snake.Engine do
       leaderboard: Enum.take(state.leaderboard, 8),
       rain: state.rain_until > state.tick,
       players: Map.new(state.players, fn {id, p} ->
-        # LOD for long tails
-        segs = if length(p.segments) > 30 do
-          {head, tail} = Enum.split(p.segments, 8)
-          head ++ Enum.take_every(tail, 2)
-        else
-          p.segments
-        end
+        # LOD for long tails — keep head precise, sample tail more sparsely
+        # as the snake grows. Caps broadcast payload even for 200+ snake bodies.
+        segs =
+          cond do
+            length(p.segments) > 80 ->
+              {head, tail} = Enum.split(p.segments, 10)
+              head ++ Enum.take_every(tail, 3)
+
+            length(p.segments) > 30 ->
+              {head, tail} = Enum.split(p.segments, 8)
+              head ++ Enum.take_every(tail, 2)
+
+            true ->
+              p.segments
+          end
 
         {id, %{
           n: p.name, c: p.color, a: r2(p.angle),
@@ -687,7 +693,8 @@ defmodule LurusWww.Games.Snake.Engine do
               combo_until: state.tick + 50,
               just_leveled: leveled_up
             }
-            maybe_fatten(grown)
+            # Girth derived smoothly from level — no length truncation, no visual snap.
+            %{grown | girth: girth_for_level(grown.level)}
           end)
 
           fattened? = ps[id].girth > p.girth
@@ -780,18 +787,11 @@ defmodule LurusWww.Games.Snake.Engine do
     end
   end
 
-  # Fatten: when segments hit threshold, truncate to @fatten_shrink and bump girth.
-  # Rogue-like progression — length plateau forces evolution into thickness.
-  defp maybe_fatten(p) do
-    if length(p.segments) >= @fatten_threshold && p.girth < @max_girth do
-      new_len = max(@initial_length, round(length(p.segments) * @fatten_shrink))
-      %{p |
-        segments: Enum.take(p.segments, new_len),
-        girth: Float.round(min(@max_girth, p.girth + @girth_step), 2)
-      }
-    else
-      p
-    end
+  # Girth derived smoothly from level. Replaces the old fatten-and-truncate
+  # mechanic, which caused a jarring visual freeze every time the snake hit
+  # the length threshold and lost ~40% of its body in one tick.
+  defp girth_for_level(level) do
+    Float.round(1.0 + min((level - 1) * 0.04, @max_girth - 1.0), 2)
   end
 
   defp target_food(state) do
