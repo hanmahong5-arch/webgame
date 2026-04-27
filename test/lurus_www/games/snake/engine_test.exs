@@ -550,9 +550,11 @@ defmodule LurusWww.Games.Snake.EngineTest do
       p2_segs = for i <- 0..15, do: {900.0 + i * 9.0, 700.0}
       state = force_segments(state, "p2", p2_segs)
       state = move_head(state, "p1", 945.0, 700.0)
+      # Pin p1's angle so steer_and_move drives the head INTO p2's body line,
+      # not in a random direction (add_player picks angle randomly).
       state = %{state |
         players: state.players
-          |> Map.update!("p1", &%{&1 | invincible_until: 0})
+          |> Map.update!("p1", &%{&1 | invincible_until: 0, angle: 0.0, target_angle: 0.0})
           |> Map.update!("p2", &%{&1 | invincible_until: 0}),
         tick: 100
       }
