@@ -94,6 +94,18 @@ defmodule LurusWww.Games.Snake.Engine do
   @bot_avoid_radius 90
   @bot_respawn_delay 60  # ticks dead before respawn (~3s)
 
+  # ── Laser Eye / Tail-Sever ───────────────────────────────
+  # Press V / right-click / mobile laser button to fire a short forward beam.
+  # Hits the closest other-snake segment in front and severs everything past it.
+  # Severed segments scatter as food. Killer doesn't kill victim — just trims them.
+  @laser_range 180.0      # px straight ahead of head
+  @laser_radius 12.0      # collision tolerance perpendicular to beam
+  @laser_charge_ticks 4    # ~200ms warning so victim can dodge
+  @laser_cooldown 160      # ~8s between fires
+  @laser_self_cost 6       # segments lost from attacker's own tail per fire
+  @laser_min_segs 12       # cannot fire if length < this
+  @laser_min_victim_len 6  # cannot sever if victim shorter than this
+
   @colors ~w(#FF6B6B #4ECDC4 #45B7D1 #96CEB4 #FFEAA7 #DDA0DD #98D8C8 #F7DC6F #FF8C69 #B08EFF #7AFF89 #FFB800 #FF6BCC #00F0FF #66D9EF #F92672 #A6E22E #FD971F #AE81FF #E6DB74)
 
   defstruct [
@@ -139,7 +151,10 @@ defmodule LurusWww.Games.Snake.Engine do
           streak: 0, streak_until: 0,
           last_seen: state.tick,
           is_bot: false,
-          dead_at: 0
+          dead_at: 0,
+          laser_charge_until: 0,
+          laser_fire_at: 0,
+          laser_cd_until: 0
         }
 
         state = %{state |
@@ -204,7 +219,10 @@ defmodule LurusWww.Games.Snake.Engine do
         streak: 0, streak_until: 0,
         last_seen: state.tick,
         is_bot: true,
-        dead_at: 0
+        dead_at: 0,
+        laser_charge_until: 0,
+        laser_fire_at: 0,
+        laser_cd_until: 0
       }
 
       state = %{state |
@@ -264,6 +282,29 @@ defmodule LurusWww.Games.Snake.Engine do
   end
   def set_boost(state, _, _), do: state
 
+  @doc """
+  Begin a laser charge. After @laser_charge_ticks the beam fires automatically
+  in `process_lasers/1`. No-op if on cooldown, dead, too short, or already
+  charging.
+  """
+  def trigger_laser(state, id) do
+    case Map.get(state.players, id) do
+      %{alive: true} = p ->
+        cond do
+          p.laser_cd_until > state.tick -> state
+          p.laser_charge_until > state.tick -> state
+          length(p.segments) < @laser_min_segs -> state
+          true ->
+            charge_until = state.tick + @laser_charge_ticks
+            updated = %{p | laser_charge_until: charge_until, last_seen: state.tick}
+            state
+            |> put_in([Access.key(:players), id], updated)
+            |> Map.update!(:events, &[{:laser_charge, id, p.angle} | &1])
+        end
+      _ -> state
+    end
+  end
+
   @doc "Respawn dead player. Always succeeds even if just died."
   def respawn(state, pid) do
     case Map.get(state.players, pid) do
@@ -275,7 +316,8 @@ defmodule LurusWww.Games.Snake.Engine do
           combo: 0, combo_until: 0, just_leveled: false,
           girth: 1.0,
           streak: 0, streak_until: 0,
-          last_seen: state.tick, dead_at: 0
+          last_seen: state.tick, dead_at: 0,
+          laser_charge_until: 0, laser_fire_at: 0, laser_cd_until: 0
         }
         state
         |> put_in([Access.key(:players), pid], reset)
@@ -294,6 +336,7 @@ defmodule LurusWww.Games.Snake.Engine do
       |> tick_bots()
       |> steer_and_move()
       |> detect_collisions()
+      |> process_lasers()
       |> collect_food()
       |> collect_powerups()
       |> apply_magnet()
@@ -350,7 +393,12 @@ defmodule LurusWww.Games.Snake.Engine do
           cmb: p.combo, ul: p.just_leveled,
           g: r2(p.girth),
           st: if(p.streak_until > state.tick, do: p.streak, else: 0),
-          bot: p.is_bot
+          bot: p.is_bot,
+          # Laser state — for charge ring telegraph + cooldown HUD on client.
+          # lc: ticks remaining of charge (0 = not charging)
+          # lcd: ticks remaining of cooldown (0 = ready)
+          lc: max(0, p.laser_charge_until - state.tick),
+          lcd: max(0, p.laser_cd_until - state.tick)
         }}
       end),
       food: Enum.map(state.food, fn {x, y, t} -> [r2(x), r2(y), if(t == :golden, do: 1, else: 0)] end),
@@ -899,6 +947,146 @@ defmodule LurusWww.Games.Snake.Engine do
     %{state | leaderboard: board}
   end
 
+  # ── Laser Eye / Tail Sever ──────────────────────────────
+  # On the tick where charge expires, trace a forward beam. The first other
+  # alive snake whose body is hit gets severed at that segment (everything
+  # behind it scatters as food). Shield absorbs (consumes a stack, no cut).
+  # Attacker pays @laser_self_cost from their own tail, regardless of hit.
+
+  defp process_lasers(state) do
+    firing =
+      state.players
+      |> Enum.filter(fn {_id, p} ->
+        p.alive && p.laser_charge_until == state.tick
+      end)
+
+    if firing == [] do
+      state
+    else
+      Enum.reduce(firing, state, fn {id, _p}, acc -> fire_laser(acc, id) end)
+    end
+  end
+
+  defp fire_laser(state, id) do
+    p = state.players[id]
+    {hx, hy} = hd(p.segments)
+    fx = :math.cos(p.angle)
+    fy = :math.sin(p.angle)
+    bx = hx + fx * @laser_range
+    by = hy + fy * @laser_range
+
+    # Find closest hit across other alive players.
+    candidates =
+      state.players
+      |> Enum.reject(fn {oid, op} ->
+        oid == id || !op.alive ||
+          # Ghost is intangible
+          Map.has_key?(op.effects, :ghost)
+      end)
+      |> Enum.flat_map(fn {oid, op} ->
+        # Skip first 3 segs (neck) — symmetric with eat / collision rules.
+        op.segments
+        |> Enum.with_index()
+        |> Enum.drop(3)
+        |> Enum.map(fn {{sx, sy}, idx} ->
+          {oid, idx, sx, sy,
+           segment_dist_along_beam(hx, hy, fx, fy, sx, sy, @laser_range)}
+        end)
+      end)
+      |> Enum.filter(fn {_, _, _, _, d_along} -> d_along != nil end)
+      |> Enum.sort_by(fn {_, _, _, _, d_along} -> d_along end)
+
+    # The first segment whose perpendicular distance to the beam is within
+    # @laser_radius wins. (sort already gives us closest along beam first.)
+    hit =
+      Enum.find(candidates, fn {_oid, _idx, sx, sy, _d_along} ->
+        perpendicular_dist(hx, hy, fx, fy, sx, sy) <= @laser_radius
+      end)
+
+    state = pay_laser_cost(state, id)
+
+    case hit do
+      nil ->
+        # Whiff. Still on cooldown + cost paid.
+        state |> Map.update!(:events, &[{:laser_fire, id, nil, bx, by, 0} | &1])
+
+      {oid, hit_idx, sx, sy, _} ->
+        # Shield absorbs entirely (consumes one stack, no sever).
+        target = state.players[oid]
+
+        if target.shield_stacks > 0 do
+          state
+          |> update_in([Access.key(:players), oid, Access.key(:shield_stacks)], &(&1 - 1))
+          |> Map.update!(:events, &[{:laser_blocked, id, oid, sx, sy} | &1])
+        else
+          sever_at(state, id, oid, hit_idx, sx, sy)
+        end
+    end
+  end
+
+  # Reject if the segment is behind the head (negative beam coordinate) or
+  # past the beam endpoint. Returns distance along beam, or nil if rejected.
+  defp segment_dist_along_beam(hx, hy, fx, fy, sx, sy, range) do
+    along = (sx - hx) * fx + (sy - hy) * fy
+
+    cond do
+      along < 0 -> nil
+      along > range -> nil
+      true -> along
+    end
+  end
+
+  # Perpendicular distance from segment to infinite beam line.
+  defp perpendicular_dist(hx, hy, fx, fy, sx, sy) do
+    # Cross product magnitude / |forward| (forward is unit so |forward|=1)
+    abs((sx - hx) * (-fy) + (sy - hy) * fx)
+  end
+
+  defp pay_laser_cost(state, id) do
+    update_in(state.players[id], fn p ->
+      kept = max(@laser_min_segs - @laser_self_cost, length(p.segments) - @laser_self_cost)
+      %{p |
+        segments: Enum.take(p.segments, kept),
+        laser_charge_until: 0,
+        laser_fire_at: state.tick,
+        laser_cd_until: state.tick + @laser_cooldown
+      }
+    end)
+  end
+
+  defp sever_at(state, attacker_id, victim_id, hit_idx, hit_x, hit_y) do
+    target = state.players[victim_id]
+    {keep, severed} = Enum.split(target.segments, hit_idx)
+
+    # Don't trim short snakes to nothing — leave at least @laser_min_victim_len.
+    keep =
+      if length(keep) < @laser_min_victim_len do
+        Enum.take(target.segments, @laser_min_victim_len)
+      else
+        keep
+      end
+
+    severed_count = length(target.segments) - length(keep)
+    # Convert severed body to food. Sample sparsely (every 2nd) so we don't
+    # explode broadcast size when hitting a long snake.
+    new_food =
+      severed
+      |> Enum.take_every(2)
+      |> Enum.map(fn {x, y} ->
+        {x, y, if(:rand.uniform() < 0.20, do: :golden, else: :normal)}
+      end)
+
+    state
+    |> put_in([Access.key(:players), victim_id, Access.key(:segments)], keep)
+    |> Map.update!(:food, fn fd ->
+      capped_food = fd ++ new_food
+      if length(capped_food) > @max_food, do: Enum.take(capped_food, @max_food), else: capped_food
+    end)
+    |> Map.update!(:events, &[
+      {:laser_fire, attacker_id, victim_id, hit_x, hit_y, severed_count} | &1
+    ])
+  end
+
   # ── Bot AI ──────────────────────────────────────────────
   # Tiny rule-based AI: wall-avoid → threat-avoid → food-seek.
   # Decisions are stateless (target_angle recomputed each tick) so bots
@@ -1036,5 +1224,11 @@ defmodule LurusWww.Games.Snake.Engine do
   defp encode_event({:fatten, id, g}), do: ["fat", id, g]
   defp encode_event({:streak, id, n}), do: ["streak", id, n]
   defp encode_event({:food_rain, n}), do: ["rain", n]
+  # Laser events — client uses these for SFX + visual beam line + sever burst.
+  defp encode_event({:laser_charge, id, angle}), do: ["lcharge", id, r2(angle)]
+  defp encode_event({:laser_fire, attacker, victim, hx, hy, severed}),
+    do: ["lfire", attacker, victim, r2(hx), r2(hy), severed]
+  defp encode_event({:laser_blocked, attacker, victim, hx, hy}),
+    do: ["lblock", attacker, victim, r2(hx), r2(hy)]
   defp encode_event(_), do: nil
 end

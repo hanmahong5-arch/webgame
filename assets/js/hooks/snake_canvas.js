@@ -25,8 +25,10 @@ const SnakeCanvas = {
     this.audio = new GameAudio()
     this.particles = []
     this.rainDrops = []          // ambient food-rain particles
+    this.laserBeams = []         // active beam segments to draw briefly
     this.MAX_PARTICLES = 400
     this.MAX_RAINDROPS = 200
+    this.MAX_LASERS = 24
     this.cam = { x: 900, y: 600 }
     this.lastDrawAt = 0
     this.lastSteerAt = 0
@@ -49,8 +51,16 @@ const SnakeCanvas = {
     this.canvas.addEventListener("mousemove", (e) => {
       this.mouse.x = e.clientX; this.mouse.y = e.clientY; this.sendSteer()
     })
-    this.canvas.addEventListener("mousedown", () => this.setBoosting(true))
-    this.canvas.addEventListener("mouseup", () => this.setBoosting(false))
+    this.canvas.addEventListener("mousedown", (e) => {
+      // Right-click = laser eye (don't trigger boost)
+      if (e.button === 2) { e.preventDefault(); this.fireLaser(); return }
+      if (e.button === 0) this.setBoosting(true)
+    })
+    this.canvas.addEventListener("mouseup", (e) => {
+      if (e.button === 0) this.setBoosting(false)
+    })
+    // Suppress browser context menu so right-click can be used as a game button
+    this.canvas.addEventListener("contextmenu", (e) => e.preventDefault())
     // Clear stuck boost when pointer leaves canvas
     this.canvas.addEventListener("mouseleave", () => this.setBoosting(false))
 
@@ -118,15 +128,29 @@ const SnakeCanvas = {
       this._boostBtnHandlers = { btn: boostBtn, onPress, onRelease }
     }
 
+    // Visible laser button — tap-fire, no hold semantics.
+    const laserBtn = document.getElementById("touch-laser-btn")
+    if (laserBtn) {
+      const onLaserTap = (e) => { e.preventDefault(); this.fireLaser() }
+      laserBtn.addEventListener("touchstart", onLaserTap, { passive: false })
+      laserBtn.addEventListener("click", onLaserTap)
+      this._laserBtnHandlers = { btn: laserBtn, onLaserTap }
+    }
+
     // Keyboard. Multiple boost keys so any layout works:
     //   Space / Shift / Enter / W (also press-anywhere on mobile)
     // Browsers fire keydown repeatedly while held; setBoosting de-dupes the
     // PubSub push so holding space gives one cast, not 30/sec.
     const BOOST_KEYS = new Set(["Space", "ShiftLeft", "ShiftRight", "Enter", "KeyW"])
+    const LASER_KEYS = new Set(["KeyV", "KeyF"])
     this._onKey = (e) => {
       if (BOOST_KEYS.has(e.code)) {
         if (e.code === "Space") e.preventDefault()
         this.setBoosting(e.type === "keydown")
+        return
+      }
+      if (LASER_KEYS.has(e.code)) {
+        if (e.type === "keydown" && !e.repeat) this.fireLaser()
         return
       }
       if (e.type === "keydown") this.tryRespawn()
@@ -288,6 +312,15 @@ const SnakeCanvas = {
     if (this.boosting !== active) { this.boosting = active; this.pushEvent("boost", { active }) }
   },
 
+  fireLaser() {
+    // Server enforces actual cooldown / cost / validity. We only debounce the
+    // event push so a button-mash sends one event per ~250ms.
+    const now = performance.now()
+    if (this._lastLaserAt && now - this._lastLaserAt < 250) return
+    this._lastLaserAt = now
+    this.pushEvent("laser", {})
+  },
+
   pushKillerToLV() {
     if (!this._lastKiller) return
     this.pushEvent("set_killer", { name: this._lastKiller.name, color: this._lastKiller.color })
@@ -378,6 +411,53 @@ const SnakeCanvas = {
               vx: (Math.random() - 0.5) * 0.5, vy: 2 + Math.random() * 2,
               life: 120 + Math.random() * 60,
               golden: Math.random() < 0.25
+            })
+          }
+          break
+        }
+        case "lcharge": {
+          // Someone is charging laser. Per-snake state for telegraph ring is
+          // already in `lc` field; charge sound is played here.
+          if (ev[1] === this.playerId) this.audio.play("powerup")
+          break
+        }
+        case "lfire": {
+          // ev = ["lfire", attacker_id, victim_id, hit_x, hit_y, severed_count]
+          const [_, atk, vic, hx, hy, severed] = ev
+          this.audio.play(atk === this.playerId ? "powerup" : "die", false)
+          this.laserBeams.push({
+            x0: state.players?.[atk]?.s?.[0]?.[0] ?? hx,
+            y0: state.players?.[atk]?.s?.[0]?.[1] ?? hy,
+            x1: hx, y1: hy,
+            attacker: atk,
+            until: now + 200
+          })
+          // Particle burst at hit point
+          const color = vic ? (state.players?.[vic]?.c || "#FF66AA") : "#FF66AA"
+          for (let i = 0; i < 16; i++) {
+            this.particles.push({
+              x: hx + (Math.random() - 0.5) * 8,
+              y: hy + (Math.random() - 0.5) * 8,
+              vx: (Math.random() - 0.5) * 5,
+              vy: (Math.random() - 0.5) * 5,
+              life: 24 + Math.random() * 16,
+              color, size: 2 + Math.random() * 2.5
+            })
+          }
+          if (vic === this.playerId && severed > 0) {
+            this.flashBanner = { text: `−${severed} SEVERED`, color: "#FF3355", until: now + 1200 }
+          }
+          break
+        }
+        case "lblock": {
+          // Shield absorbed the laser. Ring flash on victim.
+          const [_, _atk, _vic, hx, hy] = ev
+          for (let i = 0; i < 12; i++) {
+            const a = (i / 12) * Math.PI * 2
+            this.particles.push({
+              x: hx, y: hy,
+              vx: Math.cos(a) * 3, vy: Math.sin(a) * 3,
+              life: 18, color: "#00FF87", size: 2
             })
           }
           break
@@ -721,6 +801,26 @@ const SnakeCanvas = {
           ctx.beginPath(); ctx.arc(hsx, hsy, auraR, 0, Math.PI * 2); ctx.stroke()
         }
 
+        // Laser charge telegraph — red expanding ring while lc > 0.
+        // Visible to ALL players (gives victims a chance to dodge).
+        const charge = p.lc || 0
+        if (charge > 0) {
+          // charge counts DOWN ticks; max is @laser_charge_ticks (4 in engine)
+          const progress = 1 - charge / 4
+          const ringR = headR * (1.4 + progress * 1.2)
+          ctx.strokeStyle = "#FF3355"
+          ctx.lineWidth = 2 + progress * 3
+          ctx.globalAlpha = 0.4 + progress * 0.5
+          ctx.beginPath(); ctx.arc(hsx, hsy, ringR, 0, Math.PI * 2); ctx.stroke()
+          // Forward-pointing arc indicating direction
+          ctx.strokeStyle = "#FF6688"
+          ctx.lineWidth = 3
+          ctx.beginPath()
+          ctx.arc(hsx, hsy, ringR, angle - 0.5, angle + 0.5)
+          ctx.stroke()
+          ctx.globalAlpha = 1
+        }
+
         // Shield rings (one per stack)
         if (shieldStacks > 0) {
           ctx.strokeStyle = "#00FF87"
@@ -787,6 +887,34 @@ const SnakeCanvas = {
       ctx.globalAlpha = 1; return true
     })
 
+    // Laser beams — bright pink line + outer glow, fades over 200ms
+    if (this.laserBeams.length) {
+      this.laserBeams = this.laserBeams.filter(b => {
+        if (nowMs > b.until) return false
+        const remaining = b.until - nowMs
+        const a = Math.min(1, remaining / 200)
+        const x0 = toSx(b.x0), y0 = toSy(b.y0)
+        const x1 = toSx(b.x1), y1 = toSy(b.y1)
+        // Outer glow
+        ctx.globalAlpha = a * 0.4
+        ctx.strokeStyle = "#FF66AA"
+        ctx.lineWidth = 8
+        ctx.lineCap = "round"
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke()
+        // Core
+        ctx.globalAlpha = a
+        ctx.strokeStyle = "#FFD0E5"
+        ctx.lineWidth = 2.5
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke()
+        ctx.globalAlpha = 1
+        return true
+      })
+      // Cap to prevent unbounded growth from rapid fire
+      if (this.laserBeams.length > this.MAX_LASERS) {
+        this.laserBeams.splice(0, this.laserBeams.length - this.MAX_LASERS)
+      }
+    }
+
     // Food-rain ambient drops (purely cosmetic — server seeds real food separately)
     if (this.rainDrops.length) {
       this.rainDrops = this.rainDrops.filter(d => {
@@ -852,6 +980,23 @@ const SnakeCanvas = {
       ctx.fillRect(bx2, by2, bw * Math.min(1, len / 50), bh)
       ctx.fillStyle = "#55556A"; ctx.font = "8px sans-serif"; ctx.textAlign = "center"
       ctx.fillText(me.boosting ? "BOOST" : `Length: ${len}`, W_CSS / 2, by2 - 3)
+    }
+
+    // Laser cooldown bar — placed just above boost bar so player sees readiness.
+    if (me?.alive && state.players?.[this.playerId]) {
+      const meRaw = state.players[this.playerId]
+      const lcd = meRaw.lcd || 0    // ticks remaining of cooldown (0 = ready)
+      const lc  = meRaw.lc  || 0    // ticks remaining of charge
+      const bw = 100, bh = 4, bx2 = (W_CSS - bw) / 2, by2 = H_CSS - 38
+      ctx.fillStyle = "rgba(6,6,16,0.5)"; ctx.fillRect(bx2 - 1, by2 - 1, bw + 2, bh + 2)
+      // Cooldown progress (full when ready, drains as you fire)
+      const ready = lcd === 0
+      const fillRatio = ready ? 1 : 1 - lcd / 160   // matches @laser_cooldown=160
+      ctx.fillStyle = lc > 0 ? "#FF3355" : (ready ? "#FF66AA" : "#552233")
+      ctx.fillRect(bx2, by2, bw * fillRatio, bh)
+      ctx.fillStyle = "#55556A"; ctx.font = "8px sans-serif"; ctx.textAlign = "center"
+      const label = lc > 0 ? "CHARGING…" : (ready ? "LASER 👁 READY (V)" : `LASER ${(lcd * 0.05).toFixed(1)}s`)
+      ctx.fillText(label, W_CSS / 2, by2 - 3)
     }
 
     // Stale-state overlay: server stopped sending broadcasts. Tells the user

@@ -141,6 +141,16 @@ defmodule LurusWwwWeb.Live.GameLive do
     {:noreply, socket}
   end
 
+  def handle_event("laser", _params, socket) do
+    # Server enforces cooldown + length cost; this rate limit is just to throttle
+    # event spam from the client (UI button mashing).
+    if rate_limit_ok?(:laser, 4, 8_000) &&
+         socket.assigns.joined && socket.assigns.room_id do
+      GameServer.fire_laser(socket.assigns.room_id, socket.assigns.player_id)
+    end
+    {:noreply, socket}
+  end
+
   def handle_event(_, _, socket), do: {:noreply, socket}
 
   @impl true
@@ -183,9 +193,11 @@ defmodule LurusWwwWeb.Live.GameLive do
           <canvas id="game-canvas" phx-hook="SnakeCanvas" phx-update="ignore"></canvas>
         </div>
 
-        <%!-- Mobile-only on-screen boost button. Hidden on hover-capable devices via CSS. --%>
+        <%!-- Mobile-only on-screen control buttons. Hidden on hover-capable devices via CSS. --%>
         <button id="touch-boost-btn" class="touch-boost-btn" aria-label="boost"
                 phx-update="ignore" tabindex="-1">⚡</button>
+        <button id="touch-laser-btn" class="touch-laser-btn" aria-label="laser eye"
+                phx-update="ignore" tabindex="-1">👁</button>
 
         <%!-- Top HUD --%>
         <div class="game-hud">
@@ -248,7 +260,11 @@ defmodule LurusWwwWeb.Live.GameLive do
                   id="player-name-input" />
                 <button type="submit" class="btn-play">PLAY</button>
               </form>
-              <p class="join-controls">Mouse = steer &middot; Click / Space / Shift = boost &middot; mobile: hold ⚡ button</p>
+              <p class="join-controls">
+                Mouse = steer &middot; Click / Space / Shift = boost &middot;
+                <strong style="color:#FF66AA">V / right-click = laser eye 👁</strong>
+                <br/>mobile: hold ⚡ button to boost &middot; tap 👁 for laser
+              </p>
             </div>
           </div>
         <% end %>

@@ -62,6 +62,13 @@ bun run test:e2e                 # Playwright (playwright.config.ts)
 - **playerId 漂移**: 三路 fallback — localStorage baseline + form + `joined` event。
 - **Tail growth**: 必须用真实间隔 points 扩展尾部，不要 `List.duplicate`（会坍塌）。
 - **多 tab 碰撞**: 服务端每 tick push `my_id`，前端按最新覆盖。
+- **Tick 必须 try/rescue**: 单次 Engine.tick 崩溃就会冻结整个房间所有玩家，rescue 后保留旧 state 继续 tick。
+- **Reconnect ≠ 新 id**: `:already_joined` 必须走 `Engine.resume_player`，不要 `gen_id()` 重试，否则丢分数/段/等级。
+- **`:latest` tag 必配 `imagePullPolicy: Always`**: 否则 kubelet 缓存让 CI bump 永远到不了 pod。
+- **跨玩家干扰道具会被当 bug**: freeze/slowmo 已删；新增类似机制需要：受害者警告 + 反制窗口 + 短时长 + 自愿进入。
+- **fatten 截断 = 视觉冻结**: 单帧改变 body 拓扑会被感知为"卡死"，已换成 `girth_for_level/1` 平滑派生。
+
+> 完整 40 条踩坑 + 4 条已反转设计教训见 `/webgame` skill。
 
 ## BMAD
 

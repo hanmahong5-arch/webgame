@@ -1095,6 +1095,36 @@ body {
 /* Coarse-pointer (touch) devices only */
 @media (hover: none) and (pointer: coarse) {
   .touch-boost-btn { display: flex; }
+  .touch-laser-btn { display: flex; }
+}
+
+/* Mobile laser button — pink, smaller, sits left of the boost button. */
+.touch-laser-btn {
+  position: fixed;
+  right: 116px;
+  bottom: 30px;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 102, 170, 0.7);
+  background: radial-gradient(circle, rgba(255, 102, 170, 0.35), rgba(255, 102, 170, 0.10));
+  color: #FF66AA;
+  font-size: 28px;
+  line-height: 1;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  box-shadow: 0 0 18px rgba(255, 102, 170, 0.4);
+  cursor: pointer;
+}
+.touch-laser-btn:active {
+  transform: scale(0.92);
+  background: radial-gradient(circle, rgba(255, 102, 170, 0.6), rgba(255, 102, 170, 0.25));
 }
 
 .hud-effect {
