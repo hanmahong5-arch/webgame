@@ -555,7 +555,9 @@ defmodule LurusWww.Games.Snake.EngineTest do
       state = %{state |
         players: state.players
           |> Map.update!("p1", &%{&1 | invincible_until: 0, angle: 0.0, target_angle: 0.0})
-          |> Map.update!("p2", &%{&1 | invincible_until: 0}),
+          # Pin p2 angle too — random direction makes resample warp body
+          # off the y=700 line and the test becomes flaky.
+          |> Map.update!("p2", &%{&1 | invincible_until: 0, angle: 0.0, target_angle: 0.0}),
         tick: 100
       }
 
