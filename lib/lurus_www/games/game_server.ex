@@ -198,7 +198,17 @@ defmodule LurusWww.Games.GameServer do
     # Maintain bot population every 60 ticks (~3s) — cheap, idempotent.
     engine = if rem(engine.tick, 60) == 0, do: maybe_fill_bots(engine), else: engine
 
-    if tick_ok? do
+    # Broadcast at 10Hz (every other tick). Physics still runs at 20Hz so
+    # collision / steering precision is unchanged. Client interpolation
+    # auto-adapts to the wider state interval. Halves payload bandwidth.
+    # Always broadcast on tick 1 (so newly-joined players see initial state)
+    # and on any tick that produced events (so eat / kill / level-up are
+    # never delayed by 50ms).
+    should_broadcast =
+      tick_ok? &&
+        (rem(engine.tick, 2) == 0 || engine.events != [] || engine.tick == 1)
+
+    if should_broadcast do
       broadcast_game(engine)
     end
 

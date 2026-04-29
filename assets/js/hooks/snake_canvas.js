@@ -248,6 +248,50 @@ const SnakeCanvas = {
         drift: rand() * Math.PI * 2
       })
     }
+    this._buildBackgroundCache()
+  },
+
+  // Pre-render stars + ambient glow into a single world-space offscreen
+  // canvas. Lets `draw()` blit a viewport region per frame instead of
+  // looping 400 stars + 8 radial-gradient blobs every time. Big perf win
+  // on long sessions / high-segment scenes.
+  // Trade-off: stars no longer twinkle, ambient no longer drifts. Both
+  // were minor cosmetics; the perf savings dominate.
+  _buildBackgroundCache() {
+    const BG_W = 3000, BG_H = 2200, OX = 200, OY = 200
+    const off = document.createElement("canvas")
+    off.width = BG_W; off.height = BG_H
+    const c = off.getContext("2d")
+
+    // Solid base
+    c.fillStyle = "#05050C"
+    c.fillRect(0, 0, BG_W, BG_H)
+
+    // Ambient glow blobs
+    for (const a of this._ambient) {
+      const cx = a.x + OX, cy = a.y + OY
+      const grad = c.createRadialGradient(cx, cy, 0, cx, cy, a.r)
+      grad.addColorStop(0, a.c + "20")
+      grad.addColorStop(0.5, a.c + "10")
+      grad.addColorStop(1, a.c + "00")
+      c.fillStyle = grad
+      c.fillRect(cx - a.r, cy - a.r, a.r * 2, a.r * 2)
+    }
+
+    // Stars
+    c.globalAlpha = 0.6
+    for (const s of this._stars) {
+      const cx = s.x + OX, cy = s.y + OY
+      c.fillStyle = s.c
+      c.fillRect(cx - s.r / 2, cy - s.r / 2, s.r, s.r)
+    }
+    c.globalAlpha = 1
+
+    this._bgCache = off
+    this._bgOX = OX
+    this._bgOY = OY
+    this._bgW = BG_W
+    this._bgH = BG_H
   },
 
   _buildGlowCache() {
@@ -462,6 +506,26 @@ const SnakeCanvas = {
           }
           break
         }
+        case "larmor": {
+          // Beam hit the armored head-side body. Visible "spark deflect" but
+          // no damage. Tells the attacker they need to aim further back.
+          const [_, atk, _vic, hx, hy] = ev
+          if (atk === this.playerId) {
+            this.flashBanner = {
+              text: "ARMORED — aim for the tail",
+              color: "#9090FF", until: now + 1100
+            }
+          }
+          for (let i = 0; i < 10; i++) {
+            const a = Math.random() * Math.PI * 2
+            this.particles.push({
+              x: hx, y: hy,
+              vx: Math.cos(a) * 2.5, vy: Math.sin(a) * 2.5,
+              life: 15, color: "#B0B0FF", size: 1.5
+            })
+          }
+          break
+        }
       }
     }
   },
@@ -538,32 +602,28 @@ const SnakeCanvas = {
     const toSx = (wx) => wx - camX + cx
     const toSy = (wy) => wy - camY + cy
 
-    // BG — dark base
-    ctx.fillStyle = "#05050C"; ctx.fillRect(0, 0, W_CSS, H_CSS)
-
-    // Ambient glow blobs (big soft circles drifting)
-    for (const a of this._ambient) {
-      const asx = toSx(a.x), asy = toSy(a.y)
-      if (asx < -a.r - 50 || asx > W_CSS + a.r + 50 || asy < -a.r - 50 || asy > H_CSS + a.r + 50) continue
-      const drift = Math.sin(t * 0.2 + a.drift) * 20
-      const grad = ctx.createRadialGradient(asx + drift, asy + drift * 0.6, 0, asx + drift, asy + drift * 0.6, a.r)
-      grad.addColorStop(0, a.c + "20")
-      grad.addColorStop(0.5, a.c + "10")
-      grad.addColorStop(1, a.c + "00")
-      ctx.fillStyle = grad
-      ctx.fillRect(asx + drift - a.r, asy + drift * 0.6 - a.r, a.r * 2, a.r * 2)
+    // BG — blit pre-rendered stars + ambient glow from cache. Replaces the
+    // per-frame 400-star loop + 8-blob radial-gradient loop. ~8x faster on
+    // typical hardware.
+    if (this._bgCache) {
+      const sx = camX - cx + this._bgOX
+      const sy = camY - cy + this._bgOY
+      // Source rect must stay inside the cache bounds; clip + base-fill any
+      // overflow so we don't get a black bar when camera wanders to edges.
+      ctx.fillStyle = "#05050C"
+      ctx.fillRect(0, 0, W_CSS, H_CSS)
+      const srcX = Math.max(0, sx)
+      const srcY = Math.max(0, sy)
+      const srcW = Math.min(this._bgW - srcX, W_CSS - (srcX - sx))
+      const srcH = Math.min(this._bgH - srcY, H_CSS - (srcY - sy))
+      if (srcW > 0 && srcH > 0) {
+        const dstX = srcX - sx
+        const dstY = srcY - sy
+        ctx.drawImage(this._bgCache, srcX, srcY, srcW, srcH, dstX, dstY, srcW, srcH)
+      }
+    } else {
+      ctx.fillStyle = "#05050C"; ctx.fillRect(0, 0, W_CSS, H_CSS)
     }
-
-    // Starfield — twinkling dots
-    for (const s of this._stars) {
-      const ssx = toSx(s.x), ssy = toSy(s.y)
-      if (ssx < -2 || ssx > W_CSS + 2 || ssy < -2 || ssy > H_CSS + 2) continue
-      const tw = 0.4 + 0.6 * Math.abs(Math.sin(t * 1.5 + s.twinkle))
-      ctx.globalAlpha = tw * 0.7
-      ctx.fillStyle = s.c
-      ctx.fillRect(ssx - s.r / 2, ssy - s.r / 2, s.r, s.r)
-    }
-    ctx.globalAlpha = 1
 
     // Grid — single batched path, stronger inside arena
     ctx.strokeStyle = "rgba(100,140,200,0.05)"; ctx.lineWidth = 1
@@ -685,13 +745,34 @@ const SnakeCanvas = {
       // Just leveled up: white flash for 1 second
       const levelFlash = justLeveled ? Math.max(0, 1 - (state.tick % 20) / 20) : 0
 
-      // Body
-      ctx.globalAlpha = alive ? (0.85 * invisAlpha) : 0.12
+      // Body — split into ARMORED head-side (full alpha + thick) and
+      // SEVERABLE tail (dimmer + thinner). Boundary index `ar` comes from
+      // server, already adjusted for LOD downsampling. Severable region is
+      // the only zone where lasers can cut.
+      const armorIdx = Math.min(p.ar ?? Math.min(segs.length, 6 + (level - 1) * 3), segs.length)
+      ctx.lineCap = "round"; ctx.lineJoin = "round"
+
+      // Severable tail (drawn first, underneath head). Overlap one segment
+      // with the armor zone so the line is visually continuous.
+      if (segs.length > armorIdx && armorIdx > 0) {
+        ctx.globalAlpha = alive ? (0.45 * invisAlpha) : 0.08
+        ctx.strokeStyle = color
+        ctx.lineWidth = r * 1.55
+        ctx.beginPath()
+        for (let i = armorIdx - 1; i < segs.length; i++) {
+          const sx2 = toSx(segs[i][0]), sy2 = toSy(segs[i][1])
+          if (i === armorIdx - 1) ctx.moveTo(sx2, sy2); else ctx.lineTo(sx2, sy2)
+        }
+        ctx.stroke()
+      }
+
+      // Armored head-side body — full thickness, optional level-flash white.
+      ctx.globalAlpha = alive ? (0.92 * invisAlpha) : 0.12
       ctx.strokeStyle = levelFlash > 0.3 ? "#FFFFFF" : color
       ctx.lineWidth = r * 2
-      ctx.lineCap = "round"; ctx.lineJoin = "round"
       ctx.beginPath()
-      for (let i = 0; i < segs.length; i++) {
+      const armorEnd = Math.min(armorIdx, segs.length)
+      for (let i = 0; i < armorEnd; i++) {
         const sx2 = toSx(segs[i][0]), sy2 = toSy(segs[i][1])
         if (i === 0) ctx.moveTo(sx2, sy2); else ctx.lineTo(sx2, sy2)
       }

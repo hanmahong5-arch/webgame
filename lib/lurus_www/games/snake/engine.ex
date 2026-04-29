@@ -93,10 +93,18 @@ defmodule LurusWww.Games.Snake.Engine do
   @bot_wall_margin 160
   @bot_avoid_radius 90
   @bot_respawn_delay 60  # ticks dead before respawn (~3s)
-  # Bots are filler, not contenders. Hard caps prevent runaway snowballing —
-  # a Lv50 bot with 200+ segments tanks the whole room (broadcast bloat + lag).
-  @bot_max_length 50
-  @bot_max_level 3
+
+  # ── Armored / severable body zones ──────────────────────
+  # Snakes have two body regions:
+  #   * Armored (head-side): immune to laser sever — counter-play requires
+  #     hitting the tail.
+  #   * Severable (tail-side): lasers cut everything from hit point onward
+  #     into food.
+  # Armored count grows with level so progression has an evolutionary axis:
+  # higher level = harder to cut down. New players are vulnerable; veterans
+  # become long but with diminishing severable tails.
+  @armor_base 6
+  @armor_per_level 3
 
   # ── Laser Eye / Tail-Sever ───────────────────────────────
   # Press V / right-click / mobile laser button to fire a short forward beam.
@@ -370,24 +378,9 @@ defmodule LurusWww.Games.Snake.Engine do
       rain: state.rain_until > state.tick,
       players: Map.new(state.players, fn {id, p} ->
         # LOD for long tails — keep head precise, sample tail more sparsely
-        # as the snake grows. Caps broadcast payload even for 200+ snake bodies.
-        segs =
-          cond do
-            length(p.segments) > 150 ->
-              {head, tail} = Enum.split(p.segments, 12)
-              head ++ Enum.take_every(tail, 4)
-
-            length(p.segments) > 80 ->
-              {head, tail} = Enum.split(p.segments, 10)
-              head ++ Enum.take_every(tail, 3)
-
-            length(p.segments) > 30 ->
-              {head, tail} = Enum.split(p.segments, 8)
-              head ++ Enum.take_every(tail, 2)
-
-            true ->
-              p.segments
-          end
+        # as the snake grows. Returns the LOD'd segs AND the LOD-relative
+        # armor boundary index so client can render two zones correctly.
+        {segs, armor_lod_idx} = lod_segments_and_armor(p)
 
         {id, %{
           n: p.name, c: p.color, a: r2(p.angle),
@@ -406,7 +399,11 @@ defmodule LurusWww.Games.Snake.Engine do
           # lc: ticks remaining of charge (0 = not charging)
           # lcd: ticks remaining of cooldown (0 = ready)
           lc: max(0, p.laser_charge_until - state.tick),
-          lcd: max(0, p.laser_cd_until - state.tick)
+          lcd: max(0, p.laser_cd_until - state.tick),
+          # Armored boundary in the LOD'd `s` array — segments at index < ar
+          # render as protected (full alpha + outline), >= ar as severable
+          # (dim, narrower stroke).
+          ar: armor_lod_idx
         }}
       end),
       food: Enum.map(state.food, fn {x, y, t} -> [r2(x), r2(y), if(t == :golden, do: 1, else: 0)] end),
@@ -415,6 +412,35 @@ defmodule LurusWww.Games.Snake.Engine do
   end
 
   defp r2(f), do: Float.round(f * 1.0, 1)
+
+  # LOD downsample + armor index in one pass. The armor index in the LOD'd
+  # array can differ from the original (we reduce the count of body segs in
+  # the tail, so a fixed boundary count maps to a smaller LOD index).
+  defp lod_segments_and_armor(p) do
+    full = p.segments
+    full_len = length(full)
+    armor = armored_count(p)
+
+    cond do
+      full_len > 150 -> downsample_with_armor(full, 12, 4, armor)
+      full_len > 80  -> downsample_with_armor(full, 10, 3, armor)
+      full_len > 30  -> downsample_with_armor(full, 8, 2, armor)
+      true           -> {full, armor}
+    end
+  end
+
+  defp downsample_with_armor(segs, head_size, step, armor_full) do
+    {head, tail} = Enum.split(segs, head_size)
+    sampled = head ++ Enum.take_every(tail, step)
+
+    armor_lod =
+      cond do
+        armor_full <= head_size -> armor_full
+        true -> head_size + div(armor_full - head_size, step)
+      end
+
+    {sampled, min(armor_lod, length(sampled))}
+  end
 
   defp encode_effects(effects) do
     Enum.map(effects, fn {type, {ttl, tier}} -> [Atom.to_string(type), tier, ttl] end)
@@ -735,23 +761,13 @@ defmodule LurusWww.Games.Snake.Engine do
           combo_mult = 1.0 + min(combo_new * 0.05, 0.5)  # up to 1.5x
           pts = round(raw_pts * star_mult * combo_mult)
 
-          # Growth
-          grow_raw = Enum.reduce(eaten, 0, fn {_, _, t}, a -> a + grow_amount(p, t) end)
+          # Growth — no cap. Long snakes are supposed to be possible; the
+          # armored/severable zone system + LOD compression keep them
+          # tactically interesting without tanking the room.
+          grow = Enum.reduce(eaten, 0, fn {_, _, t}, a -> a + grow_amount(p, t) end)
 
           new_food_eaten = p.food_eaten + length(eaten)
-
-          # Bots are filler, not contenders — hard cap their level + length so
-          # one runaway "Adder" can't snowball to 200+ segments and tank the
-          # whole room with broadcast bloat / render lag.
-          {grow, new_level} =
-            if p.is_bot do
-              capped_lvl = min(level_of(new_food_eaten), @bot_max_level)
-              capped_grow = if length(p.segments) >= @bot_max_length, do: 0, else: grow_raw
-              {capped_grow, capped_lvl}
-            else
-              {grow_raw, level_of(new_food_eaten)}
-            end
-
+          new_level = level_of(new_food_eaten)
           leveled_up = new_level > p.level
 
           ps = Map.update!(ps, id, fn pl ->
@@ -995,7 +1011,9 @@ defmodule LurusWww.Games.Snake.Engine do
     bx = hx + fx * @laser_range
     by = hy + fy * @laser_range
 
-    # Find closest hit across other alive players.
+    # Find closest hit across other alive players. Each candidate is tagged
+    # with :armored or :severable based on the target's progression — armored
+    # zone protects head-side segments and grows with level.
     candidates =
       state.players
       |> Enum.reject(fn {oid, op} ->
@@ -1004,22 +1022,26 @@ defmodule LurusWww.Games.Snake.Engine do
           Map.has_key?(op.effects, :ghost)
       end)
       |> Enum.flat_map(fn {oid, op} ->
-        # Skip first 3 segs (neck) — symmetric with eat / collision rules.
+        armor = armored_count(op)
         op.segments
         |> Enum.with_index()
+        # First 3 segs (neck) are skipped entirely — head-on collision
+        # already covers that geometry in detect_collisions.
         |> Enum.drop(3)
         |> Enum.map(fn {{sx, sy}, idx} ->
+          zone = if idx < armor, do: :armored, else: :severable
           {oid, idx, sx, sy,
-           segment_dist_along_beam(hx, hy, fx, fy, sx, sy, @laser_range)}
+           segment_dist_along_beam(hx, hy, fx, fy, sx, sy, @laser_range), zone}
         end)
       end)
-      |> Enum.filter(fn {_, _, _, _, d_along} -> d_along != nil end)
-      |> Enum.sort_by(fn {_, _, _, _, d_along} -> d_along end)
+      |> Enum.filter(fn {_, _, _, _, d_along, _} -> d_along != nil end)
+      |> Enum.sort_by(fn {_, _, _, _, d_along, _} -> d_along end)
 
-    # The first segment whose perpendicular distance to the beam is within
-    # @laser_radius wins. (sort already gives us closest along beam first.)
+    # The first segment whose perpendicular distance is within @laser_radius
+    # wins. The candidate ordering means the closest one along the beam is
+    # checked first — armored segments still BLOCK the beam (don't pass through).
     hit =
-      Enum.find(candidates, fn {_oid, _idx, sx, sy, _d_along} ->
+      Enum.find(candidates, fn {_oid, _idx, sx, sy, _d_along, _zone} ->
         perpendicular_dist(hx, hy, fx, fy, sx, sy) <= @laser_radius
       end)
 
@@ -1030,8 +1052,12 @@ defmodule LurusWww.Games.Snake.Engine do
         # Whiff. Still on cooldown + cost paid.
         state |> Map.update!(:events, &[{:laser_fire, id, nil, bx, by, 0} | &1])
 
-      {oid, hit_idx, sx, sy, _} ->
-        # Shield absorbs entirely (consumes one stack, no sever).
+      {oid, hit_idx, sx, sy, _, :armored} ->
+        # Beam hits armored zone — absorbed without effect, but visible feedback.
+        state
+        |> Map.update!(:events, &[{:laser_armored, id, oid, sx, sy} | &1])
+
+      {oid, hit_idx, sx, sy, _, :severable} ->
         target = state.players[oid]
 
         if target.shield_stacks > 0 do
@@ -1042,6 +1068,13 @@ defmodule LurusWww.Games.Snake.Engine do
           sever_at(state, id, oid, hit_idx, sx, sy)
         end
     end
+  end
+
+  # How many head-side segments are immune to lasers. Grows with level so
+  # progression has a defensive axis. New players: 6 protected (vulnerable);
+  # Lv 50: 153 protected (mostly armored, only the trailing tail can be cut).
+  defp armored_count(p) do
+    min(length(p.segments), @armor_base + (p.level - 1) * @armor_per_level)
   end
 
   # Reject if the segment is behind the head (negative beam coordinate) or
@@ -1250,5 +1283,7 @@ defmodule LurusWww.Games.Snake.Engine do
     do: ["lfire", attacker, victim, r2(hx), r2(hy), severed]
   defp encode_event({:laser_blocked, attacker, victim, hx, hy}),
     do: ["lblock", attacker, victim, r2(hx), r2(hy)]
+  defp encode_event({:laser_armored, attacker, victim, hx, hy}),
+    do: ["larmor", attacker, victim, r2(hx), r2(hy)]
   defp encode_event(_), do: nil
 end
