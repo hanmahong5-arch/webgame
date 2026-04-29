@@ -29,6 +29,10 @@ const SnakeCanvas = {
     this.MAX_PARTICLES = 400
     this.MAX_RAINDROPS = 200
     this.MAX_LASERS = 24
+    // Pooled per-id segment arrays. Re-used in draw() for interpolated positions
+    // so we don't allocate ~1000 small [x,y] arrays/frame at high length, which
+    // was triggering periodic GC stalls past 4000 score.
+    this._rsegsCache = {}
     this.cam = { x: 900, y: 600 }
     this.lastDrawAt = 0
     this.lastSteerAt = 0
@@ -381,6 +385,11 @@ const SnakeCanvas = {
     this.state = state
     this.lastStateAt = now
 
+    // Drop pooled segment arrays for players who left so the cache doesn't leak.
+    for (const id in this._rsegsCache) {
+      if (!state.players[id]) delete this._rsegsCache[id]
+    }
+
     // Cap visual particle arrays so they can't grow unbounded across long sessions / rain bursts
     if (this.rainDrops.length > this.MAX_RAINDROPS) {
       this.rainDrops.splice(0, this.rainDrops.length - this.MAX_RAINDROPS)
@@ -558,8 +567,11 @@ const SnakeCanvas = {
     // Render "one tick behind" for smoothness — map [0..1] onto prev→curr; clamp light overshoot
     const ialpha = Math.max(0, Math.min(1.15, rawAlpha))
 
-    // Build interpolated segments per player (snap if segment counts differ — growth/death frame)
+    // Build interpolated segments per player (snap if segment counts differ — growth/death frame).
+    // Re-use pooled [x,y] sub-arrays so a 250-segment x 5-snake frame doesn't churn 1k+
+    // tiny allocations through GC.
     const rsegs = {}
+    const cache = this._rsegsCache
     if (this.prevState?.players) {
       for (const id in state.players) {
         const cur = state.players[id]
@@ -570,14 +582,16 @@ const SnakeCanvas = {
         if (!ps || ps.length !== cs.length) {
           rsegs[id] = cs
         } else {
-          const out = new Array(cs.length)
+          let pool = cache[id]
+          if (!pool) pool = cache[id] = []
+          while (pool.length < cs.length) pool.push([0, 0])
+          pool.length = cs.length
           for (let i = 0; i < cs.length; i++) {
-            out[i] = [
-              ps[i][0] + (cs[i][0] - ps[i][0]) * ialpha,
-              ps[i][1] + (cs[i][1] - ps[i][1]) * ialpha
-            ]
+            const a = pool[i]
+            a[0] = ps[i][0] + (cs[i][0] - ps[i][0]) * ialpha
+            a[1] = ps[i][1] + (cs[i][1] - ps[i][1]) * ialpha
           }
-          rsegs[id] = out
+          rsegs[id] = pool
         }
       }
     } else {
@@ -650,13 +664,19 @@ const SnakeCanvas = {
     ctx.lineWidth = 1
     ctx.strokeRect(bx0, by0, bx1 - bx0, by1 - by0)
 
-    // Food — batch by color, NO shadowBlur (use pre-rendered glow sprite)
+    // Food — batch by color, NO shadowBlur (use pre-rendered glow sprite).
+    // World-space AABB cull first so off-screen items skip the screen-space
+    // transform entirely. With 600 food items and a viewport showing ~80, this
+    // drops 87% of the per-frame work.
     const foodGlow = this._glowCache?.food
     const goldenGlow = this._glowCache?.golden
+    const fMinX = camX - cx - 10, fMaxX = camX + cx + 10
+    const fMinY = camY - cy - 10, fMaxY = camY + cy + 10
     ctx.globalAlpha = 0.8
     for (const f of state.food) {
-      const fsx = toSx(f[0]), fsy = toSy(f[1])
-      if (fsx < -10 || fsx > W_CSS + 10 || fsy < -10 || fsy > H_CSS + 10) continue
+      const fx = f[0], fy = f[1]
+      if (fx < fMinX || fx > fMaxX || fy < fMinY || fy > fMaxY) continue
+      const fsx = fx - camX + cx, fsy = fy - camY + cy
       const golden = f[2] === 1 || f[2] === "golden"
       const sprite = golden ? goldenGlow : foodGlow
       if (sprite) {
@@ -789,16 +809,16 @@ const SnakeCanvas = {
         ctx.globalAlpha = invisAlpha
         // Mega: larger head
         const headR = effects.includes("mega") ? r * 2.2 : r * 1.3
+        // Head color shifts on active effect / boost — replaces the old shadowBlur
+        // glow as effect feedback at zero perf cost. shadowBlur was the single
+        // most expensive op per frame at high snake count.
         let gc = color
         if (effects.includes("star")) gc = "#E6DB74"
         else if (effects.includes("blade")) gc = "#FF4466"
         else if (effects.includes("freeze") || effects.includes("slowmo_target")) gc = "#66D9EF"
         else if (boosting) gc = "#00F0FF"
-        // Only use shadowBlur on own head (expensive)
-        if (isMe) { ctx.save(); ctx.shadowColor = gc; ctx.shadowBlur = 14 }
-        ctx.fillStyle = color
+        ctx.fillStyle = gc
         ctx.beginPath(); ctx.arc(hsx, hsy, headR, 0, Math.PI * 2); ctx.fill()
-        if (isMe) ctx.restore()
 
         // Forward + perpendicular unit vectors for head accessories
         const fxv = Math.cos(angle), fyv = Math.sin(angle)
@@ -902,16 +922,19 @@ const SnakeCanvas = {
           ctx.globalAlpha = 1
         }
 
-        // Shield rings (one per stack)
+        // Shield rings — one stroke for all stacks. moveTo before each arc so
+        // they don't lineTo into each other across the head.
         if (shieldStacks > 0) {
           ctx.strokeStyle = "#00FF87"
           ctx.lineWidth = 2
+          ctx.globalAlpha = 0.4 + 0.3 * Math.sin(t * 5)
+          ctx.beginPath()
           for (let s = 0; s < shieldStacks; s++) {
-            ctx.globalAlpha = 0.4 + 0.3 * Math.sin(t * 5 + s)
-            ctx.beginPath()
-            ctx.arc(hsx, hsy, headR * (1.5 + s * 0.35), 0, Math.PI * 2)
-            ctx.stroke()
+            const sr = headR * (1.5 + s * 0.35)
+            ctx.moveTo(hsx + sr, hsy)
+            ctx.arc(hsx, hsy, sr, 0, Math.PI * 2)
           }
+          ctx.stroke()
         }
         // Invincibility halo (respawn safety)
         if (invincible) {
