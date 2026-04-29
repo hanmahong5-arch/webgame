@@ -14,7 +14,12 @@ defmodule LurusWwwWeb.Live.GameLive do
       joined: false,
       game_state: nil,
       my_alive: false,
-      last_killer: nil
+      last_killer: nil,
+      # Tracks the per-player PubSub topic we're currently subscribed to so
+      # we can unsub/resub idempotently on room overflow or reconnect. Game
+      # state arrives only on this topic; the room-wide topic carries only
+      # server_shutdown / lobby messages.
+      player_topic: nil
     )
 
     if connected?(socket) do
@@ -54,6 +59,8 @@ defmodule LurusWwwWeb.Live.GameLive do
           else
             socket
           end
+
+          socket = resub_player(socket, room_id, final_pid)
 
           # Resume: player may already be dead (rejoined after dying); derive from state.
           my_alive = derive_alive(state, final_pid)
@@ -101,6 +108,8 @@ defmodule LurusWwwWeb.Live.GameLive do
         else
           socket
         end
+
+        socket = resub_player(socket, room_id, final_pid)
 
         my_alive = derive_alive(state, final_pid)
         {:noreply,
@@ -327,6 +336,22 @@ defmodule LurusWwwWeb.Live.GameLive do
   end
 
   defp gen_id, do: Base.encode16(:crypto.strong_rand_bytes(8), case: :lower)
+
+  # Idempotent resubscribe to the per-player game-state topic. Game state
+  # broadcasts are observer-specific, so each LV must listen on a topic keyed
+  # by its own player id. Safe to call repeatedly; unsubscribes the old topic
+  # first if any.
+  defp resub_player(socket, room_id, player_id) do
+    new_topic = "game:#{room_id}:#{player_id}"
+    case socket.assigns[:player_topic] do
+      nil -> Phoenix.PubSub.subscribe(LurusWww.PubSub, new_topic)
+      ^new_topic -> :noop
+      old ->
+        Phoenix.PubSub.unsubscribe(LurusWww.PubSub, old)
+        Phoenix.PubSub.subscribe(LurusWww.PubSub, new_topic)
+    end
+    assign(socket, player_topic: new_topic)
+  end
 
   # Per-LV-pid sliding-window rate limit using process dictionary.
   # Rejects events when the user has exceeded `max` calls within `window_ms`.

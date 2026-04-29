@@ -272,9 +272,7 @@ defmodule LurusWww.Games.GameServer do
   defp ensure_ticking(state), do: state
 
   defp broadcast_game(engine) do
-    client_state = Engine.to_client(engine)
-
-    # Persist scores for players who just died
+    # Persist scores for players who just died (independent of observer).
     for event <- engine.events do
       case event do
         {:player_died, player_id, _killer, _killer_name} ->
@@ -287,7 +285,19 @@ defmodule LurusWww.Games.GameServer do
       end
     end
 
-    Phoenix.PubSub.broadcast(LurusWww.PubSub, "game:#{engine.id}", {:game_state, client_state})
+    # Per-observer broadcast — each human gets a viewport-culled snapshot on
+    # their own topic. Off-screen snakes shrink to head-only, food outside the
+    # view radius is dropped. Bots aren't subscribers so we skip them.
+    # Cost: O(humans) Engine.to_client calls per broadcast (vs. 1 before), but
+    # payload is ~10x smaller in busy rooms which dominates wall-clock end-to-end.
+    for {pid, p} <- engine.players, !p.is_bot do
+      observer_state = Engine.to_client(engine, pid)
+      Phoenix.PubSub.broadcast(
+        LurusWww.PubSub,
+        "game:#{engine.id}:#{pid}",
+        {:game_state, observer_state}
+      )
+    end
   end
 
   defp broadcast_lobby(engine) do

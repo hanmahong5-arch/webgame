@@ -26,8 +26,10 @@ const SnakeCanvas = {
     this.particles = []
     this.rainDrops = []          // ambient food-rain particles
     this.laserBeams = []         // active beam segments to draw briefly
-    this.MAX_PARTICLES = 400
-    this.MAX_RAINDROPS = 200
+    // Particle pool sized just under what feels lively — anything more is
+    // silent waste since most particles fade in <1s and bursts overlap.
+    this.MAX_PARTICLES = 150
+    this.MAX_RAINDROPS = 150
     this.MAX_LASERS = 24
     // Pooled per-id segment arrays. Re-used in draw() for interpolated positions
     // so we don't allocate ~1000 small [x,y] arrays/frame at high length, which
@@ -740,6 +742,9 @@ const SnakeCanvas = {
     // Snakes
     for (const id in state.players) {
       const p = state.players[id]
+      // Server marks far-away snakes oof: true and ships only their head.
+      // Skip body/head paint entirely — minimap + leaderboard read separately.
+      if (p.oof) continue
       const segs = rsegs[id] || p.s || p.segments; if (!segs?.length) continue
       const alive = p.al !== undefined ? p.al : p.alive
       const color = p.c || p.color

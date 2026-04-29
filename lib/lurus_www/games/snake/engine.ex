@@ -367,7 +367,28 @@ defmodule LurusWww.Games.Snake.Engine do
 
   # ── Serialization ───────────────────────────────────────
 
-  def to_client(state) do
+  # View radius around the observer's head — anything farther is "off-screen".
+  # 900px is ~1.5 screen widths so the player has buffer on snake/food entering
+  # the visible area before transition. Larger than viewport reduces pop-in;
+  # smaller saves more bandwidth/CPU. Tuned empirically.
+  @view_radius 900.0
+
+  @doc """
+  Build a client snapshot. When `observer_id` is set, segments + food are
+  viewport-culled around the observer's head:
+    * own snake: full LOD as always
+    * other snakes within view: full LOD
+    * other snakes off-view: head segment only (so minimap + name still work)
+    * food: only items within (view_radius + 250) of observer
+  When `observer_id` is nil (e.g. tests, get_state RPC), no culling — full state.
+  """
+  def to_client(state, observer_id \\ nil) do
+    observer = if observer_id, do: Map.get(state.players, observer_id), else: nil
+    {ox, oy} = observer_center(observer, state)
+    cull? = observer != nil
+    view_r2 = @view_radius * @view_radius
+    food_r2 = (@view_radius + 250.0) * (@view_radius + 250.0)
+
     %{
       id: state.id,
       size: [state.width, state.height],
@@ -377,10 +398,20 @@ defmodule LurusWww.Games.Snake.Engine do
       leaderboard: Enum.take(state.leaderboard, 8),
       rain: state.rain_until > state.tick,
       players: Map.new(state.players, fn {id, p} ->
-        # LOD for long tails — keep head precise, sample tail more sparsely
-        # as the snake grows. Returns the LOD'd segs AND the LOD-relative
-        # armor boundary index so client can render two zones correctly.
-        {segs, armor_lod_idx} = lod_segments_and_armor(p)
+        in_view = !cull? || id == observer_id || snake_in_view?(p, ox, oy, view_r2)
+
+        # LOD for long tails — keep head precise, sample tail more sparsely.
+        # Off-view snakes downgrade to a single head segment so minimap and
+        # leaderboard still render but body painting is skipped client-side.
+        {segs, armor_lod_idx} =
+          if in_view do
+            lod_segments_and_armor(p)
+          else
+            case p.segments do
+              [head | _] -> {[head], 0}
+              [] -> {[], 0}
+            end
+          end
 
         {id, %{
           n: p.name, c: p.color, a: r2(p.angle),
@@ -403,12 +434,39 @@ defmodule LurusWww.Games.Snake.Engine do
           # Armored boundary in the LOD'd `s` array — segments at index < ar
           # render as protected (full alpha + outline), >= ar as severable
           # (dim, narrower stroke).
-          ar: armor_lod_idx
+          ar: armor_lod_idx,
+          # Off-view marker — client skips body/head paint to save GPU.
+          oof: !in_view
         }}
       end),
-      food: Enum.map(state.food, fn {x, y, t} -> [r2(x), r2(y), if(t == :golden, do: 1, else: 0)] end),
+      food: encode_food(state.food, ox, oy, food_r2, cull?),
       pups: Enum.map(state.powerups, fn {x, y, t, tier} -> [r2(x), r2(y), pup_idx(t), tier] end)
     }
+  end
+
+  defp observer_center(%{segments: [{x, y} | _]}, _state), do: {x, y}
+  defp observer_center(_, state), do: {state.width / 2, state.height / 2}
+
+  defp snake_in_view?(%{segments: [{hx, hy} | _]}, ox, oy, r2) do
+    dx = hx - ox
+    dy = hy - oy
+    dx * dx + dy * dy < r2
+  end
+  defp snake_in_view?(_, _, _, _), do: false
+
+  defp encode_food(food, _ox, _oy, _r2, false) do
+    Enum.map(food, fn {x, y, t} -> [r2(x), r2(y), if(t == :golden, do: 1, else: 0)] end)
+  end
+  defp encode_food(food, ox, oy, radius2, true) do
+    Enum.reduce(food, [], fn {x, y, t}, acc ->
+      dx = x - ox
+      dy = y - oy
+      if dx * dx + dy * dy < radius2 do
+        [[r2(x), r2(y), if(t == :golden, do: 1, else: 0)] | acc]
+      else
+        acc
+      end
+    end)
   end
 
   defp r2(f), do: Float.round(f * 1.0, 1)
