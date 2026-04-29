@@ -88,11 +88,15 @@ defmodule LurusWww.Games.Snake.Engine do
   # ── Bots ─────────────────────────────────────────────────
   @bot_names ~w(Cobra Viper Mamba Anaconda Python Boa Asp Krait Sidewinder Adder)
   @bot_min_humans 1     # only fill bots when at least 1 human is around
-  @bot_target_total 4   # bots top up the room to this total (humans + bots)
-  @bot_max 5            # never more than this many bots in a room
+  @bot_target_total 3   # bots top up the room to this total (humans + bots)
+  @bot_max 4            # never more than this many bots in a room
   @bot_wall_margin 160
   @bot_avoid_radius 90
   @bot_respawn_delay 60  # ticks dead before respawn (~3s)
+  # Bots are filler, not contenders. Hard caps prevent runaway snowballing —
+  # a Lv50 bot with 200+ segments tanks the whole room (broadcast bloat + lag).
+  @bot_max_length 50
+  @bot_max_level 3
 
   # ── Laser Eye / Tail-Sever ───────────────────────────────
   # Press V / right-click / mobile laser button to fire a short forward beam.
@@ -369,6 +373,10 @@ defmodule LurusWww.Games.Snake.Engine do
         # as the snake grows. Caps broadcast payload even for 200+ snake bodies.
         segs =
           cond do
+            length(p.segments) > 150 ->
+              {head, tail} = Enum.split(p.segments, 12)
+              head ++ Enum.take_every(tail, 4)
+
             length(p.segments) > 80 ->
               {head, tail} = Enum.split(p.segments, 10)
               head ++ Enum.take_every(tail, 3)
@@ -728,10 +736,22 @@ defmodule LurusWww.Games.Snake.Engine do
           pts = round(raw_pts * star_mult * combo_mult)
 
           # Growth
-          grow = Enum.reduce(eaten, 0, fn {_, _, t}, a -> a + grow_amount(p, t) end)
+          grow_raw = Enum.reduce(eaten, 0, fn {_, _, t}, a -> a + grow_amount(p, t) end)
 
           new_food_eaten = p.food_eaten + length(eaten)
-          new_level = level_of(new_food_eaten)
+
+          # Bots are filler, not contenders — hard cap their level + length so
+          # one runaway "Adder" can't snowball to 200+ segments and tank the
+          # whole room with broadcast bloat / render lag.
+          {grow, new_level} =
+            if p.is_bot do
+              capped_lvl = min(level_of(new_food_eaten), @bot_max_level)
+              capped_grow = if length(p.segments) >= @bot_max_length, do: 0, else: grow_raw
+              {capped_grow, capped_lvl}
+            else
+              {grow_raw, level_of(new_food_eaten)}
+            end
+
           leveled_up = new_level > p.level
 
           ps = Map.update!(ps, id, fn pl ->

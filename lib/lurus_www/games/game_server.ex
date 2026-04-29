@@ -9,8 +9,9 @@ defmodule LurusWww.Games.GameServer do
   @idle_timeout 60_000
 
   # Bot management — only fill when humans present.
-  @bot_target_total 4
-  @bot_max 5
+  # Lower target reduces broadcast load + leaves room for actual players.
+  @bot_target_total 3
+  @bot_max 4
 
   # ── Client API ──────────────────────────────────────────
 
