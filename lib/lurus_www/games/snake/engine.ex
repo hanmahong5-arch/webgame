@@ -365,20 +365,21 @@ defmodule LurusWww.Games.Snake.Engine do
 
   @doc """
   Roll the gacha for `id`. Costs @gacha_seg_cost tail segs + @gacha_score_cost
-  score. No-op when below min length / min score / dead. Emits a :gacha_result
-  event so the client can play the wheel animation and show the prize.
+  score. Returns `{state, applied?}` so the caller can skip broadcasts +
+  telemetry when the roll was a no-op (length/score gate / dead). Emits a
+  :gacha_result event on success so the client plays the wheel animation.
   """
   def trigger_gacha(state, id) do
     case Map.get(state.players, id) do
       %{alive: true} = p ->
         cond do
-          p.score < @gacha_min_score -> state
-          length(p.segments) < @gacha_min_length -> state
-          true -> do_gacha(state, id, p)
+          p.score < @gacha_min_score -> {state, false}
+          length(p.segments) < @gacha_min_length -> {state, false}
+          true -> {do_gacha(state, id, p), true}
         end
 
       _ ->
-        state
+        {state, false}
     end
   end
 
@@ -411,9 +412,21 @@ defmodule LurusWww.Games.Snake.Engine do
       %{p | shield_stacks: min(5, p.shield_stacks + n)}
     end)
   end
+  # Tier-aware merge. Rolling a lower-tier copy of an active effect must not
+  # downgrade it (legendary star T3 → common T1 felt punishing). Same-or-higher
+  # tier wins, ttl always extends to the longer of the two.
   defp apply_gacha_prize(state, id, {:effect, type, tier, ttl, _}) do
     update_in(state.players[id], fn p ->
-      %{p | effects: Map.put(p.effects, type, {ttl, tier})}
+      merged =
+        case Map.get(p.effects, type) do
+          {old_ttl, old_tier} when old_tier > tier ->
+            {max(old_ttl, ttl), old_tier}
+          {old_ttl, _old_tier} ->
+            {max(old_ttl, ttl), tier}
+          nil ->
+            {ttl, tier}
+        end
+      %{p | effects: Map.put(p.effects, type, merged)}
     end)
   end
 
@@ -477,6 +490,19 @@ defmodule LurusWww.Games.Snake.Engine do
   @view_radius 900.0
 
   @doc """
+  Pre-compute the per-broadcast pieces that are identical across all observers
+  (encoded event list + per-snake LOD). Caller (game_server.broadcast_game)
+  passes the result into each `to_client/3` call to avoid N×rework when a
+  busy room has many human observers.
+  """
+  def precompute_shared(state) do
+    %{
+      encoded_events: state.events |> Enum.map(&encode_event/1) |> Enum.reject(&is_nil/1),
+      lod_cache: Map.new(state.players, fn {id, p} -> {id, lod_segments_and_armor(p)} end)
+    }
+  end
+
+  @doc """
   Build a client snapshot. When `observer_id` is set, segments + food are
   viewport-culled around the observer's head:
     * own snake: full LOD as always
@@ -484,20 +510,29 @@ defmodule LurusWww.Games.Snake.Engine do
     * other snakes off-view: head segment only (so minimap + name still work)
     * food: only items within (view_radius + 250) of observer
   When `observer_id` is nil (e.g. tests, get_state RPC), no culling — full state.
+  Pass `shared` (from `precompute_shared/1`) to skip duplicate event encoding +
+  per-snake LOD downsampling across observer iterations.
   """
-  def to_client(state, observer_id \\ nil) do
+  def to_client(state, observer_id \\ nil, shared \\ nil) do
     observer = if observer_id, do: Map.get(state.players, observer_id), else: nil
     {ox, oy} = observer_center(observer, state)
     cull? = observer != nil
     view_r2 = @view_radius * @view_radius
     food_r2 = (@view_radius + 250.0) * (@view_radius + 250.0)
 
+    encoded_events =
+      case shared do
+        %{encoded_events: e} -> e
+        _ -> state.events |> Enum.map(&encode_event/1) |> Enum.reject(&is_nil/1)
+      end
+    lod_cache = shared && shared[:lod_cache]
+
     %{
       id: state.id,
       size: [state.width, state.height],
       tick: state.tick,
       status: state.status,
-      events: state.events |> Enum.map(&encode_event/1) |> Enum.reject(&is_nil/1),
+      events: encoded_events,
       leaderboard: Enum.take(state.leaderboard, 8),
       rain: state.rain_until > state.tick,
       players: Map.new(state.players, fn {id, p} ->
@@ -508,7 +543,7 @@ defmodule LurusWww.Games.Snake.Engine do
         # leaderboard still render but body painting is skipped client-side.
         {segs, armor_lod_idx} =
           if in_view do
-            lod_segments_and_armor(p)
+            (lod_cache && Map.get(lod_cache, id)) || lod_segments_and_armor(p)
           else
             case p.segments do
               [head | _] -> {[head], 0}
@@ -921,7 +956,9 @@ defmodule LurusWww.Games.Snake.Engine do
         {ps, [{:player_died, id, killer, killer_name} | evts], fd ++ body_food}
       end)
 
-    capped_food = if length(food) > @max_food, do: Enum.take(food, @max_food), else: food
+    # When over cap, drop OLDEST food (head of list) so fresh kill drops
+    # always reach the killer. Enum.take(_, -n) keeps the trailing n items.
+    capped_food = if length(food) > @max_food, do: Enum.take(food, -@max_food), else: food
     %{state | players: players, events: events, food: capped_food}
   end
 
@@ -1012,7 +1049,11 @@ defmodule LurusWww.Games.Snake.Engine do
   end
 
   defp apply_pup(ps, _state, id, :shield, tier) do
-    Map.update!(ps, id, fn p -> %{p | shield_stacks: min(3, p.shield_stacks + tier)} end)
+    # Powerup pickup floor cap is 3, but never decrease an already-higher
+    # stack (gacha can push to 5). max(stacks, ...) preserves the gacha tier.
+    Map.update!(ps, id, fn p ->
+      %{p | shield_stacks: max(p.shield_stacks, min(3, p.shield_stacks + tier))}
+    end)
   end
 
   defp apply_pup(ps, _state, id, :freeze, tier) do
@@ -1341,7 +1382,9 @@ defmodule LurusWww.Games.Snake.Engine do
     |> put_in([Access.key(:players), victim_id, Access.key(:segments)], keep)
     |> Map.update!(:food, fn fd ->
       capped_food = fd ++ new_food
-      if length(capped_food) > @max_food, do: Enum.take(capped_food, @max_food), else: capped_food
+      # Same as detect_collisions: drop oldest when over cap so the sever
+      # drops actually persist long enough for someone to eat them.
+      if length(capped_food) > @max_food, do: Enum.take(capped_food, -@max_food), else: capped_food
     end)
     |> Map.update!(:events, &[
       {:laser_fire, attacker_id, victim_id, hit_x, hit_y, severed_count} | &1

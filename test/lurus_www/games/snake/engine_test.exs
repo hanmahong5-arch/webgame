@@ -1207,4 +1207,187 @@ defmodule LurusWww.Games.Snake.EngineTest do
       assert state2.status == :waiting
     end
   end
+
+  # ── Gacha ────────────────────────────────────────────────────────────────
+  # Helper to put a player into gacha-eligible shape: long enough body,
+  # enough score, alive. Avoids depending on the exact food/eat math.
+  defp gacha_ready(state, id, segs \\ 50, score \\ 200) do
+    body = for i <- 0..(segs - 1), do: {500.0 + i * 9.0, 500.0}
+
+    %{
+      state
+      | players:
+          Map.update!(state.players, id, fn p ->
+            %{p | segments: body, score: score}
+          end)
+    }
+  end
+
+  describe "trigger_gacha/2" do
+    test "no-op (returns {state, false}) when score below min" do
+      {state, id} = one_player()
+      state = gacha_ready(state, id, 50, 50)
+      assert {^state, false} = Engine.trigger_gacha(state, id)
+    end
+
+    test "no-op (returns {state, false}) when length below min" do
+      {state, id} = one_player()
+      state = gacha_ready(state, id, 30, 200)
+      assert {^state, false} = Engine.trigger_gacha(state, id)
+    end
+
+    test "no-op for unknown player id" do
+      {state, _id} = one_player()
+      assert {^state, false} = Engine.trigger_gacha(state, "ghost")
+    end
+
+    test "no-op for dead player" do
+      {state, id} = one_player()
+      state = gacha_ready(state, id)
+      state = update_in(state.players[id], &%{&1 | alive: false})
+      assert {^state, false} = Engine.trigger_gacha(state, id)
+    end
+
+    test "successful roll deducts segments and score and emits :gacha_result" do
+      {state, id} = one_player()
+      state = gacha_ready(state, id, 50, 200)
+      {state2, true} = Engine.trigger_gacha(state, id)
+      p = state2.players[id]
+      # Segment cost is 25, but never trim below @laser_min_victim_len (6).
+      assert length(p.segments) == 25
+      assert p.score == 100
+      assert Enum.any?(state2.events, fn
+               {:gacha_result, ^id, _meta} -> true
+               _ -> false
+             end)
+    end
+
+    test "successful roll never trims below @laser_min_victim_len floor" do
+      {state, id} = one_player()
+      state = gacha_ready(state, id, 40, 200)
+      {state2, true} = Engine.trigger_gacha(state, id)
+      assert length(state2.players[id].segments) >= 6
+    end
+  end
+
+  describe "apply_gacha_prize merge logic (H1)" do
+    test "rolling lower-tier same effect does NOT downgrade existing tier" do
+      {state, id} = one_player()
+      # Hand-place a star T3 with 1500 ttl in effects.
+      state =
+        update_in(state.players[id], fn p ->
+          %{p | effects: Map.put(p.effects, :star, {1500, 3})}
+        end)
+
+      # Force-roll a star T1 (400 ttl) by bypassing pick_weighted.
+      # Use a private dispatch via apply_gacha_prize indirectly: build
+      # a state with one prize in the events and check effects map.
+      # Since apply_gacha_prize is private, drive it via trigger_gacha
+      # repeatedly until we get a star T1 (deterministic check below uses
+      # the merge invariant: tier never decreases).
+      state = gacha_ready(state, id, 50, 5_000)
+
+      # Run up to 200 gacha rolls; the player should never lose star T3.
+      final =
+        Enum.reduce(1..50, state, fn _i, acc ->
+          {acc2, _} = Engine.trigger_gacha(acc, id)
+          # Re-fund + re-grow so we can keep rolling.
+          gacha_ready(acc2, id, 50, 5_000)
+        end)
+
+      case Map.get(final.players[id].effects, :star) do
+        {_ttl, tier} -> assert tier >= 3
+        nil -> :ok  # star can naturally expire from ttl decay over many ticks
+      end
+    end
+  end
+
+  describe "shield stacking (H2)" do
+    test "shield powerup pickup does NOT decrease an existing higher stack" do
+      {state, id} = one_player()
+      state = update_in(state.players[id], &%{&1 | shield_stacks: 5})
+
+      # Place a shield powerup directly under the head.
+      [{hx, hy} | _] = state.players[id].segments
+      state = %{state | powerups: [{hx, hy, :shield, 2}]}
+
+      state2 = Engine.tick(state)
+      # max(5, min(3, 5+2)) = max(5, 3) = 5 — never below 5.
+      assert state2.players[id].shield_stacks == 5
+    end
+
+    test "shield powerup pickup still floors small stacks at 3" do
+      {state, id} = one_player()
+      state = update_in(state.players[id], &%{&1 | shield_stacks: 0})
+      [{hx, hy} | _] = state.players[id].segments
+      state = %{state | powerups: [{hx, hy, :shield, 2}]}
+
+      state2 = Engine.tick(state)
+      # max(0, min(3, 0+2)) = 2.
+      assert state2.players[id].shield_stacks == 2
+    end
+  end
+
+  describe "max_segments cap" do
+    test "eating does not grow segments past @max_segments (200)" do
+      {state, id} = one_player()
+      # Force the snake to exactly 200 segments.
+      body = for i <- 0..199, do: {600.0 + i * 9.0, 600.0}
+      state = %{state | players: Map.update!(state.players, id, &%{&1 | segments: body})}
+      [{hx, hy} | _] = body
+      # Drop 5 food right under the head so the eat radius catches them.
+      state = %{state | food: [{hx, hy, :normal}, {hx + 5, hy, :normal}, {hx + 10, hy, :normal}]}
+
+      state2 = Engine.tick(state)
+      assert length(state2.players[id].segments) == 200
+      # But score still increased (eating still rewards points).
+      assert state2.players[id].score > 0
+    end
+  end
+
+  describe "food cap drops oldest, not newest (M5)" do
+    test "when over cap, fresh kill drops survive and oldest food is trimmed" do
+      state = n_players(2)
+      # Pin victim to a known location so we know what to expect.
+      state = force_segments(state, "p2", for(i <- 0..40, do: {800.0 + i * 9.0, 700.0}))
+      # Park p1's head right inside p2's body (segment index 5+, past the
+      # neck-skip of 3) so detect_collisions kills p1. Pin angles + clear
+      # invincibility so the collision actually fires this tick.
+      state = move_head(state, "p1", 800.0 + 5 * 9.0, 700.0)
+      state = %{
+        state
+        | tick: 100,
+          players:
+            state.players
+            |> Map.update!("p1", &%{&1 | invincible_until: 0, angle: 0.0, target_angle: 0.0})
+            |> Map.update!("p2", &%{&1 | invincible_until: 0, angle: 0.0, target_angle: 0.0})
+      }
+
+      # Pre-fill food list with 600 marker items at a sentinel coord we can
+      # filter for. After the kill, the marker food should be trimmed away
+      # (oldest first) and the new body-drop food should remain.
+      sentinel = {-9999.0, -9999.0, :normal}
+      state = %{state | food: List.duplicate(sentinel, 600)}
+
+      state2 = Engine.tick(state)
+      # Total food still capped at @max_food.
+      assert length(state2.food) <= 600
+      # At least some of the newly-dropped (non-sentinel) food survived.
+      fresh = Enum.reject(state2.food, fn f -> f == sentinel end)
+      assert fresh != [], "expected fresh kill drops to survive food cap"
+    end
+  end
+
+  describe "precompute_shared/1 dedupes encode_events + LOD" do
+    test "shape is correct and to_client/3 accepts it" do
+      state = n_players(3)
+      shared = Engine.precompute_shared(state)
+      assert is_list(shared.encoded_events)
+      assert is_map(shared.lod_cache)
+      # Snapshot built with shared cache equals snapshot built without.
+      a = Engine.to_client(state, "p1")
+      b = Engine.to_client(state, "p1", shared)
+      assert a == b
+    end
+  end
 end

@@ -181,10 +181,14 @@ defmodule LurusWww.Games.GameServer do
   end
 
   def handle_cast({:gacha, player_id}, state) do
-    engine = Engine.trigger_gacha(state.engine, player_id)
-    :telemetry.execute([:webgame, :game, :gacha], %{count: 1}, %{room_id: engine.id})
-    # Push immediately so the prize event isn't delayed by the next tick boundary.
-    broadcast_game(engine)
+    {engine, applied?} = Engine.trigger_gacha(state.engine, player_id)
+    # Only count + broadcast on actual rolls. Failed rolls (length/score gate)
+    # would otherwise spam the per-observer broadcast loop and inflate the
+    # webgame.game.gacha.count counter into a "click attempts" gauge.
+    if applied? do
+      :telemetry.execute([:webgame, :game, :gacha], %{count: 1}, %{room_id: engine.id})
+      broadcast_game(engine)
+    end
     {:noreply, reset_idle(%{state | engine: engine})}
   end
 
@@ -301,8 +305,11 @@ defmodule LurusWww.Games.GameServer do
     # view radius is dropped. Bots aren't subscribers so we skip them.
     # Cost: O(humans) Engine.to_client calls per broadcast (vs. 1 before), but
     # payload is ~10x smaller in busy rooms which dominates wall-clock end-to-end.
+    # `precompute_shared/1` builds the per-tick pieces (encoded events +
+    # per-snake LOD) once so all observers share the work.
+    shared = Engine.precompute_shared(engine)
     for {pid, p} <- engine.players, !p.is_bot do
-      observer_state = Engine.to_client(engine, pid)
+      observer_state = Engine.to_client(engine, pid, shared)
       Phoenix.PubSub.broadcast(
         LurusWww.PubSub,
         "game:#{engine.id}:#{pid}",

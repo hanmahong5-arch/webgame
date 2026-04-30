@@ -370,6 +370,12 @@ defmodule LurusWwwWeb.Live.GameLive do
   # Per-LV-pid sliding-window rate limit using process dictionary.
   # Rejects events when the user has exceeded `max` calls within `window_ms`.
   # Each LV is a single Erlang process so this is race-free.
+  #
+  # KNOWN LIMITATION: scope is per-LV process, not per-player. A user with
+  # multiple browser tabs (same player_id) gets independent windows. Server
+  # gates (gacha score+length, laser cooldown) prevent actual exploits, but
+  # the click-rate limit is effectively N×tabs. A proper fix lives in an ETS
+  # table keyed by player_id and is tracked as a separate story.
   defp rate_limit_ok?(key, max, window_ms) do
     now = System.monotonic_time(:millisecond)
     history = Process.get({:rl, key}, [])
