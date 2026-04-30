@@ -1127,6 +1127,41 @@ body {
   background: radial-gradient(circle, rgba(255, 102, 170, 0.6), rgba(255, 102, 170, 0.25));
 }
 
+/* Gacha button — visible on all viewports, bottom-left. Pulses gold when
+ * eligible (not gated client-side though — server validates). */
+.gacha-btn {
+  position: fixed;
+  left: 18px;
+  bottom: 18px;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 200, 0, 0.75);
+  background: radial-gradient(circle, rgba(255, 200, 0, 0.32), rgba(255, 100, 0, 0.10));
+  color: #FFD700;
+  font-size: 30px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  box-shadow: 0 0 22px rgba(255, 200, 0, 0.45);
+  cursor: pointer;
+  animation: gacha-pulse 2.4s ease-in-out infinite;
+}
+.gacha-btn:active {
+  transform: scale(0.92);
+  background: radial-gradient(circle, rgba(255, 220, 0, 0.55), rgba(255, 100, 0, 0.25));
+}
+@keyframes gacha-pulse {
+  0%, 100% { box-shadow: 0 0 22px rgba(255, 200, 0, 0.45); }
+  50%      { box-shadow: 0 0 36px rgba(255, 200, 0, 0.75); }
+}
+
 .hud-effect {
   padding: 3px 6px;
   border-radius: 6px;

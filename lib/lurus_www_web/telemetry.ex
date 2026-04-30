@@ -36,6 +36,7 @@ defmodule LurusWwwWeb.Telemetry do
       counter("webgame.game.bot_spawn.count", tags: [:room_id]),
       counter("webgame.game.rate_limited.count", tags: [:event]),
       counter("webgame.game.laser.count", tags: [:room_id]),
+      counter("webgame.game.gacha.count", tags: [:room_id]),
 
       # Game — distributions
       distribution("webgame.game.tick.duration",

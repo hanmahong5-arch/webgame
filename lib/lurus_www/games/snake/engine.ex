@@ -94,6 +94,52 @@ defmodule LurusWww.Games.Snake.Engine do
   @bot_avoid_radius 90
   @bot_respawn_delay 60  # ticks dead before respawn (~3s)
 
+  # ── Length cap ──────────────────────────────────────────
+  # Hard segment limit. Past this, eating awards score only — no further growth.
+  # Caps the O(N) cost of resample/extend/serialize that drove 4000+ score lag,
+  # and pushes long snakes to spend tail in the gacha (below) for prizes.
+  @max_segments 200
+
+  # ── Gacha ───────────────────────────────────────────────
+  # Spend a chunk of tail + score to roll a randomized buff or equipment.
+  # The seg cost doubles as a player-driven length cap. Smaller snakes can
+  # also play once they cross @gacha_min_length, so it's not just a long-snake
+  # mechanic.
+  @gacha_min_length 40
+  @gacha_min_score 100
+  @gacha_seg_cost 25
+  @gacha_score_cost 100
+
+  # Prize pool: {kind, sub, tier, ttl_ticks, weight}. `:effect` adds a buff to
+  # player.effects; `:shield_inc` bumps shield_stacks directly. Long-ttl effects
+  # (99999 ≈ 83 minutes of game time) are effectively permanent equipment.
+  @gacha_prizes [
+    # Common (50%)
+    {:effect, :magnet, 2, 600, 18},
+    {:shield_inc, nil, 1, 0, 13},
+    {:effect, :star, 1, 400, 10},
+    {:effect, :ghost, 1, 400, 9},
+
+    # Rare (35%) — combat tilt; armor_pierce is the small-snake counter to
+    # heavily-armored long snakes (lasers ignore armor for 10s).
+    {:effect, :armor_pierce, 1, 200, 12},
+    {:effect, :blade, 3, 800, 8},
+    {:effect, :mega, 3, 600, 7},
+
+    # Epic (12%) — round-permanent equipment
+    {:effect, :thorn_tail, 1, 99_999, 7},
+    {:effect, :laser_charged, 1, 99_999, 5},
+
+    # Legendary (3%)
+    {:effect, :star, 3, 1500, 3}
+  ]
+  @gacha_weight_total 92
+
+  # Thorn-tail revenge: if a thorn-equipped player dies to a killer, the
+  # killer also loses this many tail segments. Lets small snakes punish
+  # head-bash deaths without needing big bodies of their own.
+  @thorn_revenge_segs 30
+
   # ── Armored / severable body zones ──────────────────────
   # Snakes have two body regions:
   #   * Armored (head-side): immune to laser sever — counter-play requires
@@ -316,6 +362,63 @@ defmodule LurusWww.Games.Snake.Engine do
       _ -> state
     end
   end
+
+  @doc """
+  Roll the gacha for `id`. Costs @gacha_seg_cost tail segs + @gacha_score_cost
+  score. No-op when below min length / min score / dead. Emits a :gacha_result
+  event so the client can play the wheel animation and show the prize.
+  """
+  def trigger_gacha(state, id) do
+    case Map.get(state.players, id) do
+      %{alive: true} = p ->
+        cond do
+          p.score < @gacha_min_score -> state
+          length(p.segments) < @gacha_min_length -> state
+          true -> do_gacha(state, id, p)
+        end
+
+      _ ->
+        state
+    end
+  end
+
+  defp do_gacha(state, id, p) do
+    seg_count = length(p.segments)
+    kept = max(@laser_min_victim_len, seg_count - @gacha_seg_cost)
+    new_segs = Enum.take(p.segments, kept)
+    prize = roll_gacha_prize()
+
+    state
+    |> put_in([Access.key(:players), id, Access.key(:segments)], new_segs)
+    |> update_in([Access.key(:players), id, Access.key(:score)], &max(0, &1 - @gacha_score_cost))
+    |> apply_gacha_prize(id, prize)
+    |> Map.update!(:events, &[{:gacha_result, id, prize_meta(prize)} | &1])
+  end
+
+  defp roll_gacha_prize do
+    r = :rand.uniform(@gacha_weight_total)
+    pick_weighted(@gacha_prizes, r)
+  end
+
+  defp pick_weighted([prize], _r), do: prize
+  defp pick_weighted([prize | rest], r) do
+    {_, _, _, _, w} = prize
+    if r <= w, do: prize, else: pick_weighted(rest, r - w)
+  end
+
+  defp apply_gacha_prize(state, id, {:shield_inc, _, n, _, _}) do
+    update_in(state.players[id], fn p ->
+      %{p | shield_stacks: min(5, p.shield_stacks + n)}
+    end)
+  end
+  defp apply_gacha_prize(state, id, {:effect, type, tier, ttl, _}) do
+    update_in(state.players[id], fn p ->
+      %{p | effects: Map.put(p.effects, type, {ttl, tier})}
+    end)
+  end
+
+  defp prize_meta({:shield_inc, _, n, _, _}), do: ["shield", n, 0]
+  defp prize_meta({:effect, type, tier, ttl, _}), do: [Atom.to_string(type), tier, ttl]
 
   @doc "Respawn dead player. Always succeeds even if just died."
   def respawn(state, pid) do
@@ -668,6 +771,12 @@ defmodule LurusWww.Games.Snake.Engine do
     for i <- 1..count, do: {lx + ux * spacing * i, ly + uy * spacing * i}
   end
 
+  # Drop tail segments past @max_segments. Once the cap binds, growth halts
+  # and the player must spend tail (gacha) to keep level-scaling effects.
+  defp cap_segments(segs) do
+    if length(segs) > @max_segments, do: Enum.take(segs, @max_segments), else: segs
+  end
+
   defp resample(points, spacing, count) do
     do_resample(points, spacing, count - 1, [hd(points)])
   end
@@ -782,8 +891,29 @@ defmodule LurusWww.Games.Snake.Engine do
                 streak_until: state.tick + @streak_window
               }
             end)
-            evts2 = if new_streak >= 3, do: [{:streak, killer, new_streak} | evts], else: evts
-            {ps2, evts2}
+
+            # Thorn-tail revenge: if the victim was thorn-equipped, the killer
+            # also loses tail. Doesn't kill them (they'd just lose their score
+            # streak too) but heavily discourages careless head-bashing.
+            {ps3, evts2} =
+              if Map.has_key?(dead.effects, :thorn_tail) do
+                kp3 = ps2[killer]
+                k_len = length(kp3.segments)
+                cut = min(@thorn_revenge_segs, max(0, k_len - @laser_min_victim_len))
+                if cut > 0 do
+                  ps3 = Map.update!(ps2, killer, fn kp4 ->
+                    %{kp4 | segments: Enum.take(kp4.segments, k_len - cut)}
+                  end)
+                  {ps3, [{:thorn_revenge, id, killer, cut} | evts]}
+                else
+                  {ps2, evts}
+                end
+              else
+                {ps2, evts}
+              end
+
+            evts3 = if new_streak >= 3, do: [{:streak, killer, new_streak} | evts2], else: evts2
+            {ps3, evts3}
           else
             {ps, evts}
           end
@@ -829,11 +959,20 @@ defmodule LurusWww.Games.Snake.Engine do
           leveled_up = new_level > p.level
 
           ps = Map.update!(ps, id, fn pl ->
+            # Hard length cap. Past @max_segments, eating only awards score —
+            # players spend tail in the gacha to keep growing usefully.
+            new_segments =
+              if length(pl.segments) >= @max_segments do
+                pl.segments
+              else
+                cap_segments(pl.segments ++ extend_tail(pl.segments, grow, @seg_spacing))
+              end
+
             grown = %{pl |
               score: pl.score + pts,
               food_eaten: new_food_eaten,
               level: new_level,
-              segments: pl.segments ++ extend_tail(pl.segments, grow, @seg_spacing),
+              segments: new_segments,
               combo: combo_new,
               combo_until: state.tick + 50,
               just_leveled: leveled_up
@@ -1069,6 +1208,11 @@ defmodule LurusWww.Games.Snake.Engine do
     bx = hx + fx * @laser_range
     by = hy + fy * @laser_range
 
+    # armor_pierce buff: laser ignores the armored zone for the buff's
+    # duration. Small snakes use this to actually cut down well-armored
+    # long snakes (whose entire visible body is otherwise armored).
+    pierce? = Map.has_key?(p.effects, :armor_pierce)
+
     # Find closest hit across other alive players. Each candidate is tagged
     # with :armored or :severable based on the target's progression — armored
     # zone protects head-side segments and grows with level.
@@ -1080,7 +1224,7 @@ defmodule LurusWww.Games.Snake.Engine do
           Map.has_key?(op.effects, :ghost)
       end)
       |> Enum.flat_map(fn {oid, op} ->
-        armor = armored_count(op)
+        armor = if pierce?, do: 0, else: armored_count(op)
         op.segments
         |> Enum.with_index()
         # First 3 segs (neck) are skipped entirely — head-on collision
@@ -1156,11 +1300,17 @@ defmodule LurusWww.Games.Snake.Engine do
   defp pay_laser_cost(state, id) do
     update_in(state.players[id], fn p ->
       kept = max(@laser_min_segs - @laser_self_cost, length(p.segments) - @laser_self_cost)
+      # laser_charged equipment halves cooldown — gacha-tier permanent buff.
+      cd =
+        if Map.has_key?(p.effects, :laser_charged),
+          do: div(@laser_cooldown, 2),
+          else: @laser_cooldown
+
       %{p |
         segments: Enum.take(p.segments, kept),
         laser_charge_until: 0,
         laser_fire_at: state.tick,
-        laser_cd_until: state.tick + @laser_cooldown
+        laser_cd_until: state.tick + cd
       }
     end)
   end
@@ -1343,5 +1493,11 @@ defmodule LurusWww.Games.Snake.Engine do
     do: ["lblock", attacker, victim, r2(hx), r2(hy)]
   defp encode_event({:laser_armored, attacker, victim, hx, hy}),
     do: ["larmor", attacker, victim, r2(hx), r2(hy)]
+  # Gacha — meta is [type_string, tier, ttl] (or ["shield", n, 0]).
+  defp encode_event({:gacha_result, id, [type, tier, ttl]}),
+    do: ["gacha", id, type, tier, ttl]
+  # Thorn-tail revenge — victim, attacker, segments cut from attacker.
+  defp encode_event({:thorn_revenge, victim, killer, cut}),
+    do: ["thorn", victim, killer, cut]
   defp encode_event(_), do: nil
 end

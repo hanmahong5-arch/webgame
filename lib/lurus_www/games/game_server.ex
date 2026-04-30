@@ -38,6 +38,9 @@ defmodule LurusWww.Games.GameServer do
   def fire_laser(room_id, player_id),
     do: safe_cast(room_id, {:fire_laser, player_id})
 
+  def gacha(room_id, player_id),
+    do: safe_cast(room_id, {:gacha, player_id})
+
   def get_state(room_id),
     do: safe_call(room_id, :get_state)
 
@@ -174,6 +177,14 @@ defmodule LurusWww.Games.GameServer do
   def handle_cast({:fire_laser, player_id}, state) do
     engine = Engine.trigger_laser(state.engine, player_id)
     :telemetry.execute([:webgame, :game, :laser], %{count: 1}, %{room_id: engine.id})
+    {:noreply, reset_idle(%{state | engine: engine})}
+  end
+
+  def handle_cast({:gacha, player_id}, state) do
+    engine = Engine.trigger_gacha(state.engine, player_id)
+    :telemetry.execute([:webgame, :game, :gacha], %{count: 1}, %{room_id: engine.id})
+    # Push immediately so the prize event isn't delayed by the next tick boundary.
+    broadcast_game(engine)
     {:noreply, reset_idle(%{state | engine: engine})}
   end
 

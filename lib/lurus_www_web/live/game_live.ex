@@ -160,6 +160,15 @@ defmodule LurusWwwWeb.Live.GameLive do
     {:noreply, socket}
   end
 
+  def handle_event("gacha", _params, socket) do
+    # Server validates length + score cost; this just throttles spam clicks.
+    if rate_limit_ok?(:gacha, 4, 8_000) &&
+         socket.assigns.joined && socket.assigns.room_id do
+      GameServer.gacha(socket.assigns.room_id, socket.assigns.player_id)
+    end
+    {:noreply, socket}
+  end
+
   def handle_event(_, _, socket), do: {:noreply, socket}
 
   @impl true
@@ -207,6 +216,9 @@ defmodule LurusWwwWeb.Live.GameLive do
                 phx-update="ignore" tabindex="-1">⚡</button>
         <button id="touch-laser-btn" class="touch-laser-btn" aria-label="laser eye"
                 phx-update="ignore" tabindex="-1">👁</button>
+        <%!-- Gacha button — visible on all viewports; spends tail + score for a roll. --%>
+        <button id="gacha-btn" class="gacha-btn" aria-label="gacha"
+                phx-update="ignore" tabindex="-1">🎰</button>
 
         <%!-- Top HUD --%>
         <div class="game-hud">
@@ -272,7 +284,9 @@ defmodule LurusWwwWeb.Live.GameLive do
               <p class="join-controls">
                 Mouse = steer &middot; Click / Space / Shift = boost &middot;
                 <strong style="color:#FF66AA">V / right-click = laser eye 👁</strong>
-                <br/>mobile: hold ⚡ button to boost &middot; tap 👁 for laser
+                <br/>
+                <strong style="color:#FFD700">G = gacha 🎰 — spend tail + score for buffs / equipment</strong>
+                <br/>mobile: hold ⚡ to boost &middot; tap 👁 laser &middot; tap 🎰 gacha
               </p>
             </div>
           </div>

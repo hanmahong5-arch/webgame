@@ -143,12 +143,22 @@ const SnakeCanvas = {
       this._laserBtnHandlers = { btn: laserBtn, onLaserTap }
     }
 
+    // Gacha button — server validates eligibility, button just sends the event.
+    const gachaBtn = document.getElementById("gacha-btn")
+    if (gachaBtn) {
+      const onGachaTap = (e) => { e.preventDefault(); this.fireGacha() }
+      gachaBtn.addEventListener("touchstart", onGachaTap, { passive: false })
+      gachaBtn.addEventListener("click", onGachaTap)
+      this._gachaBtnHandlers = { btn: gachaBtn, onGachaTap }
+    }
+
     // Keyboard. Multiple boost keys so any layout works:
     //   Space / Shift / Enter / W (also press-anywhere on mobile)
     // Browsers fire keydown repeatedly while held; setBoosting de-dupes the
     // PubSub push so holding space gives one cast, not 30/sec.
     const BOOST_KEYS = new Set(["Space", "ShiftLeft", "ShiftRight", "Enter", "KeyW"])
     const LASER_KEYS = new Set(["KeyV", "KeyF"])
+    const GACHA_KEYS = new Set(["KeyG"])
     this._onKey = (e) => {
       if (BOOST_KEYS.has(e.code)) {
         if (e.code === "Space") e.preventDefault()
@@ -157,6 +167,10 @@ const SnakeCanvas = {
       }
       if (LASER_KEYS.has(e.code)) {
         if (e.type === "keydown" && !e.repeat) this.fireLaser()
+        return
+      }
+      if (GACHA_KEYS.has(e.code)) {
+        if (e.type === "keydown" && !e.repeat) this.fireGacha()
         return
       }
       if (e.type === "keydown") this.tryRespawn()
@@ -322,6 +336,55 @@ const SnakeCanvas = {
     if (!me || !me.alive) this.pushEvent("respawn", {})
   },
 
+  // Display table for gacha results — emoji + label + tier color.
+  // Keep static at module scope inside the hook so it's allocated once.
+  _gachaInfo(type, tier) {
+    const T = {
+      magnet:        ["🧲", "Magnet"],
+      shield:        ["🛡",  "Shield"],
+      star:          ["⭐", "Star"],
+      ghost:         ["👻", "Ghost"],
+      blade:         ["⚔",  "Blade"],
+      mega:          ["💥", "Mega Head"],
+      armor_pierce:  ["🗡",  "Armor Pierce"],
+      thorn_tail:    ["🌵", "Thorn Tail"],
+      laser_charged: ["⚡", "Laser+"]
+    }
+    const TIER_COLOR = { 1: "#9090A8", 2: "#4A9EFF", 3: "#FFB800" }
+    const LEGENDARY = type === "star" && tier === 3
+    const PERMANENT = type === "thorn_tail" || type === "laser_charged"
+    const [icon, name] = T[type] || ["✦", type]
+    const color = LEGENDARY ? "#FF6BCC" : (PERMANENT ? "#FFD700" : (TIER_COLOR[tier] || "#9090A8"))
+    return { icon, name, color, legendary: LEGENDARY, permanent: PERMANENT }
+  },
+
+  // Trigger a 1.6s reveal: 0.9s spinning emoji cycle, then 0.7s settle on
+  // the actual prize with a tier-colored halo. Client knows the result up
+  // front (server already applied it) — animation is purely cosmetic.
+  _startGachaAnim(type, tier) {
+    const info = this._gachaInfo(type, tier)
+    this.gachaAnim = {
+      start: performance.now(),
+      spinDuration: 900,
+      holdDuration: 700,
+      finalIcon: info.icon,
+      finalName: info.name,
+      color: info.color,
+      legendary: info.legendary,
+      permanent: info.permanent
+    }
+    // Burst particles immediately at center for spin-up feedback
+    for (let i = 0; i < 24; i++) {
+      const a = Math.random() * Math.PI * 2
+      const cx = this.cam.x, cy = this.cam.y
+      this.particles.push({
+        x: cx + Math.cos(a) * 30, y: cy + Math.sin(a) * 30,
+        vx: Math.cos(a) * 3, vy: Math.sin(a) * 3,
+        life: 30, color: info.color, size: 2.5
+      })
+    }
+  },
+
   getMe() {
     if (!this.state?.players || !this.playerId) return null
     const p = this.state.players[this.playerId]
@@ -369,6 +432,14 @@ const SnakeCanvas = {
     if (this._lastLaserAt && now - this._lastLaserAt < 250) return
     this._lastLaserAt = now
     this.pushEvent("laser", {})
+  },
+
+  fireGacha() {
+    // Server enforces min length + score. Local debounce stops mash-clicks.
+    const now = performance.now()
+    if (this._lastGachaAt && now - this._lastGachaAt < 400) return
+    this._lastGachaAt = now
+    this.pushEvent("gacha", {})
   },
 
   pushKillerToLV() {
@@ -534,6 +605,29 @@ const SnakeCanvas = {
               vx: Math.cos(a) * 2.5, vy: Math.sin(a) * 2.5,
               life: 15, color: "#B0B0FF", size: 1.5
             })
+          }
+          break
+        }
+        case "gacha": {
+          // ev = ["gacha", id, type, tier, ttl] — server already paid cost +
+          // applied effect. Trigger the wheel animation only for self; others
+          // get a small toast.
+          const [_, gid, gtype, gtier, _gttl] = ev
+          if (gid === this.playerId) {
+            this.audio.play("powerup")
+            this._startGachaAnim(gtype, gtier)
+          }
+          break
+        }
+        case "thorn": {
+          // ev = ["thorn", victim, killer, segs_cut]
+          const [_, _vic, atk, cut] = ev
+          if (atk === this.playerId) {
+            this.flashBanner = {
+              text: `🌵 THORNED − ${cut} SEGS`,
+              color: "#9CFF6B", until: now + 1400
+            }
+            this.audio.play("die", false)
           }
           break
         }
@@ -1124,6 +1218,62 @@ const SnakeCanvas = {
       ctx.fillStyle = "#B0B0C8"
       const secs = Math.floor(staleMs / 1000)
       ctx.fillText(`No signal for ${secs}s — auto-reconnect in progress`, W_CSS / 2, H_CSS / 2 + 18)
+    }
+
+    // Gacha reveal — 0.9s spin, 0.7s hold. Final result is known at start
+    // so the spin is pure cosmetic; we cycle through icons as a teaser.
+    if (this.gachaAnim) {
+      const ga = this.gachaAnim
+      const elapsed = nowMs - ga.start
+      const total = ga.spinDuration + ga.holdDuration
+      if (elapsed > total) {
+        this.gachaAnim = null
+      } else {
+        const spinning = elapsed < ga.spinDuration
+        const cx2 = W_CSS / 2, cy2 = H_CSS * 0.42
+        const panelW = 260, panelH = 130
+
+        ctx.fillStyle = "rgba(6,6,16,0.85)"
+        ctx.fillRect(cx2 - panelW / 2, cy2 - panelH / 2, panelW, panelH)
+        ctx.strokeStyle = ga.color
+        ctx.lineWidth = 3
+        ctx.strokeRect(cx2 - panelW / 2, cy2 - panelH / 2, panelW, panelH)
+
+        ctx.textAlign = "center"
+        ctx.fillStyle = ga.color
+        ctx.font = "bold 14px sans-serif"
+        ctx.fillText("🎰  GACHA  🎰", cx2, cy2 - panelH / 2 + 22)
+
+        // The big icon — cycles fast while spinning, settles on final.
+        if (spinning) {
+          const cycle = ["🧲", "🛡", "⭐", "👻", "⚔", "💥", "🗡", "🌵", "⚡"]
+          const idx = Math.floor(elapsed / 70) % cycle.length
+          ctx.font = "44px sans-serif"
+          ctx.fillStyle = "#FFFFFF"
+          ctx.fillText(cycle[idx], cx2, cy2 + 14)
+        } else {
+          // Hold: shake + glow on the final icon. legendary/permanent add a halo.
+          const tHold = elapsed - ga.spinDuration
+          const shake = Math.max(0, 1 - tHold / 200) * 4
+          const dx = (Math.random() - 0.5) * shake
+          const dy = (Math.random() - 0.5) * shake
+          if (ga.legendary || ga.permanent) {
+            ctx.shadowColor = ga.color
+            ctx.shadowBlur = 30
+          }
+          ctx.font = "52px sans-serif"
+          ctx.fillStyle = ga.color
+          ctx.fillText(ga.finalIcon, cx2 + dx, cy2 + 18 + dy)
+          ctx.shadowBlur = 0
+
+          ctx.font = "bold 16px sans-serif"
+          ctx.fillStyle = ga.color
+          let label = ga.finalName
+          if (ga.legendary) label = "★ LEGENDARY  " + label + "  ★"
+          else if (ga.permanent) label = "PERMANENT  " + label
+          ctx.fillText(label, cx2, cy2 + panelH / 2 - 12)
+        }
+      }
     }
 
     // Flash banner (streak / food rain / events / shutdown)
